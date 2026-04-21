@@ -29,6 +29,35 @@ export type AreaStatsResult = {
   };
 };
 
+type CopernicusStats = {
+  mean?: number;
+  stDev?: number;
+  sampleCount?: number;
+  sampleCountNoData?: number;
+};
+
+type CopernicusBandNode = {
+  stats?: CopernicusStats;
+};
+
+type CopernicusOutputNode = {
+  bands?: {
+    B0?: CopernicusBandNode;
+  };
+};
+
+type CopernicusDataEntry = {
+  outputs?: {
+    default?: CopernicusOutputNode;
+    ndvi?: CopernicusOutputNode;
+    ndwi?: CopernicusOutputNode;
+  };
+};
+
+type CopernicusStatsResponse = {
+  data?: CopernicusDataEntry[];
+};
+
 const AUTH_URL =
   "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token";
 
@@ -247,8 +276,9 @@ function getTimeIntervals(fromIso: string, toIso: string) {
   };
 }
 
-function parseBandStatsEntry(entry: any): StatsInterval {
-  const stats = entry?.outputs?.default?.bands?.B0?.stats ?? {};
+function parseBandStatsEntry(entry: CopernicusDataEntry): StatsInterval {
+  const stats = entry.outputs?.default?.bands?.B0?.stats ?? {};
+
   return {
     mean: typeof stats.mean === "number" ? stats.mean : null,
     stDev: typeof stats.stDev === "number" ? stats.stDev : null,
@@ -256,16 +286,16 @@ function parseBandStatsEntry(entry: any): StatsInterval {
       typeof stats.sampleCount === "number"
         ? stats.sampleCount
         : typeof stats.sampleCountNoData === "number"
-        ? stats.sampleCountNoData
-        : 0,
+          ? stats.sampleCountNoData
+          : 0,
   };
 }
 
-function parseStatsResponse(json: any): AreaStatsResult {
-  const data = Array.isArray(json?.data) ? json.data : [];
+function parseStatsResponse(json: CopernicusStatsResponse): AreaStatsResult {
+  const data: CopernicusDataEntry[] = Array.isArray(json?.data) ? json.data : [];
 
-  const ndviSeries = data.map((entry: any) => {
-    const stats = entry?.outputs?.ndvi?.bands?.B0?.stats ?? {};
+  const ndviSeries: StatsInterval[] = data.map((entry: CopernicusDataEntry) => {
+    const stats = entry.outputs?.ndvi?.bands?.B0?.stats ?? {};
     return {
       mean: typeof stats.mean === "number" ? stats.mean : null,
       stDev: typeof stats.stDev === "number" ? stats.stDev : null,
@@ -274,8 +304,8 @@ function parseStatsResponse(json: any): AreaStatsResult {
     };
   });
 
-  const ndwiSeries = data.map((entry: any) => {
-    const stats = entry?.outputs?.ndwi?.bands?.B0?.stats ?? {};
+  const ndwiSeries: StatsInterval[] = data.map((entry: CopernicusDataEntry) => {
+    const stats = entry.outputs?.ndwi?.bands?.B0?.stats ?? {};
     return {
       mean: typeof stats.mean === "number" ? stats.mean : null,
       stDev: typeof stats.stDev === "number" ? stats.stDev : null,
@@ -285,23 +315,23 @@ function parseStatsResponse(json: any): AreaStatsResult {
   });
 
   const ndviMeans = ndviSeries
-    .map((item) => item.mean)
+    .map((item: StatsInterval) => item.mean)
     .filter((value): value is number => typeof value === "number");
 
   const ndwiMeans = ndwiSeries
-    .map((item) => item.mean)
+    .map((item: StatsInterval) => item.mean)
     .filter((value): value is number => typeof value === "number");
 
   const ndviStdValues = ndviSeries
-    .map((item) => item.stDev)
+    .map((item: StatsInterval) => item.stDev)
     .filter((value): value is number => typeof value === "number");
 
   const ndwiStdValues = ndwiSeries
-    .map((item) => item.stDev)
+    .map((item: StatsInterval) => item.stDev)
     .filter((value): value is number => typeof value === "number");
 
   const sampleCount = ndviSeries.reduce(
-    (sum, item) => sum + (item.sampleCount || 0),
+    (sum: number, item: StatsInterval) => sum + (item.sampleCount || 0),
     0
   );
 
@@ -382,7 +412,7 @@ export async function fetchSingleStats(params: {
     throw new Error(`Copernicus Statistical API error: ${response.status} ${text}`);
   }
 
-  return JSON.parse(text);
+  return JSON.parse(text) as CopernicusStatsResponse;
 }
 
 export async function fetchAreaStats(params: {
