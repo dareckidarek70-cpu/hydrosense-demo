@@ -59,8 +59,8 @@ export function ResultsScoreChart({
                 width={36}
               />
               <Tooltip
-                formatter={(value: number) => [`Score: ${value}`, ""]}
-                contentStyle={{
+                formatter={(value) => [`Score: ${value ?? 0}`, ""]}
+                  contentStyle={{
                   borderRadius: 16,
                   border: "1px solid rgba(17,49,34,0.08)",
                   background: "rgba(255,255,255,0.96)",
