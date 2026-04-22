@@ -33,7 +33,7 @@ type CopernicusStats = {
   mean?: number;
   stDev?: number;
   sampleCount?: number;
-  sampleCountNoData?: number;
+  noDataCount?: number;
 };
 
 type CopernicusBandNode = {
@@ -48,7 +48,6 @@ type CopernicusOutputNode = {
 
 type CopernicusDataEntry = {
   outputs?: {
-    default?: CopernicusOutputNode;
     ndvi?: CopernicusOutputNode;
     ndwi?: CopernicusOutputNode;
   };
@@ -62,7 +61,7 @@ const AUTH_URL =
   "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token";
 
 const STATS_URL =
-  "https://sh.dataspace.copernicus.eu/api/v1/statistics";
+  "https://sh.dataspace.copernicus.eu/statistics/v1";
 
 const STATS_EVALSCRIPT = `
 //VERSION=3
@@ -83,16 +82,15 @@ function setup() {
         sampleType: "FLOAT32"
       },
       {
-        id: "dataMaskOut",
-        bands: 1,
-        sampleType: "UINT8"
+        id: "dataMask",
+        bands: 1
       }
     ]
   };
 }
 
 function isBadClass(scl) {
-  return scl === 0 || scl === 1 || scl === 3 || scl === 8 || scl === 9 || scl === 10 || scl === 11;
+  return scl === 0 || scl === 1;
 }
 
 function evaluatePixel(sample) {
@@ -100,7 +98,7 @@ function evaluatePixel(sample) {
     return {
       ndvi: [0],
       ndwi: [0],
-      dataMaskOut: [0]
+      dataMask: [0]
     };
   }
 
@@ -110,13 +108,14 @@ function evaluatePixel(sample) {
   return {
     ndvi: [ndvi],
     ndwi: [ndwi],
-    dataMaskOut: [1]
+    dataMask: [1]
   };
 }
 `;
 
 function median(values: number[]) {
   if (values.length === 0) return null;
+
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
 
@@ -129,9 +128,11 @@ function median(values: number[]) {
 
 function toIso(dateString: string) {
   const date = new Date(dateString);
+
   if (Number.isNaN(date.getTime())) {
     throw new Error(`Invalid date: ${dateString}`);
   }
+
   return date.toISOString();
 }
 
@@ -209,13 +210,17 @@ function geometryToGeoJson(geometry: AreaGeometry) {
   const first = ring[0];
   const last = ring[ring.length - 1];
 
+  if (!first) {
+    throw new Error("Polygon geometry is empty.");
+  }
+
   if (!last || first[0] !== last[0] || first[1] !== last[1]) {
     ring.push(first);
   }
 
   return {
     type: "Polygon" as const,
-    coordinates: [ring.map(([lat, lng]) => [lng, lat])],
+    coordinates: [ring],
   };
 }
 
@@ -276,62 +281,45 @@ function getTimeIntervals(fromIso: string, toIso: string) {
   };
 }
 
-function parseBandStatsEntry(entry: CopernicusDataEntry): StatsInterval {
-  const stats = entry.outputs?.default?.bands?.B0?.stats ?? {};
-
-  return {
-    mean: typeof stats.mean === "number" ? stats.mean : null,
-    stDev: typeof stats.stDev === "number" ? stats.stDev : null,
-    sampleCount:
-      typeof stats.sampleCount === "number"
-        ? stats.sampleCount
-        : typeof stats.sampleCountNoData === "number"
-          ? stats.sampleCountNoData
-          : 0,
-  };
-}
-
 function parseStatsResponse(json: CopernicusStatsResponse): AreaStatsResult {
   const data: CopernicusDataEntry[] = Array.isArray(json?.data) ? json.data : [];
 
-  const ndviSeries: StatsInterval[] = data.map((entry: CopernicusDataEntry) => {
+  const ndviSeries: StatsInterval[] = data.map((entry) => {
     const stats = entry.outputs?.ndvi?.bands?.B0?.stats ?? {};
     return {
       mean: typeof stats.mean === "number" ? stats.mean : null,
       stDev: typeof stats.stDev === "number" ? stats.stDev : null,
-      sampleCount:
-        typeof stats.sampleCount === "number" ? stats.sampleCount : 0,
+      sampleCount: typeof stats.sampleCount === "number" ? stats.sampleCount : 0,
     };
   });
 
-  const ndwiSeries: StatsInterval[] = data.map((entry: CopernicusDataEntry) => {
+  const ndwiSeries: StatsInterval[] = data.map((entry) => {
     const stats = entry.outputs?.ndwi?.bands?.B0?.stats ?? {};
     return {
       mean: typeof stats.mean === "number" ? stats.mean : null,
       stDev: typeof stats.stDev === "number" ? stats.stDev : null,
-      sampleCount:
-        typeof stats.sampleCount === "number" ? stats.sampleCount : 0,
+      sampleCount: typeof stats.sampleCount === "number" ? stats.sampleCount : 0,
     };
   });
 
   const ndviMeans = ndviSeries
-    .map((item: StatsInterval) => item.mean)
+    .map((item) => item.mean)
     .filter((value): value is number => typeof value === "number");
 
   const ndwiMeans = ndwiSeries
-    .map((item: StatsInterval) => item.mean)
+    .map((item) => item.mean)
     .filter((value): value is number => typeof value === "number");
 
   const ndviStdValues = ndviSeries
-    .map((item: StatsInterval) => item.stDev)
+    .map((item) => item.stDev)
     .filter((value): value is number => typeof value === "number");
 
   const ndwiStdValues = ndwiSeries
-    .map((item: StatsInterval) => item.stDev)
+    .map((item) => item.stDev)
     .filter((value): value is number => typeof value === "number");
 
   const sampleCount = ndviSeries.reduce(
-    (sum: number, item: StatsInterval) => sum + (item.sampleCount || 0),
+    (sum, item) => sum + (item.sampleCount || 0),
     0
   );
 
@@ -387,12 +375,9 @@ export async function fetchSingleStats(params: {
       aggregationInterval: {
         of: "P1M",
       },
-      resx: `${resolutionMeters}m`,
-      resy: `${resolutionMeters}m`,
+      resx: resolutionMeters,
+      resy: resolutionMeters,
       evalscript: STATS_EVALSCRIPT,
-    },
-    calculations: {
-      default: {},
     },
   };
 
@@ -401,6 +386,7 @@ export async function fetchSingleStats(params: {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify(payload),
     cache: "no-store",
@@ -420,8 +406,7 @@ export async function fetchAreaStats(params: {
   from: string;
   to: string;
 }): Promise<AreaStatsResult> {
-  const safeResolutions = [20, 40, 60, 80, 120];
-
+  const safeResolutions = [60];
   let lastError: unknown = null;
 
   for (const resolution of safeResolutions) {

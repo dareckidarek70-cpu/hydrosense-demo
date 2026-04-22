@@ -49,9 +49,13 @@ function scoreFromStats(stats: {
   const ndwiVar = stats.ndwiStdDev ?? 0.08;
 
   const cropFit = clamp(Math.round(58 + ndvi * 45 - ndviVar * 40), 45, 92);
-  const irrigation = clamp(Math.round(60 + (ndwi + 0.2) * 55 - ndwiVar * 30), 40, 92);
+  const irrigation = clamp(
+    Math.round(60 + (ndwi + 0.2) * 55 - ndwiVar * 30),
+    40,
+    92
+  );
   const investment = clamp(
-    Math.round((cropFit * 0.45) + (irrigation * 0.4) + ((1 - ndviVar) * 15)),
+    Math.round(cropFit * 0.45 + irrigation * 0.4 + (1 - ndviVar) * 15),
     45,
     92
   );
@@ -72,7 +76,8 @@ function scoreFromStats(stats: {
 }
 
 function buildFallbackScores(
-  geometry: AreaGeometry
+  geometry: AreaGeometry,
+  debugMessage?: string
 ): StatsResponse {
   let seed = 0;
 
@@ -97,6 +102,9 @@ function buildFallbackScores(
       ? "Medium"
       : "High";
 
+  const baseNote =
+    "Live satellite data unavailable for this date range – using estimated values.";
+
   return {
     stats: {
       medianNdvi: null,
@@ -117,7 +125,10 @@ function buildFallbackScores(
     },
     meta: {
       source: "fallback",
-      note: "Fallback scores were used because live Copernicus statistics were temporarily unavailable.",
+      note:
+        process.env.NODE_ENV === "development" && debugMessage
+          ? `${baseNote} Debug: ${debugMessage}`
+          : baseNote,
     },
   };
 }
@@ -162,6 +173,11 @@ function isPolygonGeometry(value: unknown): value is {
   );
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -204,6 +220,11 @@ export async function POST(req: NextRequest) {
         to,
       });
 
+      console.log("COPERNICUS RESULT:", stats);
+      console.log("SAMPLE COUNT:", stats.sampleCount);
+      console.log("DATE RANGE:", { from, to });
+      console.log("GEOMETRY:", geometry);
+
       const scores = scoreFromStats(stats);
 
       const response: StatsResponse = {
@@ -222,9 +243,14 @@ export async function POST(req: NextRequest) {
         },
       });
     } catch (error) {
-      console.error("[Copernicus stats] live fetch failed, using fallback:", error);
+      const message = getErrorMessage(error);
 
-      const fallback = buildFallbackScores(geometry);
+      console.error("[Copernicus stats] live fetch failed, using fallback:");
+      console.error("MESSAGE:", message);
+      console.error("DATE RANGE:", { from, to });
+      console.error("GEOMETRY:", geometry);
+
+      const fallback = buildFallbackScores(geometry, message);
 
       return NextResponse.json(fallback, {
         status: 200,
@@ -234,13 +260,18 @@ export async function POST(req: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("[Copernicus stats] fatal route error:", error);
+    const message = getErrorMessage(error);
 
-    const fallback = buildFallbackScores({
-      type: "PointBuffer",
-      coordinates: [45.4372, 12.3346],
-      radiusMeters: 500,
-    });
+    console.error("[Copernicus stats] fatal route error:", message);
+
+    const fallback = buildFallbackScores(
+      {
+        type: "PointBuffer",
+        coordinates: [45.4372, 12.3346],
+        radiusMeters: 500,
+      },
+      message
+    );
 
     return NextResponse.json(fallback, {
       status: 200,

@@ -253,21 +253,21 @@ export function FieldSelectorPanel() {
       setIsLoadingStats(true);
 
       try {
-        const response = await fetch("/api/copernicus/stats", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            geometry: {
-              type: "PointBuffer",
-              coordinates: [pickedPoint[0], pickedPoint[1]],
-              radiusMeters: analysisRadius,
-            },
-            from: "2025-10-01T00:00:00Z",
-            to: "2026-04-20T23:59:59Z",
-          }),
-        });
+      const response = await fetch("/api/copernicus/stats", {
+      method: "POST",
+      headers: {
+      "Content-Type": "application/json",
+       },
+        body: JSON.stringify({
+          geometry: {
+          type: "PointBuffer",
+          coordinates: [pickedPoint[0], pickedPoint[1]],
+          radiusMeters: analysisRadius,
+        },
+        from: "2025-05-01T00:00:00Z",
+        to: "2025-09-30T23:59:59Z",
+    }),
+  });
 
         const text = await response.text();
 

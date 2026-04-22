@@ -4,6 +4,7 @@ import { ScoreCard } from "@/components/cards/score-card";
 import { HydroSenseWordmark } from "@/components/hydrosense-wordmark";
 import { ResultsScoreChart } from "@/components/results-score-chart";
 import { getDemoAnalysis } from "@/lib/mock-analysis";
+import { ParcelAiChat } from "@/components/parcel-ai-chat";
 
 type ResultsPageProps = {
   searchParams?: Promise<{
@@ -84,37 +85,45 @@ function formatDateTime() {
   }).format(new Date());
 }
 
+function formatCoordinate(value: number) {
+  return value.toFixed(4);
+}
+
+function formatCoordinatePair(lat: number, lng: number) {
+  return `${formatCoordinate(lat)}, ${formatCoordinate(lng)}`;
+}
+
 function buildRiskDescription(risk: string) {
   const normalized = risk.toLowerCase();
 
   if (normalized === "low") {
-    return "The current signal pattern looks stable enough for a first pilot review.";
+    return "The overall signal looks stable enough for an early review or a small pilot.";
   }
 
   if (normalized === "high") {
-    return "This area should be treated cautiously until more evidence is collected.";
+    return "This area should be treated more carefully until the main field conditions are checked on site.";
   }
 
-  return "This area looks promising, but still needs selective follow-up validation.";
+  return "The area looks promising, but it still needs a few basic checks before any stronger recommendation.";
 }
 
 function buildScoreDescription(name: string, value: number) {
   if (name === "investment") {
-    if (value >= 80) return "The business case looks strong for an early-stage review.";
-    if (value >= 70) return "The area looks promising from an investment perspective.";
-    return "The business case is still early and needs more supporting evidence.";
+    if (value >= 80) return "The area looks strong enough to justify a closer review.";
+    if (value >= 70) return "The area looks promising from an investment point of view.";
+    return "The business case is still quite early and needs more evidence.";
   }
 
   if (name === "irrigation") {
     if (value >= 80) return "Water access looks strong and irrigation appears realistic.";
-    if (value >= 70) return "Water access looks good and irrigation should be feasible.";
-    return "Irrigation looks possible, but the case is still only moderately convincing.";
+    if (value >= 70) return "Water access looks fairly good and irrigation should be possible.";
+    return "Irrigation may be possible, but the case is still only moderate.";
   }
 
   if (name === "cropFit") {
-    if (value >= 80) return "The land appears well suited for the selected crop profile.";
+    if (value >= 80) return "The land appears well suited for the chosen crop profile.";
     if (value >= 70) return "The land looks reasonably well matched to productive use.";
-    return "Crop suitability is still mixed and would benefit from deeper validation.";
+    return "Crop suitability looks mixed and would benefit from deeper checking.";
   }
 
   return "";
@@ -132,30 +141,30 @@ function buildCustomVerdict(params: {
 
   if (investment >= 80) {
     headline =
-      "This location shows strong investment potential and stands out as a high-value screening candidate.";
+      "This location looks strong and stands out as a good candidate for closer review.";
   } else if (investment >= 70) {
     headline =
-      "This location shows credible investment potential and is suitable for a presentation-ready screening brief.";
+      "This location looks promising and is worth considering in a shortlist.";
   } else {
     headline =
-      "This location remains exploratory and should be treated as an early-stage screening case.";
+      "This location should be treated as an early option rather than a leading recommendation.";
   }
 
   if (irrigation < 60 && cropFit < 60) {
     body =
-      "Water access may require additional verification, and crop suitability appears limited under the current signal pattern.";
+      "Water access may need more checking, and crop suitability looks limited under the current signal pattern.";
   } else if (irrigation < 60) {
     body =
-      "Water access may require additional verification, even though the broader land-use signal remains reasonably encouraging.";
+      "Water access may need more checking, even though the broader land profile still looks reasonably encouraging.";
   } else if (cropFit < 60) {
     body =
-      "Water conditions look workable, but crop suitability appears mixed and may require a more selective production strategy.";
+      "Water conditions look workable, but crop suitability appears more mixed and may require a selective production plan.";
   } else if (irrigation >= 75 && cropFit >= 75) {
     body =
-      "The point-based analysis suggests a balanced and attractive profile across land suitability, water access, and presentation value.";
+      "The selected point shows a balanced profile across land suitability, water access, and overall usefulness for a first screening.";
   } else {
     body =
-      "The point-based analysis suggests a moderately balanced profile, suitable for discussion, comparison, and follow-up review.";
+      "The selected point shows a reasonably balanced profile and is suitable for comparison and follow-up review.";
   }
 
   return { headline, body };
@@ -201,6 +210,7 @@ function buildCustomAnalysis(params: {
   const cropFit = toNumber(params.cropFit, 69);
   const risk = textOrFallback(params.risk, "Medium");
   const source = textOrFallback(params.source, "estimated");
+  const coordinatePair = formatCoordinatePair(lat, lng);
 
   const customVerdict = buildCustomVerdict({
     investment,
@@ -209,18 +219,25 @@ function buildCustomAnalysis(params: {
   });
 
   return {
-    parcelLabel: `Selected point — ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    parcelLabel: "Selected area",
     executiveSummary:
-      "This brief was generated from a point selected directly on the map. HydroSense combines live Copernicus-based indicators with a simple decision-support scoring model to create a fast, presentation-ready summary.",
+      "This location was selected directly on the map and quickly analysed using HydroSense. The result is a simple overview of how the area performs in terms of water access, crop suitability, and overall investment potential.",
     generatedOn: formatDateTime(),
-    verdictLabel: "Custom point review",
+    verdictLabel: "Summary",
     verdictHeadline: customVerdict.headline,
-    verdictBody: customVerdict.body,
-    quietNote: source === "live" ? "Live custom area brief" : "Estimated custom area brief",
-    locationBadge: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-    areaBadge: radius === 1000 ? "1 km analysis radius" : "500 m analysis radius",
-    terrainBadge: "Selected location",
-    confidenceBadge: source === "live" ? "Copernicus live screening" : "Estimated satellite screening",
+    verdictBody:
+      customVerdict.body +
+      " This is a useful starting point for deciding whether the area is worth a closer look.",
+    quietNote:
+      source === "live"
+        ? "Live analysis"
+        : "Estimated analysis based on available data",
+    locationBadge: `📍 ${coordinatePair}`,
+    areaBadge:
+      radius === 1000 ? "1 km screening radius" : "500 m screening radius",
+    terrainBadge: "Map-selected point",
+    confidenceBadge:
+      source === "live" ? "Live satellite data" : "Estimated data",
     sourceBadge: getResultsSourceBadge(source),
     scores: {
       investment: {
@@ -246,37 +263,39 @@ function buildCustomAnalysis(params: {
     },
     sections: [
       {
-        title: "Why this point matters",
-        body: `The selected point (${lat.toFixed(5)}, ${lng.toFixed(
+        title: "What this point shows",
+        body: `This point (${lat.toFixed(5)}, ${lng.toFixed(
           5
-        )}) was turned into a ${radius === 1000 ? "1 km" : "500 m"} screening zone to test how quickly HydroSense can move from map interaction to a full decision-ready brief.`,
+        )}) was selected directly on the map and turned into a ${
+          radius === 1000 ? "1 km" : "500 m"
+        } analysis area. It shows how quickly a location can be turned into a clear summary that supports the next decision.`,
       },
       {
-        title: "Vegetation and land signal",
+        title: "Land and vegetation",
         body:
           cropFit >= 80
-            ? "The available satellite indicators suggest a strong land-use match and a stable basis for productive agricultural planning."
+            ? "The area looks well suited for agricultural use, with conditions that support stable production."
             : cropFit >= 70
-            ? "The available indicators suggest a fairly good match between location conditions and productive use, although not without some uncertainty."
-            : "Crop suitability appears more limited at this location, so any agricultural recommendation should be treated as selective rather than broad-based.",
+            ? "The land looks reasonably suitable, although the final result may depend on crop choice and field management."
+            : "The conditions are more mixed, so any production plan should be tested carefully before going further.",
       },
       {
-        title: "Water and irrigation outlook",
+        title: "Water and irrigation",
         body:
           irrigation >= 80
-            ? "Water-related signals look supportive, which makes irrigation planning more realistic and commercially interesting."
+            ? "Water access looks strong, which makes irrigation a realistic and useful option here."
             : irrigation >= 70
-            ? "Water-related signals look reasonably supportive, suggesting that irrigation may be feasible under the right operating assumptions."
-            : "Water access may require additional verification before this location can be framed as a strong irrigation-ready opportunity.",
+            ? "Water conditions look acceptable, although irrigation would still need to be confirmed locally."
+            : "Water access may be limited or uncertain, so irrigation should be checked carefully before planning.",
       },
       {
-        title: "Presentation takeaway",
+        title: "What to do next",
         body:
           investment >= 80
-            ? "This is a strong example of how HydroSense can identify promising locations in real time and turn them into an executive summary within seconds."
+            ? "This looks like a strong candidate for a deeper review or a small pilot project."
             : investment >= 70
-            ? "This is a useful example of a balanced screening result that can support discussion, comparison, and follow-up review."
-            : "This point works well as a transparent workflow demonstration, but it should be presented as an exploratory case rather than a leading recommendation.",
+            ? "This area is worth a closer look and could be compared with other locations before making a final decision."
+            : "Treat this as an early option and verify key factors such as water, soil, and access before going further.",
       },
     ],
   };
@@ -303,7 +322,7 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
 
   const executiveSummary = textOrFallback(
     execObj.summary ?? data.summary,
-    "HydroSense suggests that this parcel combines strong crop suitability, realistic water access, and land conditions that support diversified agricultural production with moderate irrigation investment."
+    "HydroSense suggests that this parcel combines good crop suitability, workable water access, and land conditions that support a realistic agricultural plan."
   );
 
   const verdictHeadline = textOrFallback(
@@ -313,7 +332,7 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
 
   const verdictBody = textOrFallback(
     execObj.verdict,
-    "Well suited for presentation, planning, and pilot development."
+    "It is well suited for presentation, planning, and early pilot discussion."
   );
 
   const locationBadge = textOrFallback(
@@ -387,11 +406,11 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
         title: "Location context",
         body: textOrFallback(
           soilObj.narrative,
-          "This parcel presents a coherent land profile for a live presentation and follow-up review."
+          "This parcel presents a coherent land profile and is suitable for a clear first review."
         ),
       },
       {
-        title: "Water and irrigation outlook",
+        title: "Water and irrigation",
         body: textOrFallback(
           irrigationObj.narrative ?? groundwaterObj.narrative,
           "Water access looks supportive enough for a realistic irrigation discussion."
@@ -405,11 +424,11 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
         ),
       },
       {
-        title: "Recommended next step",
+        title: "What to do next",
         body:
           nextActions.length > 0
             ? nextActions.join(" ")
-            : "This parcel is suitable for shortlist review and presentation to decision-makers.",
+            : "This parcel is suitable for shortlist review and discussion with decision-makers.",
       },
     ],
   };
@@ -506,12 +525,12 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
             </div>
           </div>
         </div>
-       
+
         <div className="report-layout">
           <section className="report-section-card print-chart-card">
             <p className="supporting-label">Visual comparison</p>
             <h3>Core indicator chart</h3>
-
+          <ParcelAiChat initialAnswer={analysis.headline} />
             <ResultsScoreChart
               investment={analysis.scores.investment.value}
               irrigation={analysis.scores.irrigation.value}
