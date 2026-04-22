@@ -530,7 +530,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
           <section className="report-section-card print-chart-card">
             <p className="supporting-label">Visual comparison</p>
             <h3>Core indicator chart</h3>
-          <ParcelAiChat initialAnswer={analysis.headline} />
+          <ParcelAiChat initialAnswer={analysis.executiveSummary} />
             <ResultsScoreChart
               investment={analysis.scores.investment.value}
               irrigation={analysis.scores.irrigation.value}
