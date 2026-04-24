@@ -35,9 +35,7 @@ export default function HomePage() {
                 marginTop: "1.5rem",
               }}
             >
-              HydroSense transforms parcel signals into a concise executive brief
-              covering water access, soil profile, crop fit, irrigation potential,
-              and decision risk.
+              HydroSense transforms parcel’s satellite data into a concise executive brief covering water access, soil profile, crop fit, irrigation potential, and decision risk.
             </p>
           </div>
 

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 type HydroSenseWordmarkProps = {
@@ -11,15 +12,24 @@ export function HydroSenseWordmark({
   href,
   tone = "dark",
   subline,
-  compact = false
+  compact = false,
 }: HydroSenseWordmarkProps) {
-  const className = `hydrosense-lockup hydrosense-lockup--${tone}${compact ? " hydrosense-lockup--compact" : ""}`;
+  const className = `hydrosense-lockup hydrosense-lockup--${tone}${
+    compact ? " hydrosense-lockup--compact" : ""
+  }`;
 
   const content = (
     <>
-      <span className="hydrosense-mark" aria-hidden="true">
-        H
+      <span className="hydrosense-mark hydrosense-mark--image" aria-hidden="true">
+        <Image
+          src="/hydrosense-logo.png"
+          alt=""
+          width={40}
+          height={40}
+          priority
+        />
       </span>
+
       <span className="hydrosense-copy">
         <strong className="hydrosense-word">HydroSense</strong>
         {subline ? <span className="hydrosense-subline">{subline}</span> : null}

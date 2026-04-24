@@ -85,7 +85,9 @@ function SatelliteOverlay({
 
     const url =
       `/api/copernicus/layer?minLng=${minLng}&minLat=${minLat}&maxLng=${maxLng}&maxLat=${maxLat}` +
-      `&width=${width}&height=${height}&layer=${selectedLayer}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      `&width=${width}&height=${height}&layer=${selectedLayer}&from=${encodeURIComponent(
+        from
+      )}&to=${encodeURIComponent(to)}`;
 
     setOverlayUrl(url);
     setOverlayBounds([
@@ -118,7 +120,8 @@ function SatelliteOverlay({
       url={overlayUrl}
       bounds={overlayBounds}
       opacity={0.72}
-      zIndex={20}
+      zIndex={1}
+      interactive={false}
     />
   );
 }
@@ -157,32 +160,16 @@ function LayerControl({
         pointerEvents: "none",
       }}
     >
-      <button
-        type="button"
-        onClick={() => onChange("BASEMAP")}
-        style={buttonStyle(selectedLayer === "BASEMAP")}
-      >
+      <button type="button" onClick={() => onChange("BASEMAP")} style={buttonStyle(selectedLayer === "BASEMAP")}>
         Base map
       </button>
-      <button
-        type="button"
-        onClick={() => onChange("TRUE_COLOR")}
-        style={buttonStyle(selectedLayer === "TRUE_COLOR")}
-      >
+      <button type="button" onClick={() => onChange("TRUE_COLOR")} style={buttonStyle(selectedLayer === "TRUE_COLOR")}>
         True Color
       </button>
-      <button
-        type="button"
-        onClick={() => onChange("NDVI")}
-        style={buttonStyle(selectedLayer === "NDVI")}
-      >
+      <button type="button" onClick={() => onChange("NDVI")} style={buttonStyle(selectedLayer === "NDVI")}>
         NDVI
       </button>
-      <button
-        type="button"
-        onClick={() => onChange("NDWI")}
-        style={buttonStyle(selectedLayer === "NDWI")}
-      >
+      <button type="button" onClick={() => onChange("NDWI")} style={buttonStyle(selectedLayer === "NDWI")}>
         NDWI
       </button>
     </div>
@@ -241,7 +228,9 @@ export function LiveParcelMap({
     : [];
 
   const selectedParcel =
-    safeParcels.find((parcel) => parcel.id === selectedParcelId) ?? safeParcels[0] ?? null;
+    safeParcels.find((parcel) => parcel.id === selectedParcelId) ??
+    safeParcels[0] ??
+    null;
 
   const fallbackCenter: [number, number] = [45.4372, 12.3346];
   const mapCenter = pickedPoint ?? selectedParcel?.center ?? fallbackCenter;
@@ -250,6 +239,8 @@ export function LiveParcelMap({
     if (selectedLayer === "BASEMAP") return null;
     return selectedLayer;
   }, [selectedLayer]);
+
+  const isSatelliteLayer = selectedLayer !== "BASEMAP";
 
   return (
     <div
@@ -276,6 +267,7 @@ export function LiveParcelMap({
         <TileLayer
           attribution="&copy; OpenStreetMap contributors &copy; CARTO"
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          zIndex={0}
         />
 
         {selectedOverlayLayer ? (
@@ -305,17 +297,38 @@ export function LiveParcelMap({
               key={parcel.id}
               positions={parcel.polygon as [number, number][]}
               pathOptions={{
-                color: isSelected ? "#164b35" : "#6a8f75",
-                weight: isSelected ? 3 : 2,
-                fillColor: isSelected ? "#87c38f" : "#b8d6ba",
-                fillOpacity:
-                  selectionMode === "custom"
-                    ? isSelected
-                      ? 0.16
-                      : 0.08
-                    : isSelected
-                    ? 0.28
-                    : 0.12,
+                color: isSatelliteLayer
+                  ? isSelected
+                    ? "#ffffff"
+                    : "#dff5e4"
+                  : isSelected
+                  ? "#164b35"
+                  : "#6a8f75",
+                weight: isSatelliteLayer
+                  ? isSelected
+                    ? 4
+                    : 3
+                  : isSelected
+                  ? 3
+                  : 2,
+                fillColor: isSatelliteLayer
+                  ? isSelected
+                    ? "#2f9e62"
+                    : "#87c38f"
+                  : isSelected
+                  ? "#87c38f"
+                  : "#b8d6ba",
+                fillOpacity: isSatelliteLayer
+                  ? isSelected
+                    ? 0.2
+                    : 0.08
+                  : selectionMode === "custom"
+                  ? isSelected
+                    ? 0.16
+                    : 0.08
+                  : isSelected
+                  ? 0.28
+                  : 0.12,
               }}
               eventHandlers={{
                 click: () => onSelect(parcel.id),
@@ -332,7 +345,7 @@ export function LiveParcelMap({
 
         {selectionMode === "custom" && pickedPoint ? (
           <>
-            <Marker position={pickedPoint} icon={markerIcon}>
+            <Marker position={pickedPoint} icon={markerIcon} zIndexOffset={500}>
               <Popup>
                 Selected point
                 <br />
@@ -344,15 +357,15 @@ export function LiveParcelMap({
               center={pickedPoint}
               radius={analysisRadius}
               pathOptions={{
-                color: "#164b35",
-                fillColor: "#87c38f",
+                color: isSatelliteLayer ? "#ffffff" : "#164b35",
+                fillColor: "#2f9e62",
                 fillOpacity: 0.18,
-                weight: 2,
+                weight: isSatelliteLayer ? 4 : 2,
               }}
             />
           </>
         ) : selectedParcel ? (
-          <Marker position={selectedParcel.center} icon={markerIcon}>
+          <Marker position={selectedParcel.center} icon={markerIcon} zIndexOffset={500}>
             <Popup>{selectedParcel.label}</Popup>
           </Marker>
         ) : null}
