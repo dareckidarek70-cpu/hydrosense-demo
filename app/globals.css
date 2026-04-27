@@ -2545,3 +2545,44 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+.water-scope-card {
+  width: min(100%, 360px);
+  min-width: 320px;
+}
+
+.water-scope-card h3 {
+  max-width: 280px;
+  font-size: 1.55rem;
+  line-height: 1.08;
+}
+
+.water-scope-card .body-copy {
+  max-width: 290px;
+}
+/* Water area hero card alignment */
+.report-summary-band {
+  align-items: center;
+}
+
+.water-scope-card {
+  width: 420px !important;
+  min-width: 360px !important;
+  max-width: 420px;
+}
+
+.report-score-grid:has(.water-scope-card) {
+  justify-content: flex-start;
+}
+.report-summary-band {
+  align-items: center;
+}
+
+.water-scope-card {
+  width: 420px !important;
+  min-width: 360px !important;
+  max-width: 420px;
+}
+
+.report-score-grid:has(.water-scope-card) {
+  justify-content: flex-start;
+}

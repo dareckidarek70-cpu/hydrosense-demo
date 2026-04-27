@@ -230,11 +230,11 @@ function buildCustomVerdict(params: {
 function getResultsSourceBadge(source?: string) {
   if (source === "live") {
     return {
-      text: "LIVE",
-      bg: "rgba(36,107,68,0.12)",
-      color: "#1f5e3c",
-      border: "1px solid rgba(36,107,68,0.18)",
-    };
+  text: "LIVE",
+  bg: "#dfeee6",
+  color: "#0f3d2e",
+  border: "1px solid #9fb8ab",
+};
   }
 
   if (source === "estimated") {
@@ -698,15 +698,15 @@ const analysis = isWaterArea
 
 {isWaterArea ? (
   <div className="report-score-grid">
-    <div
-      className="glass-card"
-      style={{
-        padding: "1.5rem",
-        background: "rgba(244, 250, 247, 0.96)",
-        border: "1px solid rgba(210, 226, 219, 0.95)",
-        boxShadow: "0 18px 45px rgba(4, 24, 15, 0.18)",
-      }}
-    >
+<div
+  className="water-scope-card glass-card"
+  style={{
+    padding: "1.5rem",
+    background: "rgba(244, 250, 247, 0.96)",
+    border: "1px solid rgba(210, 226, 219, 0.95)",
+    boxShadow: "0 18px 45px rgba(4, 24, 15, 0.18)",
+  }}
+>
       <p
         className="supporting-label"
         style={{
@@ -786,15 +786,15 @@ const analysis = isWaterArea
   </section>
 ) : null}
 
-          <ParcelAiChat initialAnswer={analysis.executiveSummary} />
+<ParcelAiChat
+  initialAnswer={
+    isWaterArea
+      ? "This selection appears to be located on water. HydroSense does not calculate agricultural indicators for open water surfaces. Please select a land parcel or agricultural area nearby."
+      : analysis.executiveSummary
+  }
+  isWaterArea={isWaterArea}
+/>
 
-          {analysis.sections.map((section, index) => (
-            <ReportSectionCard
-              key={`${section.title}-${index}`}
-              title={section.title}
-              body={section.body}
-            />
-          ))}
 
           {!isWaterArea ? (
             <ReportSectionCard
