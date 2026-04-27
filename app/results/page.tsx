@@ -408,17 +408,17 @@ function buildWaterAnalysis(params: {
     verdictHeadline: "Water area detected.",
     verdictBody:
       "HydroSense analyses agricultural land, not open water surfaces. Please select a land parcel or agricultural area to generate a meaningful field screening report.",
-    quietNote: "Water area detected",
-    locationBadge: `📍 ${coordinatePair}`,
-    areaBadge: `${radiusLabel} screening radius`,
-    terrainBadge: "Water surface",
-    confidenceBadge: "Not calculated",
-    sourceBadge: {
-      text: "WATER AREA",
-      bg: "rgba(64, 120, 160, 0.14)",
-      color: "#315f7a",
-      border: "1px solid rgba(64, 120, 160, 0.22)",
-    },
+    quietNote: "Water area detected — outside agricultural scope",
+locationBadge: `📍 ${coordinatePair}`,
+areaBadge: `${radiusLabel} screening radius`,
+terrainBadge: "Water surface",
+confidenceBadge: "Not calculated",
+sourceBadge: {
+  text: "WATER AREA",
+  bg: "rgba(226, 245, 239, 0.96)",
+  color: "#103728",
+  border: "1px solid rgba(190, 222, 211, 0.95)",
+},
     scores: {
       investment: {
         value: 0,
@@ -701,16 +701,18 @@ const analysis = isWaterArea
     <div
       className="glass-card"
       style={{
-        padding: "1.25rem",
-        background: "rgba(236, 244, 239, 0.96)",
-        border: "1px solid rgba(255, 255, 255, 0.45)",
-        color: "#163728",
+        padding: "1.5rem",
+        background: "rgba(244, 250, 247, 0.96)",
+        border: "1px solid rgba(210, 226, 219, 0.95)",
+        boxShadow: "0 18px 45px rgba(4, 24, 15, 0.18)",
       }}
     >
       <p
         className="supporting-label"
         style={{
-          color: "#5b7567",
+          color: "#3f6656",
+          fontWeight: 800,
+          letterSpacing: "0.08em",
         }}
       >
         Water area
@@ -718,8 +720,10 @@ const analysis = isWaterArea
 
       <h3
         style={{
-          marginTop: "0.35rem",
-          color: "#123423",
+          marginTop: "0.45rem",
+          color: "#103728",
+          lineHeight: 1.05,
+          fontSize: "1.35rem",
         }}
       >
         Agricultural indicators not calculated
@@ -728,8 +732,10 @@ const analysis = isWaterArea
       <p
         className="body-copy"
         style={{
-          marginTop: "0.75rem",
-          color: "#456255",
+          marginTop: "0.85rem",
+          color: "#315646",
+          lineHeight: 1.55,
+          fontWeight: 600,
         }}
       >
         This point appears to be located on water, so HydroSense does not show
