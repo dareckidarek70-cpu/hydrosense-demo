@@ -42,8 +42,10 @@ export default function RootLayout({
           </header>
           <main>{children}</main>
           <footer className="container footer-note">
-            HydroSense is a concept prototype. All parcel analysis and recommendations are demo-only and based on mocked
-            Copernicus/GIS-style interpretation.
+          <strong>Prototype note:</strong> HydroSense is a concept prototype. All parcel
+            analysis and recommendations are demo-only and based on mocked
+            Copernicus/GIS-style interpretation.{" "}
+          <strong>IT support: DS</strong>
           </footer>
         </div>
       </body>

@@ -1,10 +1,10 @@
 import { PrintBriefButton } from "@/components/print-brief-button";
 import { ReportSectionCard } from "@/components/cards/report-section-card";
 import { ScoreCard } from "@/components/cards/score-card";
-import { HydroSenseWordmark } from "@/components/hydrosense-wordmark";
 import { ResultsScoreChart } from "@/components/results-score-chart";
 import { getDemoAnalysis } from "@/lib/mock-analysis";
 import { ParcelAiChat } from "@/components/parcel-ai-chat";
+import { PrintReportLogo } from "@/components/print-report-logo";
 
 type ResultsPageProps = {
   searchParams?: Promise<{
@@ -16,6 +16,7 @@ type ResultsPageProps = {
     investment?: string;
     irrigation?: string;
     cropFit?: string;
+    sustainability?: string;
     risk?: string;
     source?: string;
   }>;
@@ -49,7 +50,8 @@ type ResultsAnalysis = {
     investment: ScoreValue;
     irrigation: ScoreValue;
     cropFit: ScoreValue;
-    risk: {
+    sustainability: ScoreValue;
+    productivity: {
       value: string;
       label: string;
       description: string;
@@ -73,9 +75,20 @@ function numberOrFallback(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function clampScore(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 100) return 100;
+  return Math.round(value);
+}
+
 function toNumber(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toScore(value: string | undefined, fallback: number) {
+  return clampScore(toNumber(value, fallback));
 }
 
 function formatDateTime() {
@@ -86,44 +99,79 @@ function formatDateTime() {
 }
 
 function formatCoordinate(value: number) {
-  return value.toFixed(4);
+  return value.toFixed(5);
 }
 
 function formatCoordinatePair(lat: number, lng: number) {
   return `${formatCoordinate(lat)}, ${formatCoordinate(lng)}`;
 }
 
-function buildRiskDescription(risk: string) {
-  const normalized = risk.toLowerCase();
+function formatRadius(radius: number) {
+  return radius >= 1000 ? "1 km" : "500 m";
+}
 
-  if (normalized === "low") {
-    return "The overall signal looks stable enough for an early review or a small pilot.";
-  }
+function buildProductivityLabel(params: {
+  investment: number;
+  irrigation: number;
+  cropFit: number;
+  sustainability: number;
+}) {
+  const average = Math.round(
+    (params.investment + params.irrigation + params.cropFit + params.sustainability) / 4
+  );
+
+  if (average >= 80) return "High";
+  if (average >= 65) return "Moderate";
+  return "Early-stage";
+}
+
+function buildProductivityDescription(productivity: string) {
+  const normalized = productivity.toLowerCase();
 
   if (normalized === "high") {
-    return "This area should be treated more carefully until the main field conditions are checked on site.";
+    return "The location shows strong agricultural productivity signals and is suitable for deeper review.";
   }
 
-  return "The area looks promising, but it still needs a few basic checks before any stronger recommendation.";
+  if (normalized === "moderate") {
+    return "The location shows usable agricultural productivity signals, but the final decision should still be checked locally.";
+  }
+
+  return "The location should be treated as an early-stage option until water access, soil quality, and field conditions are verified.";
 }
 
 function buildScoreDescription(name: string, value: number) {
   if (name === "investment") {
     if (value >= 80) return "The area looks strong enough to justify a closer review.";
     if (value >= 70) return "The area looks promising from an investment point of view.";
-    return "The business case is still quite early and needs more evidence.";
+    if (value >= 55) return "The business case is still moderate and needs more evidence.";
+    return "The business case is early and should be verified before stronger recommendations.";
   }
 
   if (name === "irrigation") {
     if (value >= 80) return "Water access looks strong and irrigation appears realistic.";
     if (value >= 70) return "Water access looks fairly good and irrigation should be possible.";
-    return "Irrigation may be possible, but the case is still only moderate.";
+    if (value >= 55) return "Irrigation may be possible, but the case is still only moderate.";
+    return "Water access may be limited or uncertain and should be checked carefully.";
   }
 
   if (name === "cropFit") {
-    if (value >= 80) return "The land appears well suited for the chosen crop profile.";
-    if (value >= 70) return "The land looks reasonably well matched to productive use.";
-    return "Crop suitability looks mixed and would benefit from deeper checking.";
+    if (value >= 80)
+      return "Seasonal satellite indicators suggest a strong crop suitability profile.";
+    if (value >= 70)
+      return "Seasonal satellite indicators suggest a reasonable crop suitability profile.";
+    if (value >= 55)
+      return "Crop suitability looks mixed and would benefit from deeper seasonal checking.";
+    return "Crop suitability appears limited under the current signal pattern.";
+  }
+
+  if (name === "sustainability") {
+    if (value >= 80)
+      return "Long-term land resilience looks strong for continued agricultural use.";
+    if (value >= 70)
+      return "Long-term sustainability signals look positive, with stable environmental suitability.";
+    if (value >= 55)
+      return "Sustainability signals are moderate and should be checked against local soil and water conditions.";
+    return "Long-term sustainability signals are weak and require careful local verification.";
   }
 
   return "";
@@ -133,38 +181,46 @@ function buildCustomVerdict(params: {
   investment: number;
   irrigation: number;
   cropFit: number;
+  sustainability: number;
 }) {
-  const { investment, irrigation, cropFit } = params;
+  const { investment, irrigation, cropFit, sustainability } = params;
+  const average = Math.round((investment + irrigation + cropFit + sustainability) / 4);
 
   let headline = "";
   let body = "";
 
-  if (investment >= 80) {
+  if (average >= 80 && sustainability >= 75) {
     headline =
-      "This location looks strong and stands out as a good candidate for closer review.";
-  } else if (investment >= 70) {
+      "This map-selected area shows strong agricultural potential and is worth deeper review.";
+  } else if (average >= 70) {
     headline =
-      "This location looks promising and is worth considering in a shortlist.";
+      "This map-selected area looks promising and can be considered for shortlist comparison.";
+  } else if (average >= 55) {
+    headline =
+      "This map-selected area shows moderate potential and should be checked before stronger recommendations.";
   } else {
     headline =
-      "This location should be treated as an early option rather than a leading recommendation.";
+      "This map-selected area should be treated as an early screening option, not a final recommendation.";
   }
 
-  if (irrigation < 60 && cropFit < 60) {
+  if (irrigation < 55 && cropFit < 55) {
     body =
-      "Water access may need more checking, and crop suitability looks limited under the current signal pattern.";
-  } else if (irrigation < 60) {
+      "Water access and crop suitability both need further checking, so this point should not be treated as a strong agricultural candidate yet.";
+  } else if (sustainability < 55) {
+    body =
+      "The area has some usable signals, but long-term sustainability should be verified before it is used for planning or investment decisions.";
+  } else if (irrigation < 55) {
     body =
       "Water access may need more checking, even though the broader land profile still looks reasonably encouraging.";
-  } else if (cropFit < 60) {
+  } else if (cropFit < 55) {
     body =
       "Water conditions look workable, but crop suitability appears more mixed and may require a selective production plan.";
-  } else if (irrigation >= 75 && cropFit >= 75) {
+  } else if (irrigation >= 75 && cropFit >= 75 && sustainability >= 75) {
     body =
-      "The selected point shows a balanced profile across land suitability, water access, and overall usefulness for a first screening.";
+      "The selected point shows a balanced profile across land suitability, water access, crop fit, and long-term sustainability.";
   } else {
     body =
-      "The selected point shows a reasonably balanced profile and is suitable for comparison and follow-up review.";
+      "The selected point shows a usable but not final profile. It is suitable for comparison, follow-up review, and local verification.";
   }
 
   return { headline, body };
@@ -199,45 +255,56 @@ function buildCustomAnalysis(params: {
   investment?: string;
   irrigation?: string;
   cropFit?: string;
+  sustainability?: string;
   risk?: string;
   source?: string;
 }): ResultsAnalysis {
   const lat = toNumber(params.lat, 45.4372);
   const lng = toNumber(params.lng, 12.3346);
   const radius = toNumber(params.radius, 500);
-  const investment = toNumber(params.investment, 70);
-  const irrigation = toNumber(params.irrigation, 66);
-  const cropFit = toNumber(params.cropFit, 69);
-  const risk = textOrFallback(params.risk, "Medium");
+
+  const investment = toScore(params.investment, 70);
+  const irrigation = toScore(params.irrigation, 66);
+  const cropFit = toScore(params.cropFit, 69);
+  const sustainability = toScore(
+    params.sustainability,
+    Math.round((investment + irrigation + cropFit) / 3)
+  );
+
   const source = textOrFallback(params.source, "estimated");
   const coordinatePair = formatCoordinatePair(lat, lng);
+  const radiusLabel = formatRadius(radius);
+
+  const productivity = buildProductivityLabel({
+    investment,
+    irrigation,
+    cropFit,
+    sustainability,
+  });
 
   const customVerdict = buildCustomVerdict({
     investment,
     irrigation,
     cropFit,
+    sustainability,
   });
 
+  const isLive = source === "live";
+
   return {
-    parcelLabel: "Selected area",
-    executiveSummary:
-      "This location was selected directly on the map and quickly analysed using HydroSense. The result is a simple overview of how the area performs in terms of water access, crop suitability, and overall investment potential.",
+    parcelLabel: "Map-selected agricultural screening area",
+    executiveSummary: `This location was selected directly on the map and converted into a ${radiusLabel} decision-ready agricultural screening area. HydroSense compares water access, crop suitability, sustainability, and investment potential to support an early location review.`,
     generatedOn: formatDateTime(),
-    verdictLabel: "Summary",
+    verdictLabel: "Custom area summary",
     verdictHeadline: customVerdict.headline,
     verdictBody:
       customVerdict.body +
-      " This is a useful starting point for deciding whether the area is worth a closer look.",
-    quietNote:
-      source === "live"
-        ? "Live analysis"
-        : "Estimated analysis based on available data",
+      " The result should be treated as a practical first screening layer before field verification.",
+    quietNote: isLive ? "Live custom analysis" : "Estimated custom analysis",
     locationBadge: `📍 ${coordinatePair}`,
-    areaBadge:
-      radius === 1000 ? "1 km screening radius" : "500 m screening radius",
+    areaBadge: `${radiusLabel} screening radius`,
     terrainBadge: "Map-selected point",
-    confidenceBadge:
-      source === "live" ? "Live satellite data" : "Estimated data",
+    confidenceBadge: isLive ? "Live satellite data" : "Estimated data",
     sourceBadge: getResultsSourceBadge(source),
     scores: {
       investment: {
@@ -255,47 +322,65 @@ function buildCustomAnalysis(params: {
         label: "Crop suitability",
         description: buildScoreDescription("cropFit", cropFit),
       },
-      risk: {
-        value: risk,
-        label: "Risk level",
-        description: buildRiskDescription(risk),
+      sustainability: {
+        value: sustainability,
+        label: "Sustainability",
+        description: buildScoreDescription("sustainability", sustainability),
+      },
+      productivity: {
+        value: productivity,
+        label: "Agricultural productivity",
+        description: buildProductivityDescription(productivity),
       },
     },
     sections: [
       {
-        title: "What this point shows",
-        body: `This point (${lat.toFixed(5)}, ${lng.toFixed(
-          5
-        )}) was selected directly on the map and turned into a ${
-          radius === 1000 ? "1 km" : "500 m"
-        } analysis area. It shows how quickly a location can be turned into a clear summary that supports the next decision.`,
+        title: "Selected point context",
+        body: `The selected point is located at ${coordinatePair}. The current brief uses a ${radiusLabel} analysis radius and turns the map selection into a structured agricultural screening report.`,
       },
       {
         title: "Land and vegetation",
         body:
           cropFit >= 80
-            ? "The area looks well suited for agricultural use, with conditions that support stable production."
+            ? "Seasonal satellite indicators suggest strong crop suitability and a positive vegetation profile for agricultural use."
             : cropFit >= 70
-            ? "The land looks reasonably suitable, although the final result may depend on crop choice and field management."
-            : "The conditions are more mixed, so any production plan should be tested carefully before going further.",
+            ? "The land looks reasonably suitable, although the final result may depend on crop choice, soil quality, and field management."
+            : cropFit >= 55
+            ? "Crop suitability is moderate. The area may still be useful, but it needs deeper checking before planning production."
+            : "Crop suitability is limited under the current signal pattern, so any production plan should be verified carefully.",
       },
       {
         title: "Water and irrigation",
         body:
           irrigation >= 80
-            ? "Water access looks strong, which makes irrigation a realistic and useful option here."
+            ? "Water access looks strong, which makes irrigation a realistic and useful option for this location."
             : irrigation >= 70
-            ? "Water conditions look acceptable, although irrigation would still need to be confirmed locally."
-            : "Water access may be limited or uncertain, so irrigation should be checked carefully before planning.",
+            ? "Water conditions look acceptable, although irrigation should still be confirmed locally."
+            : irrigation >= 55
+            ? "Water access appears moderate. Irrigation may be possible, but this should be checked before any stronger recommendation."
+            : "Water access may be limited or uncertain, so irrigation should be treated as a key follow-up check.",
+      },
+      {
+        title: "Sustainability outlook",
+        body:
+          sustainability >= 80
+            ? "The long-term sustainability signal looks strong, suggesting stable land resilience and good suitability for continued agricultural use."
+            : sustainability >= 70
+            ? "The sustainability profile looks positive, although it should still be confirmed with local soil, water, and field management checks."
+            : sustainability >= 55
+            ? "The sustainability profile is moderate, so this location should be verified carefully before being treated as a long-term agricultural option."
+            : "The sustainability profile is weak and should be treated as a warning signal until local conditions are verified.",
       },
       {
         title: "What to do next",
         body:
           investment >= 80
-            ? "This looks like a strong candidate for a deeper review or a small pilot project."
+            ? "This looks like a strong candidate for a deeper review, field verification, or a small pilot project."
             : investment >= 70
-            ? "This area is worth a closer look and could be compared with other locations before making a final decision."
-            : "Treat this as an early option and verify key factors such as water, soil, and access before going further.",
+            ? "This area is worth a closer look and could be compared with other selected locations before making a final decision."
+            : investment >= 55
+            ? "This is a moderate candidate. Compare it with stronger areas and verify water, soil, and access conditions before going further."
+            : "Treat this as an early option only. Verify water access, soil quality, access roads, and local field conditions before making any decision.",
       },
     ],
   };
@@ -322,7 +407,7 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
 
   const executiveSummary = textOrFallback(
     execObj.summary ?? data.summary,
-    "HydroSense suggests that this parcel combines good crop suitability, workable water access, and land conditions that support a realistic agricultural plan."
+    "HydroSense suggests that this parcel combines good crop suitability, workable water access, sustainability signals, and land conditions that support a realistic agricultural plan."
   );
 
   const verdictHeadline = textOrFallback(
@@ -332,7 +417,7 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
 
   const verdictBody = textOrFallback(
     execObj.verdict,
-    "It is well suited for presentation, planning, and early pilot discussion."
+    "It is well suited for presentation, planning, early pilot discussion, and long-term agricultural screening."
   );
 
   const locationBadge = textOrFallback(
@@ -355,11 +440,23 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
     "High confidence"
   );
 
-  const investmentValue = numberOrFallback(execObj.investmentReadiness, 84);
-  const irrigationValue = numberOrFallback(execObj.irrigationReadiness, 81);
-  const cropFitValue = numberOrFallback(execObj.cropFitScore, 86);
+  const investmentValue = clampScore(numberOrFallback(execObj.investmentReadiness, 84));
+  const irrigationValue = clampScore(numberOrFallback(execObj.irrigationReadiness, 81));
+  const cropFitValue = clampScore(numberOrFallback(execObj.cropFitScore, 86));
 
-  const riskValue = textOrFallback(riskObj.riskBand ?? data.risk, "Low");
+  const sustainabilityValue = clampScore(
+    numberOrFallback(
+      execObj.sustainabilityScore ?? riskObj.sustainabilityScore ?? data.sustainability,
+      Math.round((investmentValue + irrigationValue + cropFitValue) / 3)
+    )
+  );
+
+  const productivityValue = buildProductivityLabel({
+    investment: investmentValue,
+    irrigation: irrigationValue,
+    cropFit: cropFitValue,
+    sustainability: sustainabilityValue,
+  });
 
   const nextActions = Array.isArray(data.recommendedNextActions)
     ? data.recommendedNextActions.filter(
@@ -395,10 +492,15 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
         label: "Crop suitability",
         description: buildScoreDescription("cropFit", cropFitValue),
       },
-      risk: {
-        value: riskValue,
-        label: "Risk level",
-        description: buildRiskDescription(riskValue),
+      sustainability: {
+        value: sustainabilityValue,
+        label: "Sustainability",
+        description: buildScoreDescription("sustainability", sustainabilityValue),
+      },
+      productivity: {
+        value: productivityValue,
+        label: "Agricultural productivity",
+        description: buildProductivityDescription(productivityValue),
       },
     },
     sections: [
@@ -420,7 +522,14 @@ function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
         title: "Crop pathway and land fit",
         body: textOrFallback(
           cropObj.narrative,
-          "Crop suitability looks strong enough to support a productive agricultural scenario."
+          "Crop suitability looks strong enough to support a productive agricultural scenario based on seasonal satellite indicators."
+        ),
+      },
+      {
+        title: "Sustainability outlook",
+        body: textOrFallback(
+          riskObj.sustainabilityNarrative ?? data.sustainabilityNarrative,
+          "The parcel shows positive long-term sustainability signals, with stable environmental suitability for continued agricultural use."
         ),
       },
       {
@@ -449,7 +558,10 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
         <div className="report-hero glass-card">
           <div className="report-hero-top">
             <div className="report-brand-summary">
-              <HydroSenseWordmark tone="light" compact />
+              <div className="print-only">
+                <PrintReportLogo />
+              </div>
+
               <p className="eyebrow">Decision-ready review</p>
               <h1 className="section-title">{analysis.parcelLabel}</h1>
             </div>
@@ -462,18 +574,13 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
           <p className="lead">{analysis.executiveSummary}</p>
 
           <div className="report-meta-row">
-            <div className="report-brand-lockup">
-              <div className="report-brand-mark">H</div>
-              <div>
-                <strong>HydroSense</strong>
-                <p className="report-quiet-note">{analysis.quietNote}</p>
-              </div>
-            </div>
+  <p className="report-quiet-note">Live custom analysis</p>
 
-            <div className="report-generated">
-              <strong>Generated on&nbsp;&nbsp;{analysis.generatedOn}</strong>
-            </div>
-          </div>
+  <div className="report-generated">
+    <span>Generated on</span>
+    <strong>{analysis.generatedOn}</strong>
+  </div>
+</div>
 
           <div className="report-summary-band">
             <div className="report-summary-copy">
@@ -522,21 +629,31 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
                 label={analysis.scores.cropFit.label}
                 description={analysis.scores.cropFit.description}
               />
+              <ScoreCard
+                title="Sustainability"
+                score={analysis.scores.sustainability.value}
+                label={analysis.scores.sustainability.label}
+                description={analysis.scores.sustainability.description}
+              />
             </div>
           </div>
         </div>
 
         <div className="report-layout">
           <section className="report-section-card print-chart-card">
-            <p className="supporting-label">Visual comparison</p>
-            <h3>Core indicator chart</h3>
-          <ParcelAiChat initialAnswer={analysis.executiveSummary} />
+          
+
             <ResultsScoreChart
               investment={analysis.scores.investment.value}
               irrigation={analysis.scores.irrigation.value}
               cropFit={analysis.scores.cropFit.value}
+              sustainability={analysis.scores.sustainability.value}
             />
+
+          
           </section>
+
+          <ParcelAiChat initialAnswer={analysis.executiveSummary} />
 
           {analysis.sections.map((section, index) => (
             <ReportSectionCard
@@ -547,9 +664,14 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
           ))}
 
           <ReportSectionCard
-            title="Risk level"
-            body={analysis.scores.risk.description}
-            bullets={[`${analysis.scores.risk.label}: ${analysis.scores.risk.value}`]}
+            title={analysis.scores.productivity.label}
+            body={analysis.scores.productivity.description}
+            bullets={[`Productivity level: ${analysis.scores.productivity.value}`]}
+          />
+
+          <ReportSectionCard
+            title="Prototype note"
+            body="HydroSense is a prototype decision-support tool. Results are generated for demonstration and early screening purposes and should be confirmed with local field verification before investment decisions."
           />
         </div>
       </section>

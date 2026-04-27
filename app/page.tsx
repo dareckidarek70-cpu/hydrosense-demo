@@ -96,7 +96,7 @@ export default function HomePage() {
                     marginBottom: "1rem",
                   }}
                 >
-                  84
+                  84%
                 </p>
                 <p className="metric-label">Investment suitability</p>
               </div>
@@ -111,7 +111,7 @@ export default function HomePage() {
                     marginBottom: "1rem",
                   }}
                 >
-                  81
+                  81%
                 </p>
                 <p className="metric-label">Irrigation readiness</p>
               </div>
@@ -126,7 +126,7 @@ export default function HomePage() {
                     marginBottom: "1rem",
                   }}
                 >
-                  86
+                  86%
                 </p>
                 <p className="metric-label">Crop fit score</p>
               </div>
@@ -141,9 +141,9 @@ export default function HomePage() {
                     marginBottom: "1rem",
                   }}
                 >
-                  Low
+                  82%
                 </p>
-                <p className="metric-label">Risk level</p>
+                <p className="metric-label">Agricultural productivity</p>
               </div>
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function HomePage() {
         <SectionHeader
           eyebrow="What HydroSense does"
           title="A premium parcel-intelligence demo built for live explanation."
-          description="HydroSense turns satellite-style parcel context into an investor-ready recommendation without forcing judges or stakeholders through raw geospatial complexity."
+          description="The prototype is designed to present groundwater potential, crop fit, irrigation opportunities and risks in a concise agriculture industry context."
         />
         <div className="card-grid">
           {demoHighlights.map((item) => (
@@ -173,18 +173,24 @@ export default function HomePage() {
           <SectionHeader
             eyebrow="3-step story"
             title="Select parcel → Analyze signals → Present the brief"
-            description="The flow is intentionally simple so the value proposition can be explained in seconds during a live pitch."
-          />
-          <div className="metric-stack">
-            {workflowSteps.map((step, index) => (
-              <MetricCard
-                key={step.title}
-                label={`0${index + 1}`}
-                title={step.title}
-                value={step.summary}
-              />
-            ))}
-          </div>
+         />
+          <div className="metric-stack workflow-stack">
+  {workflowSteps.map((step, index) => (
+    <div className="workflow-step-wrap" key={step.title}>
+      <MetricCard
+        label={`0${index + 1}`}
+        title={step.title}
+        value={step.summary}
+      />
+
+      {index < workflowSteps.length - 1 ? (
+        <div className="workflow-arrow-down" aria-hidden="true">
+          ↓
+        </div>
+      ) : null}
+    </div>
+  ))}
+</div>
         </div>
 
         <div className="timeline-card">

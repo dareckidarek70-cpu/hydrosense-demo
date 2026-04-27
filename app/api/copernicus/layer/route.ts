@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
     const layer = (search.get("layer") ?? "TRUE_COLOR") as
       | "TRUE_COLOR"
       | "NDVI"
-      | "NDWI";
+      | "NDWI"
+      | "MOISTURE_INDEX";
 
     const timeFrom = search.get("from") ?? "2026-04-01T00:00:00Z";
     const timeTo = search.get("to") ?? "2026-04-30T23:59:59Z";

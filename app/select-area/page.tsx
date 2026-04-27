@@ -10,6 +10,15 @@ export default function SelectAreaPage() {
           title="Choose an area to analyze"
           description="Select one of the sample parcels or click anywhere on the map to analyze your own location. We’ll generate a clear, presentation-ready summary."
         />
+
+        <div className="flow-arrows">
+          <div className="flow-step active">Select area</div>
+          <div className="flow-arrow">→</div>
+          <div className="flow-step">Analysis</div>
+          <div className="flow-arrow">→</div>
+          <div className="flow-step">Brief</div>
+        </div>
+
         <FieldSelectorPanel />
       </section>
     </div>

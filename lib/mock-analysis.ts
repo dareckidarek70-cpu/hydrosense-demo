@@ -3,59 +3,73 @@ import { AnalysisResult, DemoParcel, ParcelId } from "@/lib/types";
 export const demoParcels: DemoParcel[] = [
   {
     id: "parcel-a",
-    label: "Parcel A — Veneto North",
-    region: "Veneto North Corridor",
-    areaHectares: 146,
-    terrainType: "Alluvial plain with a gentle slope",
-    intendedUse: "Large-scale crop production",
-    cropModel: "Rotational cereals and oilseeds",
+    label: "Parcel A — Veneto Agricultural Area",
+    region: "Veneto Agricultural Area",
+    areaHectares: 184,
+    terrainType: "Agricultural polygon",
+    intendedUse: "Mixed agricultural development",
+    cropModel: "Mixed field crops",
     dataSources: ["Copernicus", "GIS overlays", "Terrain model"],
     coordinates: {
-      lat: 45.631,
-      lng: 11.886,
+      lat: 45.813111,
+      lng: 11.836028,
     },
   },
   {
     id: "parcel-b",
-    label: "Parcel B — Mestre Plain",
-    region: "Mestre Plain, Veneto",
+    label: "Parcel B — Veneto Irrigation Plain",
+    region: "Veneto Irrigation Plain",
     areaHectares: 212,
     terrainType: "Flat irrigable plain",
     intendedUse: "Mixed crop production",
     cropModel: "Vegetable and maize rotation",
     dataSources: ["Copernicus", "GIS overlays", "Terrain model"],
     coordinates: {
-      lat: 45.508,
-      lng: 12.249,
+      lat: 45.925917,
+      lng: 12.073278,
     },
   },
   {
     id: "parcel-c",
-    label: "Parcel C — Coastal Belt",
-    region: "Southern Coastal Belt, Veneto",
-    areaHectares: 168,
-    terrainType: "Coastal silty area with some exposure risk",
-    intendedUse: "Higher-value crop production",
-    cropModel: "Specialty crops with adapted rotation",
+    label: "Parcel C — Southern Veneto Field",
+    region: "Southern Veneto Field",
+    areaHectares: 196,
+    terrainType: "Agricultural field with mixed constraints",
+    intendedUse: "Adaptive crop rotation",
+    cropModel: "Adaptive crop rotation",
     dataSources: ["Copernicus", "GIS overlays", "Terrain model"],
     coordinates: {
-      lat: 45.233,
-      lng: 12.312,
+      lat: 45.105722,
+      lng: 11.972833,
+    },
+  },
+  {
+    id: "parcel-d" as ParcelId,
+    label: "Parcel D — Veneto Field Reference",
+    region: "Veneto Field Reference",
+    areaHectares: 176,
+    terrainType: "Reference agricultural field",
+    intendedUse: "Mixed crop suitability check",
+    cropModel: "Mixed crop suitability check",
+    dataSources: ["Copernicus", "GIS overlays", "Terrain model"],
+    coordinates: {
+      lat: 45.4662291,
+      lng: 12.061275,
     },
   },
 ];
 
-const parcelProfiles: Record<ParcelId, Omit<AnalysisResult, "meta">> = {
+const parcelProfiles: Record<string, Omit<AnalysisResult, "meta">> = {
   "parcel-a": {
     executiveSummary: {
       headline: "Parcel A looks suitable for gradual agricultural development",
       verdict: "A good option for further review and pilot planning.",
       summary:
         "HydroSense suggests that this parcel offers solid land quality, realistic water access, and crop potential that could support phased agricultural development without major infrastructure at the start.",
-      investmentReadiness: 78,
-      irrigationReadiness: 73,
-      cropFitScore: 81,
-      confidenceIndicator: "Moderate to high confidence",
+      investmentReadiness: 72,
+      irrigationReadiness: 68,
+      cropFitScore: 75,
+      confidenceIndicator: "Moderate confidence",
       keyTakeaways: [
         "Water access looks sufficient for step-by-step development.",
         "The soil profile supports a diversified crop strategy.",
@@ -73,9 +87,9 @@ const parcelProfiles: Record<ParcelId, Omit<AnalysisResult, "meta">> = {
     soilAndLandProfile: {
       dominantSoil: "Loam-silt mix with good productivity",
       drainageClass: "Well drained with limited runoff risk",
-      terrain: "Lightly sloped alluvial farmland",
+      terrain: "Agricultural polygon",
       narrative:
-        "The parcel offers a productive land base with manageable topography and drainage, making it suitable for larger annual crop programs.",
+        "The parcel offers a productive land base with manageable topography and drainage, making it suitable for mixed annual crop programs.",
     },
     cropRecommendations: {
       narrative:
@@ -83,31 +97,34 @@ const parcelProfiles: Record<ParcelId, Omit<AnalysisResult, "meta">> = {
       recommendedCrops: [
         {
           name: "Soft wheat",
-          fitScore: 83,
-          rationale: "A good match for the parcel’s soil structure, moisture balance, and general production profile.",
+          fitScore: 76,
+          rationale:
+            "A good match for the parcel’s soil structure, moisture balance, and general production profile.",
         },
         {
           name: "Sunflower",
-          fitScore: 78,
-          rationale: "A useful rotation crop with lower water demand and good compatibility with local conditions.",
+          fitScore: 72,
+          rationale:
+            "A useful rotation crop with lower water demand and good compatibility with local conditions.",
         },
         {
           name: "Maize",
-          fitScore: 81,
-          rationale: "A strong commercial option, especially when paired with well-timed irrigation.",
+          fitScore: 75,
+          rationale:
+            "A strong commercial option, especially when paired with well-timed irrigation.",
         },
       ],
     },
     irrigationPlan: {
-      recommendedSystem: "Targeted center-pivot system with zone scheduling",
+      recommendedSystem: "Targeted irrigation system with zone scheduling",
       strategy: "Start with the most productive blocks before expanding infrastructure",
       efficiencyNote: "Use variable-rate scheduling to improve water efficiency",
       narrative:
         "Irrigation looks like a useful improvement rather than an urgent requirement. A phased rollout would help control costs while increasing yield consistency and crop options.",
     },
     riskAndSustainability: {
-      sustainabilityScore: 79,
-      riskBand: "Low to moderate",
+      sustainabilityScore: 74,
+      riskBand: "Medium",
       primaryRisk: "Lower yields during longer dry periods without irrigation",
       mitigationPriority: "Combine moisture monitoring with gradual irrigation rollout",
       narrative:
@@ -160,17 +177,20 @@ const parcelProfiles: Record<ParcelId, Omit<AnalysisResult, "meta">> = {
         {
           name: "Processing tomato",
           fitScore: 88,
-          rationale: "A strong match for irrigable plain conditions and value-focused production.",
+          rationale:
+            "A strong match for irrigable plain conditions and value-focused production.",
         },
         {
           name: "Maize",
           fitScore: 86,
-          rationale: "A reliable commercial choice supported by balanced water and soil conditions.",
+          rationale:
+            "A reliable commercial choice supported by balanced water and soil conditions.",
         },
         {
           name: "Radicchio",
           fitScore: 80,
-          rationale: "Adds higher-value potential when combined with controlled irrigation.",
+          rationale:
+            "Adds higher-value potential when combined with controlled irrigation.",
         },
       ],
     },
@@ -203,50 +223,53 @@ const parcelProfiles: Record<ParcelId, Omit<AnalysisResult, "meta">> = {
       headline: "Parcel C offers potential, but with tighter environmental limits",
       verdict: "Better suited for selective crop use than broad expansion.",
       summary:
-        "HydroSense suggests that this parcel can support agricultural use, but it would require more careful crop selection, water management, and environmental control because of its coastal setting.",
-      investmentReadiness: 71,
-      irrigationReadiness: 67,
-      cropFitScore: 74,
+        "HydroSense suggests that this parcel can support agricultural use, but it would require more careful crop selection, water management, and environmental control because of its field constraints.",
+      investmentReadiness: 67,
+      irrigationReadiness: 73,
+      cropFitScore: 70,
       confidenceIndicator: "Moderate confidence",
       keyTakeaways: [
         "The parcel can work well if crop selection matches local conditions.",
         "Water management should focus on precision rather than expansion.",
-        "Environmental sensitivity matters more here than on the inland parcels.",
+        "Environmental sensitivity matters more here than on the strongest parcel.",
       ],
     },
     groundwaterAndMoisture: {
       groundwaterPotential: "Moderate, with some seasonal uncertainty",
-      moistureStatus: "Useful moisture retention, but less stable under coastal stress",
+      moistureStatus: "Useful moisture retention, but less stable under pressure",
       rechargeOutlook: "Adequate, with monitoring needed",
       potentialScore: 68,
       narrative:
-        "The concept model suggests workable water access, but with more variation than on inland parcels. Moisture conditions could support cultivation, but only with careful irrigation timing and regular monitoring.",
+        "The concept model suggests workable water access, but with more variation than on the strongest parcel. Moisture conditions could support cultivation, but only with careful irrigation timing and regular monitoring.",
     },
     soilAndLandProfile: {
-      dominantSoil: "Silty clay loam with coastal sensitivity",
+      dominantSoil: "Silty clay loam with mixed constraints",
       drainageClass: "Moderate drainage with local exposure constraints",
-      terrain: "Flat coastal agricultural area",
+      terrain: "Agricultural field with mixed constraints",
       narrative:
-        "The parcel is workable, but the land profile calls for tighter agronomic control. It is better suited to a focused, higher-value crop strategy than to large-scale expansion.",
+        "The parcel is workable, but the land profile calls for tighter agronomic control. It is better suited to a focused crop strategy than to broad expansion.",
     },
     cropRecommendations: {
       narrative:
-        "Crop selection should prioritize resilience, value, and compatibility with coastal water-management conditions.",
+        "Crop selection should prioritize resilience, value, and compatibility with local water-management conditions.",
       recommendedCrops: [
         {
           name: "Barley",
-          fitScore: 77,
-          rationale: "A resilient option with manageable water demand under changing coastal conditions.",
-        },
-        {
-          name: "Artichoke",
-          fitScore: 73,
-          rationale: "Offers specialty-value potential when paired with careful irrigation management.",
+          fitScore: 72,
+          rationale:
+            "A resilient option with manageable water demand under changing seasonal conditions.",
         },
         {
           name: "Forage mix",
-          fitScore: 72,
-          rationale: "Supports a lower-risk strategy and helps protect soil cover.",
+          fitScore: 70,
+          rationale:
+            "Supports a lower-risk strategy and helps protect soil cover.",
+        },
+        {
+          name: "Sunflower",
+          fitScore: 69,
+          rationale:
+            "A flexible rotation option where water use should be controlled.",
         },
       ],
     },
@@ -255,20 +278,97 @@ const parcelProfiles: Record<ParcelId, Omit<AnalysisResult, "meta">> = {
       strategy: "Focus on the most suitable crop zones first",
       efficiencyNote: "Protect water quality and avoid over-application",
       narrative:
-        "Irrigation is possible here, but it should be selective. The strongest case is a precision-based strategy that protects margins and environmental stability, rather than trying to maximize irrigated area.",
+        "Irrigation is possible here, but it should be selective. The strongest case is a precision-based strategy that protects margins and environmental stability.",
     },
     riskAndSustainability: {
-      sustainabilityScore: 75,
+      sustainabilityScore: 72,
       riskBand: "Moderate",
-      primaryRisk: "Coastal exposure and salinity sensitivity with poor water management",
-      mitigationPriority: "Use salinity monitoring and conservative crop selection",
+      primaryRisk: "Seasonal variability and mixed land conditions",
+      mitigationPriority: "Use monitoring and conservative crop selection",
       narrative:
-        "Parcel C can still support a sustainability-focused approach, but only with stronger controls and a more selective cultivation strategy than the inland parcels.",
+        "Parcel C can still support a sustainability-focused approach, but only with stronger controls and a more selective cultivation strategy.",
     },
     recommendedNextActions: [
       "Check water quality before planning any larger irrigation investment.",
-      "Review crop economics under a more conservative coastal-risk scenario.",
+      "Review crop economics under a more conservative scenario.",
       "Treat this parcel as a selective-value option rather than a scale-first opportunity.",
+    ],
+    conceptNote:
+      "Concept simulation only. Results are based on mocked Copernicus, GIS overlay, and terrain-model interpretation for presentation purposes.",
+  },
+
+  "parcel-d": {
+    executiveSummary: {
+      headline: "Parcel D shows balanced agricultural potential",
+      verdict: "A stable option for diversified farming strategy.",
+      summary:
+        "HydroSense indicates that this parcel offers a balanced mix of soil quality, water availability, and crop flexibility, making it suitable for mixed agricultural use.",
+      investmentReadiness: 74,
+      irrigationReadiness: 76,
+      cropFitScore: 78,
+      confidenceIndicator: "Moderate confidence",
+      keyTakeaways: [
+        "Balanced soil and water conditions support flexibility.",
+        "The parcel is suitable for diversified crop planning.",
+        "Irrigation may improve consistency, but it is not the only factor behind the parcel’s potential.",
+      ],
+    },
+    groundwaterAndMoisture: {
+      groundwaterPotential: "Moderate",
+      moistureStatus: "Stable with seasonal variation",
+      rechargeOutlook: "Consistent",
+      potentialScore: 74,
+      narrative:
+        "Water availability appears stable enough to support agricultural planning with moderate irrigation support.",
+    },
+    soilAndLandProfile: {
+      dominantSoil: "Loam mix",
+      drainageClass: "Balanced drainage",
+      terrain: "Reference agricultural field",
+      narrative:
+        "The terrain supports standard agricultural operations with limited constraints and a balanced production profile.",
+    },
+    cropRecommendations: {
+      narrative:
+        "This parcel supports a diversified crop mix with moderate irrigation support.",
+      recommendedCrops: [
+        {
+          name: "Maize",
+          fitScore: 79,
+          rationale: "Reliable yield under moderate irrigation.",
+        },
+        {
+          name: "Wheat",
+          fitScore: 76,
+          rationale: "Stable and adaptable crop.",
+        },
+        {
+          name: "Soybean",
+          fitScore: 75,
+          rationale:
+            "Useful as part of a diversified crop rotation strategy.",
+        },
+      ],
+    },
+    irrigationPlan: {
+      recommendedSystem: "Flexible irrigation system",
+      strategy: "Expand based on seasonal performance",
+      efficiencyNote: "Monitor moisture levels and adjust irrigation timing",
+      narrative:
+        "Irrigation can improve yield consistency but does not appear to be the only limiting factor in this concept scenario.",
+    },
+    riskAndSustainability: {
+      sustainabilityScore: 77,
+      riskBand: "Moderate",
+      primaryRisk: "Seasonal variability",
+      mitigationPriority: "Monitoring and adaptive planning",
+      narrative:
+        "The parcel offers a stable sustainability profile with manageable seasonal variability.",
+    },
+    recommendedNextActions: [
+      "Validate soil and water conditions.",
+      "Test crop rotation strategy.",
+      "Monitor seasonal performance before scaling investment.",
     ],
     conceptNote:
       "Concept simulation only. Results are based on mocked Copernicus, GIS overlay, and terrain-model interpretation for presentation purposes.",

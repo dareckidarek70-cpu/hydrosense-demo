@@ -31,7 +31,7 @@ export function ScoreCard({
 
   return (
     <article className={`glass-card score-card${className ? ` ${className}` : ""}`}>
-      <p className="score-value">{resolvedScore}</p>
+      <p className="score-value">{resolvedScore}%</p>
 
       <div>
         <h3>{title}</h3>

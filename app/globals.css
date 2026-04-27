@@ -1665,439 +1665,14 @@ textarea {
     text-align: center !important;
   }
 }
-.parcel-ai-chat {
-  margin-top: 32px;
-  padding: 24px;
-  border: 1px solid rgba(17, 49, 34, 0.08);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 20px 50px rgba(17, 49, 34, 0.06);
-}
+/* === AI PANEL — CLEAN CURRENT VERSION === */
 
-.parcel-ai-chat__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.parcel-ai-chat__eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #5f7a68;
-}
-
-.parcel-ai-chat__title {
-  margin: 0;
-  font-size: 28px;
-  line-height: 1.1;
-  color: #113122;
-}
-
-.parcel-ai-chat__badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #e6efe6;
-  color: #294936;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.parcel-ai-chat__intro {
-  margin: 14px 0 20px;
-  color: #486154;
-  max-width: 780px;
-}
-
-.parcel-ai-chat__quick {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.parcel-ai-chat__quick-btn,
-.parcel-ai-chat__followup-btn {
-  border: 1px solid rgba(17, 49, 34, 0.1);
-  background: #f6f8f5;
-  color: #173423;
-  border-radius: 999px;
-  padding: 10px 14px;
-  cursor: pointer;
-  font: inherit;
-}
-
-.parcel-ai-chat__messages {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.parcel-ai-chat__empty {
-  padding: 18px;
-  border-radius: 18px;
-  background: #f8faf8;
-  color: #667a6f;
-}
-
-.parcel-ai-chat__msg {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.parcel-ai-chat__label {
-  font-size: 12px;
-  color: #5f7a68;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.parcel-ai-chat__bubble {
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: #f8faf8;
-  border: 1px solid rgba(17, 49, 34, 0.08);
-  color: #173423;
-}
-
-.parcel-ai-chat__msg--user .parcel-ai-chat__bubble {
-  background: #163b29;
-  color: white;
-}
-
-.parcel-ai-chat__bubble p {
-  margin: 10px 0 0;
-}
-
-.parcel-ai-chat__warning {
-  color: #8a5a00;
-}
-
-.parcel-ai-chat__followups {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.parcel-ai-chat__composer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.parcel-ai-chat__textarea {
-  width: 100%;
-  border-radius: 18px;
-  border: 1px solid rgba(17, 49, 34, 0.12);
-  padding: 14px 16px;
-  font: inherit;
-  resize: vertical;
-  min-height: 96px;
-  background: white;
-}
-
-.parcel-ai-chat__send {
-  align-self: flex-start;
-  border: none;
-  border-radius: 999px;
-  padding: 12px 18px;
-  background: #163b29;
-  color: white;
-  font: inherit;
-  cursor: pointer;
-}
-
-.parcel-ai-chat__send:disabled,
-.parcel-ai-chat__quick-btn:disabled,
-.parcel-ai-chat__followup-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-@media (max-width: 900px) {
-  .parcel-ai-chat {
-    padding: 18px;
-  }
-
-  .parcel-ai-chat__header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .parcel-ai-chat__title {
-    font-size: 24px;
-  }
-}
-.parcel-ai-panel {
-  background: #fcfcfb;
-  border: 1px solid rgba(33, 61, 45, 0.08);
-  border-radius: 28px;
-  padding: 28px;
-  box-shadow: 0 18px 40px rgba(26, 50, 37, 0.06);
-}
-
-.parcel-ai-panel__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-.parcel-ai-panel__eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #5d7968;
-}
-
-.parcel-ai-panel__title {
-  margin: 0;
-  font-size: clamp(1.7rem, 2vw, 2.2rem);
-  line-height: 1.05;
-  color: #183426;
-}
-
-.parcel-ai-panel__badges {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.parcel-ai-panel__badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: #eaf3ed;
-  color: #214634;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.parcel-ai-panel__badge--soft {
-  background: #f2f6f3;
-  color: #56705f;
-}
-
-.parcel-ai-panel__intro {
-  margin: 0 0 18px;
-  max-width: 760px;
-  font-size: 1rem;
-  line-height: 1.6;
-  color: #4f6558;
-}
-
-.parcel-ai-panel__quick {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 24px;
-}
-
-.parcel-ai-panel__quick-btn,
-.parcel-ai-panel__followup-btn {
-  border: 1px solid rgba(36, 67, 50, 0.12);
-  background: #ffffff;
-  color: #1f3d2d;
-  border-radius: 999px;
-  padding: 10px 14px;
-  font-size: 0.95rem;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.2s ease,
-    box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
-.parcel-ai-panel__quick-btn:hover,
-.parcel-ai-panel__followup-btn:hover {
-  transform: translateY(-1px);
-  border-color: rgba(30, 74, 50, 0.22);
-  box-shadow: 0 10px 18px rgba(30, 74, 50, 0.06);
-  background: #fbfdfb;
-}
-
-.parcel-ai-panel__thread {
-  display: grid;
-  gap: 18px;
-  margin-bottom: 24px;
-}
-
-.parcel-ai-panel__message {
-  display: grid;
-  gap: 8px;
-}
-
-.parcel-ai-panel__message-label {
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: #60796a;
-}
-
-.parcel-ai-panel__message--user .parcel-ai-panel__message-bubble {
-  background: linear-gradient(135deg, #173d2c 0%, #0f4f35 100%);
-  color: #ffffff;
-  border-radius: 18px;
-  padding: 14px 16px;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.parcel-ai-panel__message-card {
-  border: 1px solid rgba(31, 61, 45, 0.1);
-  background: #ffffff;
-  border-radius: 22px;
-  padding: 18px 18px 16px;
-  box-shadow: 0 12px 24px rgba(25, 49, 36, 0.04);
-}
-
-.parcel-ai-panel__message-title {
-  margin: 0 0 10px;
-  font-size: 1.15rem;
-  color: #1a3327;
-}
-
-.parcel-ai-panel__message-text {
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.65;
-  color: #43594d;
-}
-
-.parcel-ai-panel__warning {
-  margin: 12px 0 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: #8c5a1f;
-}
-
-.parcel-ai-panel__followups {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.parcel-ai-panel__composer {
-  border-top: 1px solid rgba(31, 61, 45, 0.08);
-  padding-top: 20px;
-}
-
-.parcel-ai-panel__composer-label {
-  display: block;
-  margin-bottom: 10px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #264534;
-}
-
-.parcel-ai-panel__textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 88px;
-  border-radius: 18px;
-  border: 1px solid rgba(32, 60, 45, 0.12);
-  background: #ffffff;
-  padding: 14px 16px;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: #1f342a;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.parcel-ai-panel__textarea:focus {
-  border-color: rgba(27, 81, 53, 0.28);
-  box-shadow: 0 0 0 4px rgba(50, 110, 77, 0.08);
-}
-
-.parcel-ai-panel__composer-actions {
-  margin-top: 14px;
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.parcel-ai-panel__composer-note {
-  font-size: 0.92rem;
-  color: #648071;
-}
-
-.parcel-ai-panel__send {
-  border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #153827 0%, #0f4f35 100%);
-  color: #ffffff;
-  padding: 12px 20px;
-  font-size: 0.98rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-}
-
-.parcel-ai-panel__send:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(21, 56, 39, 0.16);
-}
-
-.parcel-ai-panel__send:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-  .parcel-ai-panel {
-    padding: 22px 18px;
-    border-radius: 22px;
-  }
-
-  .parcel-ai-panel__title {
-    font-size: 1.6rem;
-  }
-
-  .parcel-ai-panel__composer-actions {
-    align-items: stretch;
-  }
-
-  .parcel-ai-panel__send {
-    width: 100%;
-    justify-content: center;
-  }
-}
-.parcel-ai-panel__message-bubble--soft {
-  background: #f3f6f4;
-  color: #1f3d2d;
-  border: 1px solid rgba(31, 61, 45, 0.1);
-  border-radius: 18px;
-  padding: 14px 16px;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.parcel-ai-panel__message-card--primary {
-  border-color: rgba(25, 61, 42, 0.14);
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
-}
 .ai-panel {
-  background: rgba(255,255,255,0.85);
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 20px;
   padding: 28px;
   margin-top: 32px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(8px);
 }
 
@@ -2199,11 +1774,15 @@ textarea {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
+/* === HYDROSENSE LOGO IMAGE === */
+
 .hydrosense-mark--image {
   background: transparent;
   box-shadow: none;
@@ -2215,4 +1794,752 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* === PARTNER LOGOS === */
+
+.partner-logos {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 18px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(17, 49, 34, 0.14);
+}
+
+.partner-logos img {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* === HYDROSENSE BRIEF: 4 SCORE CARDS === */
+
+.report-score-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.report-score-grid .score-card {
+  min-width: 0;
+  padding: 18px;
+}
+
+.report-score-grid .score-card h3 {
+  font-size: 0.98rem;
+}
+
+.report-score-grid .score-card .body-copy,
+.report-score-grid .score-card p {
+  font-size: 0.9rem;
+  line-height: 1.52;
+}
+
+.report-score-grid .score-card .score-value {
+  font-size: clamp(1.45rem, 1.75vw, 1.9rem);
+  min-width: 54px;
+}
+
+.report-summary-band {
+  grid-template-columns: 0.95fr 1.25fr;
+}
+
+@media (max-width: 1024px) {
+  .report-score-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-summary-band {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .partner-logos {
+    gap: 8px;
+    margin-left: 10px;
+    padding-left: 10px;
+  }
+
+  .partner-logos img {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (max-width: 640px) {
+  .report-score-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === PRINT FIX FOR 4 SCORE CARDS === */
+
+@media print {
+  .report-score-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .report-score-grid .score-card {
+    padding: 12px !important;
+    min-width: 0 !important;
+  }
+
+  .report-score-grid .score-card h3 {
+    font-size: 10.5pt !important;
+    line-height: 1.1 !important;
+  }
+
+  .report-score-grid .score-card p,
+  .report-score-grid .score-card .body-copy {
+    font-size: 8.8pt !important;
+    line-height: 1.28 !important;
+  }
+
+  .report-score-grid .score-card .score-value {
+    font-size: 17pt !important;
+    min-width: 42px !important;
+  }
+
+  .report-summary-band {
+    grid-template-columns: 1fr !important;
+  }
+}
+.prototype-footer {
+  margin-top: 32px;
+  padding: 18px 0;
+  color: #526b5f;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.prototype-footer span {
+  margin-left: 12px;
+  font-weight: 700;
+  color: #113122;
+}
+.flow-arrows {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 24px;
+  flex-wrap: wrap;
+}
+
+.flow-step {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(17, 49, 34, 0.06);
+  color: #456755;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.flow-step.active {
+  background: #163b29;
+  color: white;
+}
+
+.flow-arrow {
+  font-size: 1rem;
+  color: #6f8a7b;
+}
+.workflow-stack {
+  position: relative;
+  gap: 18px;
+}
+
+.workflow-step-wrap {
+  position: relative;
+}
+
+.workflow-arrow-down {
+  width: 38px;
+  height: 38px;
+  margin: -2px 0 -2px 22px;
+  display: grid;
+  place-items: center;
+  color: #113122;
+  font-size: 2.4rem;
+  font-weight: 900;
+  line-height: 1;
+}
+@media print {
+  .recharts-tooltip-wrapper {
+    display: none !important;
+  }
+
+  .screen-only {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .chart-card,
+  .report-section-card,
+  .ai-insight-section,
+  .score-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  header,
+  .brand-header,
+  .hero-brand,
+  .top-brand {
+    position: static !important;
+  }
+}
+@media print {
+  .chart-card,
+  .visual-chart-card,
+  .core-indicator-chart {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .chart-card .bars,
+  .chart-card .bar-grid,
+  .chart-card .chart-bars,
+  .visual-chart-card .bars,
+  .visual-chart-card .bar-grid,
+  .visual-chart-card .chart-bars,
+  .core-indicator-chart .bars,
+  .core-indicator-chart .bar-grid,
+  .core-indicator-chart .chart-bars {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 24px !important;
+    align-items: end !important;
+  }
+
+  .chart-card .bar-item,
+  .visual-chart-card .bar-item,
+  .core-indicator-chart .bar-item {
+    min-width: 0 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .chart-card p,
+  .visual-chart-card p,
+  .core-indicator-chart p {
+    clear: both !important;
+    margin-top: 24px !important;
+  }
+}
+/* =========================
+   PRINT FIX — chart + logo
+   ========================= */
+
+@media print {
+  /* Nie drukujemy górnego paska aplikacji z pełnym logo i partnerami na każdej stronie */
+  header,
+  .site-header,
+  .app-header,
+  .top-header,
+  .main-header,
+  .navbar,
+  .navigation {
+    display: none !important;
+  }
+
+  /* Usuwamy animacje i efekty, które psują układ w PDF */
+  * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+
+  /* Karty i sekcje mają trzymać się razem */
+  .report-card,
+  .section-card,
+  .chart-card,
+  .visual-comparison,
+  .ai-insight-section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Sekcja wykresu nie może się łamać w środku */
+  .visual-comparison,
+  .chart-card {
+    overflow: visible !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+
+  /* Najważniejsze: wymuszenie 4 słupków w jednym rzędzie */
+  .chart-bars,
+  .score-chart-bars,
+  .indicator-bars,
+  .comparison-bars,
+  .visual-bars {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 20px !important;
+    align-items: end !important;
+    width: 100% !important;
+  }
+
+  /* Pojedynczy słupek nie może wypaść niżej */
+  .chart-bar-item,
+  .score-chart-item,
+  .indicator-bar,
+  .comparison-bar,
+  .visual-bar {
+    min-width: 0 !important;
+    width: auto !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Zmniejszamy wykres tylko w druku, żeby 4 słupki się mieściły */
+  .chart-card {
+    padding: 18px 22px !important;
+  }
+
+  .chart-card h2,
+  .chart-card h3 {
+    margin-bottom: 12px !important;
+  }
+
+  .bar-track,
+  .score-bar-track,
+  .indicator-track {
+    height: 140px !important;
+    max-height: 140px !important;
+  }
+
+  .bar-fill,
+  .score-bar-fill,
+  .indicator-fill {
+    max-height: 140px !important;
+  }
+
+  /* Tekst pod wykresem ma być pod całym wykresem, nie obok ani pod czwartym słupkiem */
+  .chart-description,
+  .score-chart-description,
+  .visual-comparison-description {
+    clear: both !important;
+    display: block !important;
+    margin-top: 18px !important;
+  }
+
+  /* AI panel nie powinien wchodzić pod wykres */
+  .ai-insight-section,
+  .ai-expert-insight,
+  .parcel-ai-chat {
+    margin-top: 28px !important;
+    break-before: auto !important;
+  }
+}
+/* =========================================================
+   HYDROSENSE — PRINT FIX: CHART, LOGO, PAGE STABILITY
+   ========================================================= */
+
+.report-chart-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  .report-chart-screen {
+    display: none !important;
+  }
+
+  .report-chart-print {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .report-chart-card {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    overflow: hidden !important;
+    padding: 18px 20px 16px !important;
+    margin-top: 8px !important;
+    margin-bottom: 18px !important;
+    border-radius: 22px !important;
+  }
+
+  .print-chart-inner {
+    width: 100% !important;
+  }
+
+  .print-chart-kicker {
+    margin: 0 0 4px !important;
+    font-size: 13px !important;
+    letter-spacing: 0.22em !important;
+    text-transform: uppercase !important;
+    color: #587160 !important;
+    font-weight: 700 !important;
+  }
+
+  .print-chart-heading {
+    margin: 0 0 14px !important;
+    font-size: 18px !important;
+    line-height: 1.15 !important;
+    color: #111111 !important;
+  }
+
+  .print-bars-vertical {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    column-gap: 18px !important;
+    align-items: end !important;
+    width: 100% !important;
+    height: 210px !important;
+    margin: 0 auto 16px !important;
+    overflow: hidden !important;
+  }
+
+  .print-bar-vertical-item {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 210px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-bar-vertical-value {
+    font-size: 20px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    margin-bottom: 7px !important;
+    color: #111111 !important;
+  }
+
+  .print-bar-vertical-track {
+    width: 54px !important;
+    height: 128px !important;
+    border-radius: 12px 12px 0 0 !important;
+    background: #d4d4d4 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: flex-end !important;
+  }
+
+  .print-bar-vertical-fill {
+    width: 100% !important;
+    border-radius: 10px 10px 0 0 !important;
+    display: block !important;
+  }
+
+  .print-bar-vertical-label {
+    margin-top: 8px !important;
+    font-size: 13px !important;
+    line-height: 1.1 !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    color: #111111 !important;
+    white-space: nowrap !important;
+  }
+
+  .report-chart-note {
+    margin-top: 8px !important;
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+    position: static !important;
+    clear: both !important;
+  }
+}
+.print-report-logo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  width: 100%;
+  max-width: 620px;
+}
+
+.print-report-main-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.print-report-hydrosense-mark {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.print-report-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.print-report-brand-text strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #102f22;
+}
+
+.print-report-brand-text span {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: #5d7568;
+  font-weight: 600;
+}
+
+.print-report-partner-logos {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 24px;
+  border-left: 1px solid rgba(20, 47, 34, 0.18);
+}
+
+.print-report-partner-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  display: block;
+  border-radius: 12px;
+}
+
+@media print {
+  .print-report-logo {
+    max-width: 520px;
+    gap: 20px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-report-hydrosense-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .print-report-brand-text strong {
+    font-size: 1rem;
+  }
+
+  .print-report-brand-text span {
+    font-size: 0.56rem;
+    letter-spacing: 0.1em;
+  }
+
+  .print-report-partner-logos {
+    gap: 8px;
+    padding-left: 16px;
+  }
+
+  .print-report-partner-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+  }
+}
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block;
+  }
+}
+/* =========================================================
+   HYDROSENSE — SCREEN POLISH: CLEAN REPORT HERO
+   ========================================================= */
+
+/* Zielona karta raportu — trochę stabilniejszy układ */
+.report-hero {
+  padding: 28px;
+  border-radius: 32px;
+  overflow: hidden;
+}
+
+/* Góra zielonej karty */
+.report-hero-top {
+  align-items: flex-start;
+}
+
+/* Tekst w hero nie powinien rozlewać się zbyt szeroko */
+.report-hero-top > div:first-child {
+  max-width: 720px;
+}
+
+/* Lead w zielonym hero */
+.report-hero .lead {
+  max-width: 660px;
+  font-size: 0.98rem;
+  line-height: 1.68;
+}
+
+/* Meta row po usunięciu pseudo-logo H */
+.report-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(232, 247, 236, 0.13);
+  border-bottom: 1px solid rgba(232, 247, 236, 0.13);
+}
+
+/* Kasujemy wizualnie stare H, gdyby gdzieś jeszcze zostało w JSX */
+.report-brand-mark {
+  display: none !important;
+}
+
+/* Sam tekst meta */
+.report-brand-summary {
+  display: block;
+}
+
+.report-quiet-note {
+  margin: 0;
+  color: rgba(232, 247, 236, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.report-generated {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+  text-align: right;
+  color: rgba(247, 255, 248, 0.92);
+  white-space: nowrap;
+}
+
+.report-generated span {
+  color: rgba(232, 247, 236, 0.78);
+  font-size: 0.88rem;
+}
+
+.report-generated strong {
+  color: #f7fff8;
+  font-weight: 800;
+}
+
+/* Dolna część hero: tekst + 4 karty */
+.report-summary-band {
+  grid-template-columns: minmax(0, 0.9fr) minmax(560px, 1.25fr);
+  align-items: start;
+  gap: 26px;
+}
+
+/* Karty score w hero */
+.report-score-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.report-score-grid .score-card {
+  min-width: 0;
+  padding: 18px;
+  border-radius: 26px;
+}
+
+.report-score-grid .score-card h3 {
+  font-size: 0.98rem;
+  line-height: 1.08;
+}
+
+.report-score-grid .score-card .score-value {
+  font-size: clamp(1.55rem, 1.8vw, 1.95rem);
+  min-width: 52px;
+}
+
+.report-score-grid .score-card p,
+.report-score-grid .score-card .body-copy {
+  font-size: 0.88rem;
+  line-height: 1.48;
+}
+
+/* Chipy pod opisem */
+.report-summary-copy .badge-row {
+  gap: 10px;
+}
+
+.report-summary-copy .pill,
+.report-summary-copy .signal {
+  padding: 7px 11px;
+  font-size: 0.8rem;
+}
+
+/* Wykres — usuwa zdublowane wrażenie tekstu pod kartą */
+.report-chart-card + .body-copy,
+.report-chart-card + p {
+  margin-top: 12px;
+}
+
+/* AI panel trochę bliżej i czyściej */
+.ai-panel {
+  margin-top: 34px;
+  border-radius: 28px;
+}
+
+/* Responsywność */
+@media (max-width: 1180px) {
+  .report-summary-band {
+    grid-template-columns: 1fr;
+  }
+
+  .report-score-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .report-score-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-generated {
+    white-space: normal;
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .report-hero {
+    padding: 22px;
+    border-radius: 24px;
+  }
+
+  .report-meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .report-score-grid {
+    grid-template-columns: 1fr;
+  }
 }

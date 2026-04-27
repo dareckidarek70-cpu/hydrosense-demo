@@ -51,10 +51,11 @@ export function ParcelAiChat({ initialAnswer }: Props) {
       <div className="ai-questions">
         {[
           "Is this parcel suitable for irrigation investment?",
-          "Which crops look most realistic for this parcel?",
-          "How risky is this parcel for a first pilot?",
-          "What should be verified before investment?",
-        ].map((q) => (
+           "What type of irrigation would be the most optimal?",
+           "Which crops look most profitable for this parcel?",
+           "What are the most common risks for plants in this environment?",
+           "What should be verified before investment?",
+          ].map((q) => (
           <button key={q} onClick={() => askAI(q)}>
             {q}
           </button>

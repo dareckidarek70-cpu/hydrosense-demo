@@ -15,17 +15,20 @@ type ResultsScoreChartProps = {
   investment: number;
   irrigation: number;
   cropFit: number;
+  sustainability: number;
 };
 
 export function ResultsScoreChart({
   investment,
   irrigation,
   cropFit,
+  sustainability,
 }: ResultsScoreChartProps) {
   const data = [
     { name: "Investment", value: investment, color: "#73b17d" },
     { name: "Irrigation", value: irrigation, color: "#79c1b2" },
     { name: "Crop Fit", value: cropFit, color: "#9aca84" },
+    { name: "Sustainability", value: sustainability, color: "#b6c979" },
   ];
 
   return (
@@ -35,19 +38,19 @@ export function ResultsScoreChart({
         <h3 className="report-chart-title">Core indicator chart</h3>
       </div>
 
-      {/* ekran */}
+      {/* EKRAN */}
       <div className="report-chart-screen">
         <div className="report-chart-wrap">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
               margin={{ top: 18, right: 18, left: 6, bottom: 12 }}
-              barCategoryGap="36%"
+              barCategoryGap="28%"
             >
               <CartesianGrid strokeDasharray="4 4" stroke="rgba(17,49,34,0.12)" />
               <XAxis
                 dataKey="name"
-                tick={{ fill: "#587160", fontSize: 13 }}
+                tick={{ fill: "#587160", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -59,8 +62,8 @@ export function ResultsScoreChart({
                 width={36}
               />
               <Tooltip
-                formatter={(value: any) => [`Score: ${Number(value ?? 0)}`, ""]}
-                  contentStyle={{
+                formatter={(value: any) => [`Score: ${Number(value ?? 0)}%`, undefined]}
+                contentStyle={{
                   borderRadius: 16,
                   border: "1px solid rgba(17,49,34,0.08)",
                   background: "rgba(255,255,255,0.96)",
@@ -68,7 +71,7 @@ export function ResultsScoreChart({
                 }}
                 cursor={{ fill: "rgba(17,49,34,0.05)" }}
               />
-              <Bar dataKey="value" radius={[14, 14, 0, 0]} maxBarSize={114}>
+              <Bar dataKey="value" radius={[14, 14, 0, 0]} maxBarSize={96}>
                 {data.map((entry) => (
                   <Cell key={entry.name} fill={entry.color} />
                 ))}
@@ -78,32 +81,36 @@ export function ResultsScoreChart({
         </div>
       </div>
 
-      {/* druk */}
-      <div className="report-chart-print">
-        <div className="print-bars-vertical">
-          {data.map((item) => (
-            <div key={item.name} className="print-bar-vertical-item">
-              <div className="print-bar-vertical-value">{item.value}</div>
+      {/* DRUK / PDF */}
+      <div className="report-chart-print" aria-hidden="true">
+        <div className="print-chart-inner">
+          
 
-              <div className="print-bar-vertical-track">
-                <div
-                  className="print-bar-vertical-fill"
-                  style={{
-                    height: `${item.value}%`,
-                    background: item.color,
-                  }}
-                />
+          <div className="print-bars-vertical">
+            {data.map((item) => (
+              <div key={item.name} className="print-bar-vertical-item">
+                <div className="print-bar-vertical-value">{item.value}</div>
+
+                <div className="print-bar-vertical-track">
+                  <div
+                    className="print-bar-vertical-fill"
+                    style={{
+                      height: `${Math.max(0, Math.min(100, item.value))}%`,
+                      background: item.color,
+                    }}
+                  />
+                </div>
+
+                <div className="print-bar-vertical-label">{item.name}</div>
               </div>
-
-              <div className="print-bar-vertical-label">{item.name}</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
       <p className="report-chart-note">
         This score is generated from satellite-derived indicators such as vegetation,
-        moisture, and terrain.
+        moisture, terrain, and long-term sustainability signals.
       </p>
     </section>
   );

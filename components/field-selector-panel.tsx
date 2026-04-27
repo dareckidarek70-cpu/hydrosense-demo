@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type ParcelId = "parcel-a" | "parcel-b" | "parcel-c";
+type ParcelId = "parcel-a" | "parcel-b" | "parcel-c" | "parcel-d";
 
 type ParcelOption = {
   id: ParcelId;
@@ -76,17 +76,17 @@ const parcelOptions: ParcelOption[] = [
   {
     id: "parcel-a",
     mapId: "PARCEL-A",
-    label: "Parcel A — Veneto North",
-    center: [45.52, 12.18],
+    label: "Parcel A — Veneto Agricultural Area",
+    center: [45.813111, 11.836028],
     polygon: [
-      [45.528, 12.145],
-      [45.533, 12.205],
-      [45.505, 12.215],
-      [45.498, 12.16],
+      [45.8162, 11.8318],
+      [45.8174, 11.8389],
+      [45.8117, 11.8413],
+      [45.8091, 11.8344],
     ],
     areaHectares: 184,
-    terrainType: "Mixed agricultural plot",
-    cropModel: "Cereals and rotation crops",
+    terrainType: "Agricultural polygon",
+    cropModel: "Mixed field crops",
     dataSources: ["Copernicus", "GIS overlays", "Terrain model"],
     scores: {
       investment: 72,
@@ -98,13 +98,13 @@ const parcelOptions: ParcelOption[] = [
   {
     id: "parcel-b",
     mapId: "PARCEL-B",
-    label: "Parcel B — Mestre Plain",
-    center: [45.49, 12.24],
+    label: "Parcel B — Veneto Irrigation Plain",
+    center: [45.925917, 12.073278],
     polygon: [
-      [45.502, 12.215],
-      [45.507, 12.278],
-      [45.474, 12.286],
-      [45.468, 12.225],
+      [45.9293, 12.0675],
+      [45.9311, 12.0779],
+      [45.9242, 12.0815],
+      [45.9206, 12.0712],
     ],
     areaHectares: 212,
     terrainType: "Flat irrigable plain",
@@ -120,22 +120,44 @@ const parcelOptions: ParcelOption[] = [
   {
     id: "parcel-c",
     mapId: "PARCEL-C",
-    label: "Parcel C — Coastal Belt",
-    center: [45.44, 12.32],
+    label: "Parcel C — Southern Veneto Field",
+    center: [45.105722, 11.972833],
     polygon: [
-      [45.452, 12.292],
-      [45.458, 12.35],
-      [45.427, 12.362],
-      [45.418, 12.305],
+      [45.1092, 11.9674],
+      [45.1101, 11.9778],
+      [45.1038, 11.9811],
+      [45.1007, 11.9706],
     ],
     areaHectares: 196,
-    terrainType: "Coastal parcel with mixed constraints",
-    cropModel: "Specialty crops and adaptive rotation",
+    terrainType: "Agricultural field with mixed constraints",
+    cropModel: "Adaptive crop rotation",
     dataSources: ["Copernicus", "GIS overlays", "Terrain model"],
     scores: {
       investment: 67,
       irrigation: 73,
       cropFit: 70,
+      risk: "Medium",
+    },
+  },
+  {
+    id: "parcel-d",
+    mapId: "PARCEL-D",
+    label: "Parcel D — Veneto Field Reference",
+    center: [45.4662291, 12.061275],
+    polygon: [
+      [45.4694, 12.0568],
+      [45.4703, 12.0667],
+      [45.4639, 12.0692],
+      [45.4619, 12.0591],
+    ],
+    areaHectares: 176,
+    terrainType: "Reference agricultural field",
+    cropModel: "Mixed crop suitability check",
+    dataSources: ["Copernicus", "GIS overlays", "Terrain model"],
+    scores: {
+      investment: 74,
+      irrigation: 76,
+      cropFit: 78,
       risk: "Medium",
     },
   },
@@ -186,15 +208,15 @@ function buildResultsUrl(params: {
   }
 
   if (params.mode === "custom") {
-  if (typeof params.lat === "number") search.set("lat", String(params.lat));
-  if (typeof params.lng === "number") search.set("lng", String(params.lng));
-  if (typeof params.radius === "number") search.set("radius", String(params.radius));
-  if (typeof params.investment === "number") search.set("investment", String(params.investment));
-  if (typeof params.irrigation === "number") search.set("irrigation", String(params.irrigation));
-  if (typeof params.cropFit === "number") search.set("cropFit", String(params.cropFit));
-  if (typeof params.risk === "string") search.set("risk", params.risk);
-  if (typeof params.source === "string") search.set("source", params.source);
-}
+    if (typeof params.lat === "number") search.set("lat", String(params.lat));
+    if (typeof params.lng === "number") search.set("lng", String(params.lng));
+    if (typeof params.radius === "number") search.set("radius", String(params.radius));
+    if (typeof params.investment === "number") search.set("investment", String(params.investment));
+    if (typeof params.irrigation === "number") search.set("irrigation", String(params.irrigation));
+    if (typeof params.cropFit === "number") search.set("cropFit", String(params.cropFit));
+    if (typeof params.risk === "string") search.set("risk", params.risk);
+    if (typeof params.source === "string") search.set("source", params.source);
+  }
 
   return `/results?${search.toString()}`;
 }
@@ -219,6 +241,32 @@ function getSourceBadge(meta?: LiveStatsResponse["meta"]) {
   }
 
   return null;
+}
+
+function isLikelyWaterPoint(point: [number, number]) {
+  const [lat, lng] = point;
+
+  // Conservative demo safeguard:
+  // block only obvious open water / core lagoon areas.
+  // Do not block agricultural land near Mestre, Jesolo, Eraclea or coastal plains too early.
+
+  const openAdriaticSea =
+    lat < 45.48 &&
+    lng > 12.43;
+
+  const veniceLagoonCore =
+    lat > 45.28 &&
+    lat < 45.48 &&
+    lng > 12.25 &&
+    lng < 12.43;
+
+  const southernLagoon =
+    lat > 45.12 &&
+    lat < 45.30 &&
+    lng > 12.18 &&
+    lng < 12.38;
+
+  return openAdriaticSea || veniceLagoonCore || southernLagoon;
 }
 
 export function FieldSelectorPanel() {
@@ -252,22 +300,51 @@ export function FieldSelectorPanel() {
 
       setIsLoadingStats(true);
 
+      if (isLikelyWaterPoint(pickedPoint)) {
+        setLiveStats({
+          stats: {
+            medianNdvi: null,
+            medianNdwi: null,
+            ndviStdDev: null,
+            ndwiStdDev: null,
+            sampleCount: 0,
+            intervals: {
+              ndvi: [],
+              ndwi: [],
+            },
+          },
+          scores: {
+            investment: 0,
+            irrigation: 0,
+            cropFit: 0,
+            risk: "High",
+          },
+          meta: {
+            source: "fallback",
+            note: "Selected area appears to be water — analysis is not applicable.",
+          },
+        });
+
+        setIsLoadingStats(false);
+        return;
+      }
+
       try {
-      const response = await fetch("/api/copernicus/stats", {
-      method: "POST",
-      headers: {
-      "Content-Type": "application/json",
-       },
-        body: JSON.stringify({
-          geometry: {
-          type: "PointBuffer",
-          coordinates: [pickedPoint[0], pickedPoint[1]],
-          radiusMeters: analysisRadius,
-        },
-        from: "2025-05-01T00:00:00Z",
-        to: "2025-09-30T23:59:59Z",
-    }),
-  });
+        const response = await fetch("/api/copernicus/stats", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            geometry: {
+              type: "PointBuffer",
+              coordinates: [pickedPoint[0], pickedPoint[1]],
+              radiusMeters: analysisRadius,
+            },
+            from: "2025-05-01T00:00:00Z",
+            to: "2025-09-30T23:59:59Z",
+          }),
+        });
 
         const text = await response.text();
 
@@ -277,10 +354,11 @@ export function FieldSelectorPanel() {
 
         const parsed = JSON.parse(text) as LiveStatsResponse;
 
-        if (cancelled) return;
-        setLiveStats(parsed);
+       if (cancelled) return;
+setLiveStats(parsed);
       } catch {
         if (cancelled) return;
+
         setLiveStats({
           stats: {
             medianNdvi: null,
@@ -370,23 +448,27 @@ export function FieldSelectorPanel() {
   const sourceNote =
     selectionMode === "custom" ? liveStats?.meta?.note ?? null : null;
 
+  const isWaterSelection =
+    selectionMode === "custom" &&
+    liveStats?.meta?.note?.toLowerCase().includes("water");
+
   const sourceBadge =
     selectionMode === "custom" ? getSourceBadge(liveStats?.meta) : null;
 
   const customResultsHref =
-  selectionMode === "custom" && pickedPoint
-    ? buildResultsUrl({
-        mode: "custom",
-        lat: pickedPoint[0],
-        lng: pickedPoint[1],
-        radius: analysisRadius,
-        investment: activeScores.investment,
-        irrigation: activeScores.irrigation,
-        cropFit: activeScores.cropFit,
-        risk: activeScores.risk,
-        source: liveStats?.meta?.source === "copernicus-live" ? "live" : "estimated",
-      })
-    : null;
+    selectionMode === "custom" && pickedPoint
+      ? buildResultsUrl({
+          mode: "custom",
+          lat: pickedPoint[0],
+          lng: pickedPoint[1],
+          radius: analysisRadius,
+          investment: activeScores.investment,
+          irrigation: activeScores.irrigation,
+          cropFit: activeScores.cropFit,
+          risk: activeScores.risk,
+          source: liveStats?.meta?.source === "copernicus-live" ? "live" : "estimated",
+        })
+      : null;
 
   const demoResultsHref = buildResultsUrl({
     mode: "demo",
@@ -456,7 +538,9 @@ export function FieldSelectorPanel() {
             {selectionMode === "custom"
               ? isLoadingStats
                 ? "Live Copernicus statistics are being calculated for the selected point."
-                : "This selected point is ready to be turned into a full decision-ready brief."
+                : isWaterSelection
+                  ? "This selected point appears to be located on water, so agricultural parcel analysis is not applicable."
+                  : "This selected point is ready to be turned into a full decision-ready brief."
               : "This parcel is ready for a quick analysis and works well for a live presentation."}
           </p>
 
@@ -501,14 +585,17 @@ export function FieldSelectorPanel() {
               </p>
               <strong>{activeAreaId}</strong>
             </div>
+
             <div>
               <p className="supporting-label">Area</p>
               <strong>{activeAreaValue}</strong>
             </div>
+
             <div>
               <p className="supporting-label">Terrain</p>
               <strong>{activeTerrain}</strong>
             </div>
+
             <div>
               <p className="supporting-label">Current crops</p>
               <strong>{activeCrop}</strong>
@@ -518,17 +605,94 @@ export function FieldSelectorPanel() {
           <div className="summary-score-strip">
             <div className="summary-score-pill">
               <span>Investment</span>
-              <strong>{activeScores.investment}</strong>
+              <strong>{activeScores.investment}%</strong>
             </div>
+
             <div className="summary-score-pill">
               <span>Irrigation</span>
-              <strong>{activeScores.irrigation}</strong>
+              <strong>{activeScores.irrigation}%</strong>
             </div>
+
             <div className="summary-score-pill">
               <span>Crop fit</span>
-              <strong>{activeScores.cropFit}</strong>
+              <strong>{activeScores.cropFit}%</strong>
+            </div>
+
+            <div className="summary-score-pill">
+              <span>Sustainability</span>
+              <strong>
+                {Math.round(
+                  (activeScores.investment + activeScores.irrigation + activeScores.cropFit) / 3
+                )}
+                %
+              </strong>
             </div>
           </div>
+
+          {!isWaterSelection && (
+            <>
+              <div
+                style={{
+                  padding: "14px 14px",
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,0.55)",
+                  border: "1px solid rgba(17,49,34,0.08)",
+                  marginTop: 4,
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.9rem",
+                    lineHeight: 1.5,
+                    color: "#526b5d",
+                  }}
+                >
+                  <strong style={{ color: "#173728" }}>Crop fit note:</strong>{" "}
+                  This score is based on AI-assisted interpretation of seasonal satellite indicators
+                  from the May–September growing window, rather than a single image snapshot.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: 16,
+                  background: "rgba(36,107,68,0.08)",
+                  border: "1px solid rgba(36,107,68,0.12)",
+                  marginTop: 6,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.8rem",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "#4e6a5a",
+                    marginBottom: 6,
+                    fontWeight: 600,
+                  }}
+                >
+                  Seasonal analysis
+                </p>
+
+                <strong style={{ fontSize: "1.05rem", color: "#173728" }}>
+                  May–September 2025
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: 6,
+                    fontSize: "0.9rem",
+                    color: "#5d6f62",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Aggregated satellite data across the growing season
+                </p>
+              </div>
+            </>
+          )}
 
           <div>
             <p className="supporting-label">Data sources</p>
@@ -593,7 +757,10 @@ export function FieldSelectorPanel() {
               Generate summary
             </button>
 
-            <Link href={buildResultsUrl({ mode: "demo", parcel: "parcel-b" })} className="button-secondary">
+            <Link
+              href={buildResultsUrl({ mode: "demo", parcel: "parcel-b" })}
+              className="button-secondary"
+            >
               Open sample brief
             </Link>
           </div>

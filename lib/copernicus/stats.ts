@@ -60,8 +60,7 @@ type CopernicusStatsResponse = {
 const AUTH_URL =
   "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token";
 
-const STATS_URL =
-  "https://sh.dataspace.copernicus.eu/statistics/v1";
+const STATS_URL = "https://sh.dataspace.copernicus.eu/statistics/v1";
 
 const STATS_EVALSCRIPT = `
 //VERSION=3
@@ -282,23 +281,29 @@ function getTimeIntervals(fromIso: string, toIso: string) {
 }
 
 function parseStatsResponse(json: CopernicusStatsResponse): AreaStatsResult {
-  const data: CopernicusDataEntry[] = Array.isArray(json?.data) ? json.data : [];
+  const data: CopernicusDataEntry[] = Array.isArray(json?.data)
+    ? json.data
+    : [];
 
   const ndviSeries: StatsInterval[] = data.map((entry) => {
     const stats = entry.outputs?.ndvi?.bands?.B0?.stats ?? {};
+
     return {
       mean: typeof stats.mean === "number" ? stats.mean : null,
       stDev: typeof stats.stDev === "number" ? stats.stDev : null,
-      sampleCount: typeof stats.sampleCount === "number" ? stats.sampleCount : 0,
+      sampleCount:
+        typeof stats.sampleCount === "number" ? stats.sampleCount : 0,
     };
   });
 
   const ndwiSeries: StatsInterval[] = data.map((entry) => {
     const stats = entry.outputs?.ndwi?.bands?.B0?.stats ?? {};
+
     return {
       mean: typeof stats.mean === "number" ? stats.mean : null,
       stDev: typeof stats.stDev === "number" ? stats.stDev : null,
-      sampleCount: typeof stats.sampleCount === "number" ? stats.sampleCount : 0,
+      sampleCount:
+        typeof stats.sampleCount === "number" ? stats.sampleCount : 0,
     };
   });
 
@@ -346,11 +351,26 @@ export async function fetchSingleStats(params: {
 
   const fromIso = toIso(params.from);
   const toIsoValue = toIso(params.to);
+
   const resolutionMeters =
     params.resolutionMeters ?? getSafeResolutionMeters(params.geometry);
 
   const bounds = geometryToBounds(params.geometry);
   const geoJson = geometryToGeoJson(params.geometry);
+
+  const centerLat = (bounds.minLat + bounds.maxLat) / 2;
+
+  /*
+   * Important:
+   * The request CRS is EPSG:4326, so Copernicus expects resx/resy
+   * in geographic degrees, not directly in meters.
+   *
+   * We keep the public app logic in meters, then convert here.
+   * This prevents the "meters per pixel exceeded the limit" error
+   * for 500 m / 1 km custom selected areas.
+   */
+  const resxDegrees = metersToLngDegrees(resolutionMeters, centerLat);
+  const resyDegrees = metersToLatDegrees(resolutionMeters);
 
   const payload = {
     input: {
@@ -375,8 +395,8 @@ export async function fetchSingleStats(params: {
       aggregationInterval: {
         of: "P1M",
       },
-      resx: resolutionMeters,
-      resy: resolutionMeters,
+      resx: resxDegrees,
+      resy: resyDegrees,
       evalscript: STATS_EVALSCRIPT,
     },
   };
@@ -395,7 +415,9 @@ export async function fetchSingleStats(params: {
   const text = await response.text();
 
   if (!response.ok) {
-    throw new Error(`Copernicus Statistical API error: ${response.status} ${text}`);
+    throw new Error(
+      `Copernicus Statistical API error: ${response.status} ${text}`
+    );
   }
 
   return JSON.parse(text) as CopernicusStatsResponse;
@@ -406,7 +428,12 @@ export async function fetchAreaStats(params: {
   from: string;
   to: string;
 }): Promise<AreaStatsResult> {
-  const safeResolutions = [60];
+  const preferredResolution = getSafeResolutionMeters(params.geometry);
+
+  const safeResolutions = Array.from(
+    new Set([preferredResolution, 20, 40, 60, 100])
+  );
+
   let lastError: unknown = null;
 
   for (const resolution of safeResolutions) {
@@ -422,11 +449,11 @@ export async function fetchAreaStats(params: {
     } catch (error) {
       lastError = error;
 
-      const message =
-        error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
 
       const shouldRetry =
         message.includes("meters per pixel exceeds the limit") ||
+        message.includes("meters per pixel exceeded the limit") ||
         message.includes('"COMMON_EXCEPTION"') ||
         message.includes("Bad Request");
 
