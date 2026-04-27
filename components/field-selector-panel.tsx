@@ -188,7 +188,7 @@ function buildFallbackCustomAnalysis(point: [number, number], radius: 500 | 1000
 }
 
 function buildResultsUrl(params: {
-  mode: "demo" | "custom";
+  mode: "demo" | "custom" | "water";
   parcel?: string;
   lat?: number;
   lng?: number;
@@ -196,8 +196,10 @@ function buildResultsUrl(params: {
   investment?: number;
   irrigation?: number;
   cropFit?: number;
+  sustainability?: number;
   risk?: string;
   source?: string;
+  water?: boolean;
 }) {
   const search = new URLSearchParams();
 
@@ -207,15 +209,33 @@ function buildResultsUrl(params: {
     search.set("parcel", params.parcel);
   }
 
-  if (params.mode === "custom") {
+  if (params.mode === "custom" || params.mode === "water") {
     if (typeof params.lat === "number") search.set("lat", String(params.lat));
     if (typeof params.lng === "number") search.set("lng", String(params.lng));
     if (typeof params.radius === "number") search.set("radius", String(params.radius));
-    if (typeof params.investment === "number") search.set("investment", String(params.investment));
-    if (typeof params.irrigation === "number") search.set("irrigation", String(params.irrigation));
-    if (typeof params.cropFit === "number") search.set("cropFit", String(params.cropFit));
+
+    if (typeof params.investment === "number") {
+      search.set("investment", String(params.investment));
+    }
+
+    if (typeof params.irrigation === "number") {
+      search.set("irrigation", String(params.irrigation));
+    }
+
+    if (typeof params.cropFit === "number") {
+      search.set("cropFit", String(params.cropFit));
+    }
+
+    if (typeof params.sustainability === "number") {
+      search.set("sustainability", String(params.sustainability));
+    }
+
     if (typeof params.risk === "string") search.set("risk", params.risk);
     if (typeof params.source === "string") search.set("source", params.source);
+
+    if (params.water) {
+      search.set("water", "true");
+    }
   }
 
   return `/results?${search.toString()}`;
@@ -246,25 +266,13 @@ function getSourceBadge(meta?: LiveStatsResponse["meta"]) {
 function isLikelyWaterPoint(point: [number, number]) {
   const [lat, lng] = point;
 
-  // Conservative demo safeguard:
-  // block only obvious open water / core lagoon areas.
-  // Do not block agricultural land near Mestre, Jesolo, Eraclea or coastal plains too early.
-
-  const openAdriaticSea =
-    lat < 45.48 &&
-    lng > 12.43;
+  const openAdriaticSea = lat < 45.48 && lng > 12.43;
 
   const veniceLagoonCore =
-    lat > 45.28 &&
-    lat < 45.48 &&
-    lng > 12.25 &&
-    lng < 12.43;
+    lat > 45.28 && lat < 45.48 && lng > 12.25 && lng < 12.43;
 
   const southernLagoon =
-    lat > 45.12 &&
-    lat < 45.30 &&
-    lng > 12.18 &&
-    lng < 12.38;
+    lat > 45.12 && lat < 45.30 && lng > 12.18 && lng < 12.38;
 
   return openAdriaticSea || veniceLagoonCore || southernLagoon;
 }
@@ -354,8 +362,8 @@ export function FieldSelectorPanel() {
 
         const parsed = JSON.parse(text) as LiveStatsResponse;
 
-       if (cancelled) return;
-setLiveStats(parsed);
+        if (cancelled) return;
+        setLiveStats(parsed);
       } catch {
         if (cancelled) return;
 
@@ -398,17 +406,11 @@ setLiveStats(parsed);
   }, [selectionMode, pickedPoint, analysisRadius, fallbackCustomAnalysis]);
 
   const activeTitle =
-    selectionMode === "custom"
-      ? "Selected area on the map"
-      : selectedParcel.label;
+    selectionMode === "custom" ? "Selected area on the map" : selectedParcel.label;
 
-  const activeSignal =
-    selectionMode === "custom" ? "Custom point" : "Selected";
+  const activeSignal = selectionMode === "custom" ? "Custom point" : "Selected";
 
-  const activeAreaId =
-    selectionMode === "custom"
-      ? "CUSTOM-ZONE"
-      : selectedParcel.mapId;
+  const activeAreaId = selectionMode === "custom" ? "CUSTOM-ZONE" : selectedParcel.mapId;
 
   const activeAreaValue =
     selectionMode === "custom"
@@ -418,9 +420,7 @@ setLiveStats(parsed);
       : `${selectedParcel.areaHectares} hectares`;
 
   const activeTerrain =
-    selectionMode === "custom"
-      ? "Selected location"
-      : selectedParcel.terrainType;
+    selectionMode === "custom" ? "Selected location" : selectedParcel.terrainType;
 
   const activeCrop =
     selectionMode === "custom"
@@ -434,7 +434,8 @@ setLiveStats(parsed);
 
   const activeScores =
     selectionMode === "custom"
-      ? liveStats?.scores ?? fallbackCustomAnalysis?.scores ?? {
+      ? liveStats?.scores ??
+        fallbackCustomAnalysis?.scores ?? {
           investment: 70,
           irrigation: 66,
           cropFit: 69,
@@ -442,31 +443,35 @@ setLiveStats(parsed);
         }
       : selectedParcel.scores;
 
+  const activeSustainability = Math.round(
+    (activeScores.investment + activeScores.irrigation + activeScores.cropFit) / 3
+  );
+
   const isFallbackSource =
     selectionMode === "custom" && liveStats?.meta?.source === "fallback";
 
-  const sourceNote =
-    selectionMode === "custom" ? liveStats?.meta?.note ?? null : null;
+  const sourceNote = selectionMode === "custom" ? liveStats?.meta?.note ?? null : null;
 
   const isWaterSelection =
     selectionMode === "custom" &&
     liveStats?.meta?.note?.toLowerCase().includes("water");
 
-  const sourceBadge =
-    selectionMode === "custom" ? getSourceBadge(liveStats?.meta) : null;
+  const sourceBadge = selectionMode === "custom" ? getSourceBadge(liveStats?.meta) : null;
 
   const customResultsHref =
     selectionMode === "custom" && pickedPoint
       ? buildResultsUrl({
-          mode: "custom",
+          mode: isWaterSelection ? "water" : "custom",
           lat: pickedPoint[0],
           lng: pickedPoint[1],
           radius: analysisRadius,
-          investment: activeScores.investment,
-          irrigation: activeScores.irrigation,
-          cropFit: activeScores.cropFit,
-          risk: activeScores.risk,
+          investment: isWaterSelection ? undefined : activeScores.investment,
+          irrigation: isWaterSelection ? undefined : activeScores.irrigation,
+          cropFit: isWaterSelection ? undefined : activeScores.cropFit,
+          sustainability: isWaterSelection ? undefined : activeSustainability,
+          risk: isWaterSelection ? undefined : activeScores.risk,
           source: liveStats?.meta?.source === "copernicus-live" ? "live" : "estimated",
+          water: isWaterSelection,
         })
       : null;
 
@@ -602,32 +607,52 @@ setLiveStats(parsed);
             </div>
           </div>
 
-          <div className="summary-score-strip">
-            <div className="summary-score-pill">
-              <span>Investment</span>
-              <strong>{activeScores.investment}%</strong>
+          {isWaterSelection ? (
+            <div
+              style={{
+                padding: "16px 18px",
+                borderRadius: 18,
+                background: "rgba(64, 120, 160, 0.08)",
+                border: "1px solid rgba(64, 120, 160, 0.16)",
+                marginTop: 4,
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.95rem",
+                  lineHeight: 1.5,
+                  color: "#4f666f",
+                }}
+              >
+                <strong style={{ color: "#24495a" }}>Water area detected:</strong>{" "}
+                agricultural indicators are not calculated for open water surfaces. Please select
+                land or an agricultural parcel for a normal HydroSense analysis.
+              </p>
             </div>
+          ) : (
+            <div className="summary-score-strip">
+              <div className="summary-score-pill">
+                <span>Investment</span>
+                <strong>{activeScores.investment}%</strong>
+              </div>
 
-            <div className="summary-score-pill">
-              <span>Irrigation</span>
-              <strong>{activeScores.irrigation}%</strong>
-            </div>
+              <div className="summary-score-pill">
+                <span>Irrigation</span>
+                <strong>{activeScores.irrigation}%</strong>
+              </div>
 
-            <div className="summary-score-pill">
-              <span>Crop fit</span>
-              <strong>{activeScores.cropFit}%</strong>
-            </div>
+              <div className="summary-score-pill">
+                <span>Crop fit</span>
+                <strong>{activeScores.cropFit}%</strong>
+              </div>
 
-            <div className="summary-score-pill">
-              <span>Sustainability</span>
-              <strong>
-                {Math.round(
-                  (activeScores.investment + activeScores.irrigation + activeScores.cropFit) / 3
-                )}
-                %
-              </strong>
+              <div className="summary-score-pill">
+                <span>Sustainability</span>
+                <strong>{activeSustainability}%</strong>
+              </div>
             </div>
-          </div>
+          )}
 
           {!isWaterSelection && (
             <>
@@ -649,8 +674,9 @@ setLiveStats(parsed);
                   }}
                 >
                   <strong style={{ color: "#173728" }}>Crop fit note:</strong>{" "}
-                  This score is based on AI-assisted interpretation of seasonal satellite indicators
-                  from the May–September growing window, rather than a single image snapshot.
+                  This score is based on AI-assisted interpretation of seasonal satellite
+                  indicators from the May–September growing window, rather than a single image
+                  snapshot.
                 </p>
               </div>
 
@@ -736,7 +762,9 @@ setLiveStats(parsed);
 
           <p className="body-copy" style={{ marginBottom: 18 }}>
             {selectionMode === "custom"
-              ? "Generate a full brief for the selected point and continue to the executive review page."
+              ? isWaterSelection
+                ? "Open a water-area notice instead of a normal agricultural scoring brief."
+                : "Generate a full brief for the selected point and continue to the executive review page."
               : "Generate a summary for the selected parcel and continue to the results page."}
           </p>
 

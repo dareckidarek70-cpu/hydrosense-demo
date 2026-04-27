@@ -19,6 +19,7 @@ type ResultsPageProps = {
     sustainability?: string;
     risk?: string;
     source?: string;
+    water?: string;
   }>;
 };
 
@@ -386,6 +387,85 @@ function buildCustomAnalysis(params: {
   };
 }
 
+function buildWaterAnalysis(params: {
+  lat?: string;
+  lng?: string;
+  radius?: string;
+}): ResultsAnalysis {
+  const lat = toNumber(params.lat, 45.4372);
+  const lng = toNumber(params.lng, 12.3346);
+  const radius = toNumber(params.radius, 500);
+
+  const coordinatePair = formatCoordinatePair(lat, lng);
+  const radiusLabel = formatRadius(radius);
+
+  return {
+    parcelLabel: "Selected water area",
+    executiveSummary:
+      "This point appears to be located on a water surface. HydroSense is designed for agricultural land screening, so agricultural indicators are not calculated for this location.",
+    generatedOn: formatDateTime(),
+    verdictLabel: "Outside agricultural scope",
+    verdictHeadline: "Water area detected.",
+    verdictBody:
+      "HydroSense analyses agricultural land, not open water surfaces. Please select a land parcel or agricultural area to generate a meaningful field screening report.",
+    quietNote: "Water area detected",
+    locationBadge: `📍 ${coordinatePair}`,
+    areaBadge: `${radiusLabel} screening radius`,
+    terrainBadge: "Water surface",
+    confidenceBadge: "Not calculated",
+    sourceBadge: {
+      text: "WATER AREA",
+      bg: "rgba(64, 120, 160, 0.14)",
+      color: "#315f7a",
+      border: "1px solid rgba(64, 120, 160, 0.22)",
+    },
+    scores: {
+      investment: {
+        value: 0,
+        label: "Not calculated",
+        description:
+          "Investment potential is not calculated because this point is outside agricultural land.",
+      },
+      irrigation: {
+        value: 0,
+        label: "Not calculated",
+        description:
+          "Irrigation potential is not calculated for water surfaces.",
+      },
+      cropFit: {
+        value: 0,
+        label: "Not calculated",
+        description:
+          "Crop suitability is not calculated because this location is not an agricultural parcel.",
+      },
+      sustainability: {
+        value: 0,
+        label: "Not calculated",
+        description:
+          "Sustainability screening is not applied to open water areas.",
+      },
+      productivity: {
+        value: "Outside scope",
+        label: "Agricultural productivity",
+        description:
+          "Agricultural productivity is not assessed for water surfaces. Please select land or an agricultural parcel.",
+      },
+    },
+    sections: [
+      {
+        title: "Why indicators are not shown",
+        body:
+          "The selected point is probably located on a water surface. Showing values such as 0% moisture, 0% crop suitability, or 0% sustainability would be misleading, so HydroSense stops the agricultural analysis instead.",
+      },
+      {
+        title: "What to do next",
+        body:
+          "Please select a point located on land, preferably within or near an agricultural parcel. HydroSense will then generate a normal field screening report with investment, irrigation, crop suitability, sustainability, and agricultural productivity indicators.",
+      },
+    ],
+  };
+}
+
 function normalizeDemoAnalysis(raw: unknown): ResultsAnalysis {
   const data = isRecord(raw) ? raw : {};
   const metaObj = isRecord(data.meta) ? data.meta : {};
@@ -547,10 +627,16 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
   const params = searchParams ? await searchParams : {};
   const mode = params?.mode ?? "demo";
 
-  const analysis =
-    mode === "custom"
-      ? buildCustomAnalysis(params ?? {})
-      : normalizeDemoAnalysis(getDemoAnalysis(params?.parcel ?? "parcel-b"));
+  const isWaterArea =
+    params?.water === "true" ||
+    params?.water === "1" ||
+    mode === "water";
+
+const analysis = isWaterArea
+    ? buildWaterAnalysis(params ?? {})
+    : mode === "custom"
+    ? buildCustomAnalysis(params ?? {})
+    : normalizeDemoAnalysis(getDemoAnalysis(params?.parcel ?? "parcel-b"));
 
   return (
     <div className="container">
@@ -574,13 +660,13 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
           <p className="lead">{analysis.executiveSummary}</p>
 
           <div className="report-meta-row">
-  <p className="report-quiet-note">Live custom analysis</p>
+            <p className="report-quiet-note">{analysis.quietNote}</p>
 
-  <div className="report-generated">
-    <span>Generated on</span>
-    <strong>{analysis.generatedOn}</strong>
-  </div>
-</div>
+            <div className="report-generated">
+            <span>Generated on</span>
+            <strong>{analysis.generatedOn}</strong>
+            </div>
+          </div>
 
           <div className="report-summary-band">
             <div className="report-summary-copy">
@@ -610,48 +696,89 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
               </div>
             </div>
 
-            <div className="report-score-grid">
-              <ScoreCard
-                title="Investment"
-                score={analysis.scores.investment.value}
-                label={analysis.scores.investment.label}
-                description={analysis.scores.investment.description}
-              />
-              <ScoreCard
-                title="Irrigation"
-                score={analysis.scores.irrigation.value}
-                label={analysis.scores.irrigation.label}
-                description={analysis.scores.irrigation.description}
-              />
-              <ScoreCard
-                title="Crop Fit"
-                score={analysis.scores.cropFit.value}
-                label={analysis.scores.cropFit.label}
-                description={analysis.scores.cropFit.description}
-              />
-              <ScoreCard
-                title="Sustainability"
-                score={analysis.scores.sustainability.value}
-                label={analysis.scores.sustainability.label}
-                description={analysis.scores.sustainability.description}
-              />
-            </div>
+{isWaterArea ? (
+  <div className="report-score-grid">
+    <div
+      className="glass-card"
+      style={{
+        padding: "1.25rem",
+        background: "rgba(236, 244, 239, 0.96)",
+        border: "1px solid rgba(255, 255, 255, 0.45)",
+        color: "#163728",
+      }}
+    >
+      <p
+        className="supporting-label"
+        style={{
+          color: "#5b7567",
+        }}
+      >
+        Water area
+      </p>
+
+      <h3
+        style={{
+          marginTop: "0.35rem",
+          color: "#123423",
+        }}
+      >
+        Agricultural indicators not calculated
+      </h3>
+
+      <p
+        className="body-copy"
+        style={{
+          marginTop: "0.75rem",
+          color: "#456255",
+        }}
+      >
+        This point appears to be located on water, so HydroSense does not show
+        agricultural percentage indicators for this selection.
+      </p>
+    </div>
+  </div>
+) : (
+  <div className="report-score-grid">
+    <ScoreCard
+      title="Investment"
+      score={analysis.scores.investment.value}
+      label={analysis.scores.investment.label}
+      description={analysis.scores.investment.description}
+    />
+    <ScoreCard
+      title="Irrigation"
+      score={analysis.scores.irrigation.value}
+      label={analysis.scores.irrigation.label}
+      description={analysis.scores.irrigation.description}
+    />
+    <ScoreCard
+      title="Crop Fit"
+      score={analysis.scores.cropFit.value}
+      label={analysis.scores.cropFit.label}
+      description={analysis.scores.cropFit.description}
+    />
+    <ScoreCard
+      title="Sustainability"
+      score={analysis.scores.sustainability.value}
+      label={analysis.scores.sustainability.label}
+      description={analysis.scores.sustainability.description}
+    />
+  </div>
+)}
           </div>
         </div>
 
         <div className="report-layout">
-          <section className="report-section-card print-chart-card">
-          
-
-            <ResultsScoreChart
-              investment={analysis.scores.investment.value}
-              irrigation={analysis.scores.irrigation.value}
-              cropFit={analysis.scores.cropFit.value}
-              sustainability={analysis.scores.sustainability.value}
-            />
-
-          
-          </section>
+          {!isWaterArea ? (
+  <section className="report-section-card print-chart-card">
+    <ResultsScoreChart
+      investment={analysis.scores.investment.value}
+      irrigation={analysis.scores.irrigation.value}
+      cropFit={analysis.scores.cropFit.value}
+      sustainability={analysis.scores.sustainability.value}
+    />
+  </section>
+) : null}
 
           <ParcelAiChat initialAnswer={analysis.executiveSummary} />
 
@@ -663,11 +790,13 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
             />
           ))}
 
-          <ReportSectionCard
+          {!isWaterArea ? (
+            <ReportSectionCard
             title={analysis.scores.productivity.label}
             body={analysis.scores.productivity.description}
             bullets={[`Productivity level: ${analysis.scores.productivity.value}`]}
-          />
+         />
+) : null}
 
           <ReportSectionCard
             title="Prototype note"
