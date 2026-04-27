@@ -171,9 +171,10 @@ export default function HomePage() {
       <section className="page-section two-column-grid">
         <div className="glass-card">
           <SectionHeader
-            eyebrow="3-step story"
-            title="Select parcel → Analyze signals → Present the brief"
-         />
+          eyebrow="3-step story"
+          title="Select parcel → Analyze signals → Present the brief"
+          description="HydroSense guides the user from parcel selection to satellite-based scoring and a concise executive brief ready for presentation."
+        />
           <div className="metric-stack workflow-stack">
   {workflowSteps.map((step, index) => (
     <div className="workflow-step-wrap" key={step.title}>
