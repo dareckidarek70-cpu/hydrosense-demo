@@ -3173,3 +3173,37 @@ b {
 .map-overlay .hero-feature-title {
   padding-left: 1.1rem;
 }
+/* =========================================================
+   PRINT FIX — FIRST PAGE PALE TEXT
+   ========================================================= */
+
+@media print {
+  /* 1) "Generated on ..." */
+  .report-generated,
+  .report-generated span,
+  .report-generated strong,
+  .report-meta-row,
+  .report-meta-row span,
+  .report-meta-row strong {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+    opacity: 1 !important;
+  }
+
+  /* 2) Jasne badge / etykiety pod Summary */
+  .badge-row > *,
+  .badge-row .pill,
+  .badge-row .signal,
+  .badge-row .risk-badge,
+  .report-summary-copy .pill,
+  .report-summary-copy .signal,
+  .report-summary-copy .risk-badge,
+  .field-chip {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+    background: #f4f4f4 !important;
+    border: 1px solid rgba(0, 0, 0, 0.14) !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+  }
+}
