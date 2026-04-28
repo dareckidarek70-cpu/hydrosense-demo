@@ -3134,3 +3134,42 @@ b {
   color: #d7e3da !important;
   opacity: 1 !important;
 }
+/* Hero preview — stronger readability fix */
+.map-overlay .label-row .hero-preview-microtext,
+.map-overlay .label-row .signal.hero-preview-microtext,
+.map-overlay .label-row .pill.hero-preview-microtext {
+  color: rgba(242, 255, 245, 0.86) !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+.map-overlay .label-row .hero-preview-pill {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.map-overlay .hero-preview-kicker {
+  color: rgba(242, 255, 245, 0.92) !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.26);
+}
+.map-overlay .label-row {
+  padding-left: 1.1rem;
+  padding-right: 1.1rem;
+}
+
+.map-overlay .supporting-label {
+  text-align: center;
+  padding-left: 0;
+  margin-top: -0.35rem;
+  margin-bottom: 1.5rem;
+}
+
+.map-overlay .hero-feature-title {
+  padding-left: 1.1rem;
+}
