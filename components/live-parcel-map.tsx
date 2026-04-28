@@ -85,7 +85,9 @@ function SatelliteOverlay({
 
     const url =
       `/api/copernicus/layer?minLng=${minLng}&minLat=${minLat}&maxLng=${maxLng}&maxLat=${maxLat}` +
-      `&width=${width}&height=${height}&layer=${selectedLayer}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      `&width=${width}&height=${height}&layer=${selectedLayer}&from=${encodeURIComponent(
+        from
+      )}&to=${encodeURIComponent(to)}`;
 
     setOverlayUrl(url);
     setOverlayBounds([
@@ -228,54 +230,69 @@ function MapSourceNote({ selectedLayer }: { selectedLayer: LayerMode }) {
   );
 }
 
-function LayerLegends() {
+function LayerLegend({ selectedLayer }: { selectedLayer: LayerMode }) {
+  if (selectedLayer === "BASEMAP" || selectedLayer === "TRUE_COLOR") {
+    return null;
+  }
+
+  const legend =
+    selectedLayer === "NDVI"
+      ? {
+          title: "NDVI",
+          subtitle: "Vegetation condition and biomass intensity",
+          labels: [
+            "Barren land, sand, snow",
+            "Shrub, grassland",
+            "High vegetation level / tropical rainforest",
+          ],
+          min: "-1.0",
+          max: "1.0",
+          gradientClass: "legend-gradient--ndvi",
+        }
+      : selectedLayer === "NDWI"
+      ? {
+          title: "NDWI",
+          subtitle: "Water presence and surface moisture response",
+          labels: ["Very low", "Moderate", "Very high"],
+          min: "0.0",
+          max: "1.0",
+          gradientClass: "legend-gradient--ndwi",
+        }
+      : {
+          title: "Moisture Index",
+          subtitle: "Relative dryness and moisture interpretation",
+          labels: ["Extremely dry", "Neutral", "Very moist"],
+          min: "0.0",
+          max: "1.0",
+          gradientClass: "legend-gradient--moisture",
+        };
+
   return (
-    <div className="map-layer-legends">
-      <h3>Map layer legends</h3>
+    <div className="map-layer-legends map-layer-legends--single">
+      <div className="map-layer-legends__header">
+        <div>
+          <h3>Map layer legend</h3>
+          <p>Interpreting satellite-derived indices</p>
+        </div>
 
-      <div className="legend-card">
-        <div className="legend-title">NDVI</div>
-        <div className="legend-labels">
-          <span>Barren land, sand, snow</span>
-          <span>Shrub, grassland</span>
-          <span>
-            High vegetation level
-            <br />
-            Tropical rainforest
-          </span>
-        </div>
-        <div className="legend-gradient legend-gradient--ndvi" />
-        <div className="legend-scale-values">
-          <span>-1.0</span>
-          <span>1.0</span>
-        </div>
+        <span>{legend.title}</span>
       </div>
 
-      <div className="legend-card">
-        <div className="legend-title">NDWI</div>
-        <div className="legend-labels">
-          <span>Very low</span>
-          <span>Moderate</span>
-          <span>Very high</span>
-        </div>
-        <div className="legend-gradient legend-gradient--ndwi" />
-        <div className="legend-scale-values">
-          <span>0.0</span>
-          <span>1.0</span>
-        </div>
-      </div>
+      <div className="legend-card legend-card--active">
+        <div className="legend-title">{legend.title}</div>
+        <p className="legend-subtitle">{legend.subtitle}</p>
 
-      <div className="legend-card">
-        <div className="legend-title">Moisture Index</div>
         <div className="legend-labels">
-          <span>Extremely dry</span>
-          <span>Neutral</span>
-          <span>Very moist</span>
+          <span>{legend.labels[0]}</span>
+          <span>{legend.labels[1]}</span>
+          <span>{legend.labels[2]}</span>
         </div>
-        <div className="legend-gradient legend-gradient--moisture" />
+
+        <div className={`legend-gradient ${legend.gradientClass}`} />
+
         <div className="legend-scale-values">
-          <span>0.0</span>
-          <span>1.0</span>
+          <span>{legend.min}</span>
+          <span>{legend.max}</span>
         </div>
       </div>
     </div>
@@ -332,7 +349,9 @@ export function LiveParcelMap({
       }}
     >
       <LayerControl selectedLayer={selectedLayer} onChange={setSelectedLayer} />
-      <MapSourceNote selectedLayer={selectedLayer} />
+      {(selectedLayer === "BASEMAP" || selectedLayer === "TRUE_COLOR") && (
+  <MapSourceNote selectedLayer={selectedLayer} />
+)}
 
       <MapContainer
         center={mapCenter}
@@ -425,7 +444,7 @@ export function LiveParcelMap({
         ) : null}
       </MapContainer>
 
-      <LayerLegends />
+      <LayerLegend selectedLayer={selectedLayer} />
     </div>
   );
 }

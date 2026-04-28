@@ -1927,28 +1927,35 @@ textarea {
 .flow-arrows {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin: 0 0 24px;
   flex-wrap: wrap;
 }
 
 .flow-step {
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(17, 49, 34, 0.06);
-  color: #456755;
-  font-size: 0.85rem;
-  font-weight: 600;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #6b8275;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: default;
+  pointer-events: none;
 }
 
 .flow-step.active {
-  background: #163b29;
-  color: white;
+  background: transparent;
+  color: #143625;
+  font-weight: 800;
 }
 
 .flow-arrow {
   font-size: 1rem;
-  color: #6f8a7b;
+  color: #7a8f83;
+  line-height: 1;
 }
 .workflow-stack {
   position: relative;
@@ -2678,4 +2685,452 @@ textarea {
 
 .legend-scale-values span:last-child {
   text-align: right;
+}
+.map-layer-legends {
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.legend-card {
+  padding: 12px 14px;
+}
+
+.legend-title {
+  font-size: 0.95rem;
+}
+
+.legend-labels {
+  font-size: 0.8rem;
+}
+/* =========================================================
+   TOP NAVIGATION — MAKE CLICKABLE LINKS CLEARLY CLICKABLE
+   ========================================================= */
+
+/* wszystkie linki w górnym menu */
+.site-nav a,
+.header-nav a,
+nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 44px;
+  padding: 0.65rem 1.35rem;
+
+  border-radius: 999px;
+  border: 1px solid transparent;
+
+  color: #486252;
+  text-decoration: none;
+  font-weight: 700;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* po najechaniu — widać, że to element klikalny */
+.site-nav a:hover,
+.header-nav a:hover,
+nav a:hover {
+  background: rgba(20, 70, 49, 0.08);
+  border-color: rgba(20, 70, 49, 0.18);
+  color: #143f2d;
+  transform: translateY(-1px);
+}
+
+/* aktywny / ważny link: Brief */
+.site-nav a[href="/results"],
+.site-nav a[href*="results"],
+.header-nav a[href="/results"],
+.header-nav a[href*="results"],
+nav a[href="/results"],
+nav a[href*="results"] {
+  background: #123f2c;
+  color: #ffffff;
+  border-color: #123f2c;
+  box-shadow: 0 10px 24px rgba(18, 63, 44, 0.18);
+}
+
+/* hover dla Brief */
+.site-nav a[href="/results"]:hover,
+.site-nav a[href*="results"]:hover,
+.header-nav a[href="/results"]:hover,
+.header-nav a[href*="results"]:hover,
+nav a[href="/results"]:hover,
+nav a[href*="results"]:hover {
+  background: #0f3425;
+  color: #ffffff;
+  border-color: #0f3425;
+}
+.map-layer-legends {
+  padding: 18px 20px 20px;
+  background: rgba(255, 255, 255, 0.82);
+  border-top: 1px solid rgba(17, 49, 34, 0.08);
+}
+
+.map-layer-legends--single {
+  animation: fade-up 260ms ease;
+}
+
+.map-layer-legends__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.map-layer-legends__header h3 {
+  margin: 0;
+  color: #143625;
+  font-size: 1.08rem;
+  line-height: 1.1;
+}
+
+.map-layer-legends__header p {
+  margin: 6px 0 0;
+  color: #66776d;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.map-layer-legends__header span {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: rgba(36, 107, 68, 0.1);
+  color: #17402c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.legend-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(17, 49, 34, 0.1);
+}
+
+.legend-card--active {
+  box-shadow: 0 14px 34px rgba(17, 49, 34, 0.06);
+}
+
+.legend-title {
+  font-weight: 700;
+  color: #17402c;
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.legend-subtitle {
+  margin: 0 0 12px;
+  color: #66776d;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.legend-labels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  font-size: 0.8rem;
+  color: #334c3f;
+  line-height: 1.25;
+}
+
+.legend-labels span:nth-child(2) {
+  text-align: center;
+}
+
+.legend-labels span:nth-child(3) {
+  text-align: right;
+}
+
+.legend-gradient {
+  height: 18px;
+  border-radius: 999px;
+  margin: 10px 0 6px;
+}
+
+.legend-gradient--ndvi {
+  background: linear-gradient(
+    90deg,
+    #f7f2c8 0%,
+    #d8ddb3 22%,
+    #9ac25a 48%,
+    #4f8e2b 72%,
+    #0c5d12 100%
+  );
+}
+
+.legend-gradient--ndwi {
+  background: linear-gradient(
+    90deg,
+    #00ff18 0%,
+    #b8ffc0 35%,
+    #f5f5ff 50%,
+    #7478ff 75%,
+    #0000ff 100%
+  );
+}
+
+.legend-gradient--moisture {
+  background: linear-gradient(
+    90deg,
+    #9e2f2f 0%,
+    #ff2200 18%,
+    #ffd600 38%,
+    #6df06d 52%,
+    #27d6c8 68%,
+    #1396ff 82%,
+    #0700c9 100%
+  );
+}
+
+.legend-scale-values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  font-size: 0.78rem;
+  color: #66776d;
+  font-weight: 600;
+}
+
+.legend-scale-values span:last-child {
+  text-align: right;
+}
+
+@media (max-width: 700px) {
+  .map-layer-legends__header {
+    flex-direction: column;
+  }
+
+  .legend-labels {
+    font-size: 0.72rem;
+    gap: 8px;
+  }
+}
+/* =========================================================
+   HYDROSENSE MAP — FIX LEAFLET ZOOM OVERLAP
+   ========================================================= */
+
+.leaflet-top.leaflet-left {
+  top: 76px !important;
+  left: 18px !important;
+  z-index: 450 !important;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 10px 24px rgba(17, 49, 34, 0.14) !important;
+}
+
+.leaflet-control-zoom a {
+  width: 38px !important;
+  height: 38px !important;
+  line-height: 36px !important;
+  border-radius: 10px !important;
+  color: #173728 !important;
+  font-weight: 800 !important;
+}
+
+.leaflet-control-zoom a:first-child {
+  margin-bottom: 4px !important;
+}
+/* =========================================================
+   HYDROSENSE MAP — SATELLITE LAYER BADGE POSITION
+   ========================================================= */
+
+.map-layer-legends__header span {
+  transform: translateY(16px);
+}
+/* =========================================================
+   REPORT HERO — META TAGS AS PLAIN TEXT, NOT PILLS
+   ========================================================= */
+
+.report-summary-copy .badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.report-summary-copy .pill,
+.report-summary-copy .signal,
+.report-summary-copy .risk-badge {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(247, 255, 248, 0.84);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: default;
+  pointer-events: none;
+}
+/* =========================================================
+   INFO CHIPS IN CARDS — PLAIN TEXT INSTEAD OF PILLS
+   ========================================================= */
+
+.card-grid .pill,
+.card-grid .signal,
+.card-grid .risk-badge,
+.insight-grid .pill,
+.insight-grid .signal,
+.insight-grid .risk-badge,
+.hero-card .pill,
+.hero-card .signal,
+.glass-card .pill,
+.glass-card .signal {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+
+  color: #3f684f;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.5;
+
+  cursor: default;
+  pointer-events: none;
+}.card-grid .pill,
+.card-grid .signal,
+.card-grid .risk-badge,
+.insight-grid .pill,
+.insight-grid .signal,
+.insight-grid .risk-badge,
+.hero-card .pill,
+.hero-card .signal,
+.glass-card .pill,
+.glass-card .signal {
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+
+  color: #3f684f;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.5;
+
+  cursor: default;
+  pointer-events: none;
+}
+
+.card-grid .pill::before,
+.card-grid .signal::before,
+.insight-grid .pill::before,
+.insight-grid .signal::before,
+.hero-card .pill::before,
+.hero-card .signal::before,
+.glass-card .pill::before,
+.glass-card .signal::before {
+  content: "— ";
+  color: rgba(63, 104, 79, 0.55);
+}
+
+.card-grid .pill,
+.card-grid .signal,
+.card-grid .risk-badge,
+.insight-grid .pill,
+.insight-grid .signal,
+.insight-grid .risk-badge,
+.hero-card .pill,
+.hero-card .signal,
+.glass-card .pill,
+.glass-card .signal {
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+
+  color: #3f684f;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.5;
+
+  cursor: default;
+  pointer-events: none;
+}
+
+.card-grid .pill::before,
+.card-grid .signal::before,
+.insight-grid .pill::before,
+.insight-grid .signal::before,
+.hero-card .pill::before,
+.hero-card .signal::before,
+.glass-card .pill::before,
+.glass-card .signal::before {
+  content: "— ";
+  color: rgba(63, 104, 79, 0.55);
+}
+/* Subtle contrast improvement after reverting heavy menu/card styling */
+
+.hero-eyebrow,
+.section-eyebrow,
+.kicker,
+.overline {
+  color: #2f7a55;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.site-header nav a,
+.header-nav a,
+.nav-link {
+  color: #304f3f;
+  font-weight: 800;
+}
+
+.site-header nav a:hover,
+.header-nav a:hover,
+.nav-link:hover {
+  color: #0f3d2a;
+}
+
+.muted,
+.text-muted,
+.card-muted,
+.lead,
+p {
+  color: #426254;
+}
+
+strong,
+b {
+  color: #123c2a;
+}
+
+.report-meta,
+.parcel-meta,
+.generated-date {
+  color: #355846;
+  font-weight: 700;
+}
+
+.tag,
+.pill,
+.meta-pill {
+  color: #d7e3da;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-weight: 800;
+  opacity: 1;
+}
+.report-hero span {
+  color: #d7e3da !important;
+  opacity: 1 !important;
 }
