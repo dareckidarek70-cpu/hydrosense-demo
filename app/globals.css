@@ -2586,3 +2586,96 @@ textarea {
 .report-score-grid:has(.water-scope-card) {
   justify-content: flex-start;
 }
+.map-layer-legends {
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.84);
+  border-top: 1px solid rgba(17, 49, 34, 0.08);
+}
+
+.map-layer-legends h3 {
+  margin: 0 0 18px;
+  color: #143625;
+  font-size: 1.15rem;
+}
+
+.legend-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(17, 49, 34, 0.1);
+  margin-bottom: 14px;
+}
+
+.legend-title {
+  font-weight: 700;
+  color: #17402c;
+  margin-bottom: 10px;
+}
+
+.legend-labels,
+.legend-scale-values {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  font-size: 0.82rem;
+  color: #334c3f;
+}
+
+.legend-labels span:nth-child(2) {
+  text-align: center;
+}
+
+.legend-labels span:nth-child(3) {
+  text-align: right;
+}
+
+.legend-gradient {
+  height: 20px;
+  border-radius: 999px;
+  margin: 10px 0 6px;
+}
+
+.legend-gradient--ndvi {
+  background: linear-gradient(
+    90deg,
+    #f7f2c8 0%,
+    #d8ddb3 22%,
+    #9ac25a 48%,
+    #4f8e2b 72%,
+    #0c5d12 100%
+  );
+}
+
+.legend-gradient--ndwi {
+  background: linear-gradient(
+    90deg,
+    #00ff18 0%,
+    #b8ffc0 35%,
+    #f5f5ff 50%,
+    #7478ff 75%,
+    #0000ff 100%
+  );
+}
+
+.legend-gradient--moisture {
+  background: linear-gradient(
+    90deg,
+    #9e2f2f 0%,
+    #ff2200 18%,
+    #ffd600 38%,
+    #6df06d 52%,
+    #27d6c8 68%,
+    #1396ff 82%,
+    #0700c9 100%
+  );
+}
+
+.legend-scale-values {
+  grid-template-columns: 1fr 1fr;
+  font-size: 0.78rem;
+  color: #66776d;
+}
+
+.legend-scale-values span:last-child {
+  text-align: right;
+}

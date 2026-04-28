@@ -164,6 +164,7 @@ function LayerControl({
       >
         Base map
       </button>
+
       <button
         type="button"
         onClick={() => onChange("TRUE_COLOR")}
@@ -171,6 +172,7 @@ function LayerControl({
       >
         True Color
       </button>
+
       <button
         type="button"
         onClick={() => onChange("NDVI")}
@@ -178,6 +180,7 @@ function LayerControl({
       >
         NDVI
       </button>
+
       <button
         type="button"
         onClick={() => onChange("NDWI")}
@@ -185,7 +188,8 @@ function LayerControl({
       >
         NDWI
       </button>
-       <button
+
+      <button
         type="button"
         onClick={() => onChange("MOISTURE_INDEX")}
         style={buttonStyle(selectedLayer === "MOISTURE_INDEX")}
@@ -224,6 +228,60 @@ function MapSourceNote({ selectedLayer }: { selectedLayer: LayerMode }) {
   );
 }
 
+function LayerLegends() {
+  return (
+    <div className="map-layer-legends">
+      <h3>Map layer legends</h3>
+
+      <div className="legend-card">
+        <div className="legend-title">NDVI</div>
+        <div className="legend-labels">
+          <span>Barren land, sand, snow</span>
+          <span>Shrub, grassland</span>
+          <span>
+            High vegetation level
+            <br />
+            Tropical rainforest
+          </span>
+        </div>
+        <div className="legend-gradient legend-gradient--ndvi" />
+        <div className="legend-scale-values">
+          <span>-1.0</span>
+          <span>1.0</span>
+        </div>
+      </div>
+
+      <div className="legend-card">
+        <div className="legend-title">NDWI</div>
+        <div className="legend-labels">
+          <span>Very low</span>
+          <span>Moderate</span>
+          <span>Very high</span>
+        </div>
+        <div className="legend-gradient legend-gradient--ndwi" />
+        <div className="legend-scale-values">
+          <span>0.0</span>
+          <span>1.0</span>
+        </div>
+      </div>
+
+      <div className="legend-card">
+        <div className="legend-title">Moisture Index</div>
+        <div className="legend-labels">
+          <span>Extremely dry</span>
+          <span>Neutral</span>
+          <span>Very moist</span>
+        </div>
+        <div className="legend-gradient legend-gradient--moisture" />
+        <div className="legend-scale-values">
+          <span>0.0</span>
+          <span>1.0</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LiveParcelMap({
   parcels = [],
   selectedParcelId,
@@ -248,7 +306,9 @@ export function LiveParcelMap({
     : [];
 
   const selectedParcel =
-    safeParcels.find((parcel) => parcel.id === selectedParcelId) ?? safeParcels[0] ?? null;
+    safeParcels.find((parcel) => parcel.id === selectedParcelId) ??
+    safeParcels[0] ??
+    null;
 
   const fallbackCenter: [number, number] = [45.4372, 12.3346];
   const mapCenter = pickedPoint ?? selectedParcel?.center ?? fallbackCenter;
@@ -364,6 +424,8 @@ export function LiveParcelMap({
           </Marker>
         ) : null}
       </MapContainer>
+
+      <LayerLegends />
     </div>
   );
 }
