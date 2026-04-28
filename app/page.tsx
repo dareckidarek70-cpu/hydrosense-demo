@@ -57,23 +57,31 @@ export default function HomePage() {
           }}
         >
           <div className="map-overlay">
-            <div className="label-row">
-              <span className="signal">AI-assisted parcel intelligence</span>
-              <span className="pill">Veneto demo parcel set</span>
-            </div>
+  <div className="label-row">
+    <span className="signal hero-preview-microtext">
+      AI-assisted parcel intelligence
+    </span>
+    <span className="pill hero-preview-microtext hero-preview-pill">
+      Veneto demo parcel set
+    </span>
+  </div>
 
-            <div>
-              <p className="supporting-label">Featured parcel for live review</p>
-              <h2
-                className="section-title hero-feature-title"
-                style={{
-                  color: "#f2fff5",
-                  fontSize: "clamp(1.8rem, 3.2vw, 3.2rem)",
-                  lineHeight: 0.95,
-                  letterSpacing: "-0.035em",
-                  maxWidth: "9.5ch",
-                  marginBottom: "1.75rem",
-                }}
+  <div>
+    <p className="supporting-label hero-preview-kicker">
+      Featured parcel for live review
+    </p>
+
+    <h2
+      className="section-title hero-feature-title"
+      style={{
+        color: "#f2fff5",
+        fontSize: "clamp(1.8rem, 3.2vw, 3.2rem)",
+        lineHeight: 0.95,
+        letterSpacing: "-0.035em",
+        maxWidth: "9.5ch",
+        marginBottom: "1.75rem",
+      }}
+    
               >
                 Parcel B — Mestre Plain
               </h2>
