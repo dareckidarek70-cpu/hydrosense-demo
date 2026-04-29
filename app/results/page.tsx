@@ -228,14 +228,7 @@ function buildCustomVerdict(params: {
 }
 
 function getResultsSourceBadge(source?: string) {
-  if (source === "live") {
-    return {
-  text: "LIVE",
-  bg: "#dfeee6",
-  color: "#0f3d2e",
-  border: "1px solid #9fb8ab",
-};
-  }
+  
 
   if (source === "estimated") {
     return {
