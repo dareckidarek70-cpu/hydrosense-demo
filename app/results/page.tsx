@@ -806,3 +806,5 @@ const analysis = isWaterArea
     </div>
   );
 }
+
+/* === komentarz === */
