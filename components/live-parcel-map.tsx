@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Crosshair, LoaderCircle } from "lucide-react";
 import type { Observation } from "@/lib/copernicus/observations";
 import { inclusiveEnd, observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
@@ -9,9 +9,9 @@ import { useLocale } from "./locale";
 import { responseFailure } from "@/lib/copernicus/errors";
 import type { MessageKey } from "@/lib/i18n";
 import { MapRasterCache } from "@/lib/map-raster-cache";
+import { rasterZoom, visibleRasterFraction } from "@/lib/raster-viewport";
 import {
   Circle,
-  ImageOverlay,
   MapContainer,
   Marker,
   Polygon,
@@ -101,7 +101,7 @@ function SyncMapSize() {
   return null;
 }
 
-function DemoFocus({ lat, lng }: { lat: number; lng: number }) {
+function SelectionFocus({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   useEffect(() => { map.panTo([lat, lng], { animate: false }); }, [lat, lng, map]);
   return null;
@@ -111,23 +111,126 @@ function SatelliteOverlay({ selectedLayer, from, to, onStatus, cache }: {
   selectedLayer: Exclude<LayerMode, "BASEMAP">;
   from: string;
   to: string;
-  onStatus: (status: MessageKey) => void;
+  onStatus: (status: MessageKey, coverage?: number) => void;
   cache: MapRasterCache;
 }) {
   const map = useMap();
-  const [image, setImage] = useState<{ url: string; bounds: L.LatLngBounds } | null>(null);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let deadline: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
     let controller: AbortController | undefined;
     let requested: string | undefined;
+    let overlay: L.ImageOverlay | undefined;
 
-    function refresh(delay: number) {
+    async function show(key: string, bounds: L.LatLngBounds) {
+      const request = new AbortController();
+      controller = request;
+      const { signal } = request;
+      let pendingUrl: string | undefined;
+      let layer: L.ImageOverlay | undefined;
+      const cached = cache.get(key);
+      const deadline = setTimeout(() => {
+        if (signal.aborted) return;
+        request.abort();
+        layer?.remove();
+        requested = undefined;
+        onStatus("timeout");
+      }, 24_000);
+
+      try {
+        let blob: Blob | undefined;
+        if (!cached) {
+          const response = await fetch(`/api/copernicus/layer?${key}`, { signal });
+          if (!response.ok) {
+            const code = await responseFailure(response);
+            if (!signal.aborted) {
+              requested = undefined;
+              onStatus(code);
+            }
+            return;
+          }
+          if (!response.headers.get("Content-Type")?.startsWith("image/png")) {
+            if (!signal.aborted) {
+              requested = undefined;
+              onStatus("mapInvalidImage");
+            }
+            return;
+          }
+          blob = await response.blob();
+          if (signal.aborted) return;
+          pendingUrl = URL.createObjectURL(blob);
+        }
+
+        const url = cached ?? pendingUrl;
+        if (!url) return;
+        layer = L.imageOverlay(url, bounds, { opacity: 0, zIndex: 20 }).addTo(map);
+        overlay = layer;
+        const image = layer.getElement();
+        const decodeStart = performance.now();
+        try {
+          if (!image) throw new Error("Missing overlay image");
+          await image.decode();
+        } catch {
+          if (!signal.aborted) {
+            if (cached) cache.delete(key);
+            layer.remove();
+            requested = undefined;
+            onStatus("mapInvalidImage");
+          }
+          return;
+        }
+        if (signal.aborted) return;
+        const decodeMs = Math.round(performance.now() - decodeStart);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) throw new Error("Missing raster canvas");
+        ctx.drawImage(image, 0, 0);
+        const coverage = visibleRasterFraction(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
+        if (coverage === 0) {
+          layer.remove();
+          requested = undefined;
+          onStatus("mapNoPixels");
+          return;
+        }
+        if (blob) {
+          cache.store(key, blob, Date.now(), url);
+          pendingUrl = undefined;
+        }
+
+        layer.setOpacity(0.9);
+        image.dataset.rasterState = "ready";
+        image.dataset.rasterDecodeMs = String(decodeMs);
+        onStatus("mapReady", coverage);
+      } catch {
+        if (!signal.aborted) {
+          layer?.remove();
+          requested = undefined;
+          onStatus("mapFallback");
+        }
+      } finally {
+        clearTimeout(deadline);
+        if (pendingUrl) URL.revokeObjectURL(pendingUrl);
+      }
+    }
+
+    function refresh(fit: boolean) {
+      if (disposed) return;
       const bounds = map.getBounds();
       const { x, y } = map.getSize();
       const west = bounds.getWest(), south = bounds.getSouth(), east = bounds.getEast(), north = bounds.getNorth();
-      const withinLimits = east - west <= 1 && north - south <= 1 && west >= -180 && east <= 180
+      const longitudeSpan = east - west, latitudeSpan = north - south;
+      if (fit && x > 0 && y > 0) {
+        const zoom = map.getZoom();
+        const target = rasterZoom(zoom, Math.min(18, map.getMaxZoom()), longitudeSpan, latitudeSpan);
+        if (target > zoom) {
+          map.setZoom(target, { animate: false });
+          return;
+        }
+      }
+      const withinLimits = longitudeSpan <= 1 && latitudeSpan <= 1 && west >= -180 && east <= 180
         && south >= -84 && north <= 84 && x > 0 && y > 0;
       const scale = Math.min(1, 768 / Math.max(x, y));
       const key = withinLimits ? new URLSearchParams({
@@ -140,66 +243,29 @@ function SatelliteOverlay({ selectedLayer, from, to, onStatus, cache }: {
 
       if (key === requested) return;
       requested = key;
-      clearTimeout(timer);
-      clearTimeout(deadline);
       controller?.abort();
-      const cached = key ? cache.get(key) : undefined;
-      timer = setTimeout(async () => {
-        if (!key) {
-          setImage(null);
-          onStatus("zoomMap");
-          return;
-        }
-        if (cached) {
-          setImage({ url: cached, bounds });
-          onStatus("mapReady");
-          return;
-        }
-        setImage(null);
-        controller = new AbortController();
-        const { signal } = controller;
+      overlay?.remove();
+      if (key) {
         onStatus("mapRequest");
-        deadline = setTimeout(() => {
-          controller?.abort();
-          requested = undefined;
-          onStatus("timeout");
-        }, 24_000);
-        try {
-          const response = await fetch(`/api/copernicus/layer?${key}`, { signal });
-          if (!response.ok) {
-            const code = await responseFailure(response);
-            if (!signal.aborted) {
-              requested = undefined;
-              onStatus(code);
-            }
-            return;
-          }
-          const blob = await response.blob();
-          if (signal.aborted) return;
-          setImage({ url: cache.store(key, blob), bounds });
-          onStatus("mapReady");
-        } catch {
-          if (!signal.aborted) {
-            requested = undefined;
-            onStatus("mapFallback");
-          }
-        } finally {
-          if (!signal.aborted) clearTimeout(deadline);
-        }
-      }, cached || !key ? 0 : delay);
+        void show(key, bounds);
+      } else {
+        onStatus("zoomMap");
+      }
     }
-    const onViewportChange = () => refresh(160);
-    refresh(0);
-    map.on("moveend resize", onViewportChange);
+
+    const onMove = () => refresh(false);
+    const onResize = () => refresh(true);
+    map.on("moveend", onMove).on("resize", onResize);
+    queueMicrotask(onResize);
     return () => {
-      map.off("moveend resize", onViewportChange);
-      clearTimeout(timer);
-      clearTimeout(deadline);
+      disposed = true;
+      map.off("moveend", onMove).off("resize", onResize);
       controller?.abort();
+      overlay?.remove();
     };
   }, [map, selectedLayer, from, to, onStatus, cache]);
 
-  return image ? <ImageOverlay url={image.url} bounds={image.bounds} opacity={0.9} zIndex={20} /> : null;
+  return null;
 }
 
 function LayerControl({
@@ -240,6 +306,12 @@ const LiveParcelMap = memo(function LiveParcelMap({
   const { t, locale, date, coordinates, num } = useLocale();
   const [selectedLayer, setSelectedLayer] = useState<LayerMode>("BASEMAP");
   const [overlayStatus, setOverlayStatus] = useState<MessageKey | null>(null);
+  const [pixelCoverage, setPixelCoverage] = useState<number>();
+  const showOverlayStatus = useCallback((status: MessageKey, coverage?: number) => {
+    setOverlayStatus(status);
+    setPixelCoverage(coverage);
+  }, []);
+  const [layerAttempt, setLayerAttempt] = useState(0);
   const [defaultWindow] = useState(() => observationWindow());
   const [cache] = useState(() => new MapRasterCache());
   useEffect(() => () => cache.clear(), [cache]);
@@ -254,6 +326,7 @@ const LiveParcelMap = memo(function LiveParcelMap({
   const mapCenter = pickedPoint ?? selectedParcel?.center ?? fallbackCenter;
 
   const selectedOverlayLayer = selectedLayer === "BASEMAP" ? null : selectedLayer;
+  const canRetry = overlayStatus && !["mapRequest", "mapReady", "zoomMap", "mapNoPixels"].includes(overlayStatus);
 
   return (
     <div className="map-shell">
@@ -279,20 +352,18 @@ const LiveParcelMap = memo(function LiveParcelMap({
 
         {selectedOverlayLayer && !observationPending ? (
           <SatelliteOverlay
-            key={`${selectedOverlayLayer}:${window.from}:${window.to}`}
+            key={`${selectedOverlayLayer}:${window.from}:${window.to}:${layerAttempt}`}
             selectedLayer={selectedOverlayLayer}
             from={window.from}
             to={window.to}
-            onStatus={setOverlayStatus}
+            onStatus={showOverlayStatus}
             cache={cache}
           />
         ) : null}
 
         <MapClickHandler onPickPoint={onPickPoint} />
         <PickMapCenter onPickPoint={onPickPoint} />
-        {!pickedPoint && selectedParcel ? (
-          <DemoFocus lat={selectedParcel.center[0]} lng={selectedParcel.center[1]} />
-        ) : null}
+        <SelectionFocus lat={mapCenter[0]} lng={mapCenter[1]} />
 
         {parcels.map((parcel) => {
           const isSelected = parcel.id === selectedParcelId;
@@ -356,9 +427,15 @@ const LiveParcelMap = memo(function LiveParcelMap({
             <span>{observationPending ? t("findingDate") : (
               <>Sentinel-2 L2A · {observation ? t("overlayDay", { date: date(window.from) }) :
                 t("referenceMosaic", { from: date(window.from), to: date(inclusiveEnd(window)) })}
-              {overlayStatus ? ` · ${t(overlayStatus)}` : ""}</>
+              {overlayStatus === "mapReady" && pixelCoverage !== undefined
+                ? ` · ${t(pixelCoverage < 0.05 ? "mapSparsePixels" : "mapPixelCoverage", { coverage: num(pixelCoverage * 100, 2) })} ${t("mapReady")}`
+                : overlayStatus ? ` · ${t(overlayStatus)}` : ""}</>
             )}</span>
           </p>
+          {!observationPending && canRetry ? <button type="button" className="button-secondary satellite-layer-retry"
+            onClick={() => { setOverlayStatus("mapRequest"); setLayerAttempt((attempt) => attempt + 1); }}>
+            {t("mapRetry")}
+          </button> : null}
           <SatelliteLegend key={selectedOverlayLayer} layer={selectedOverlayLayer} />
         </>
       ) : null}

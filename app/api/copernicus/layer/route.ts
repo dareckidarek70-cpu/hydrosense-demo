@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const started = performance.now();
     const image = await cachedRequest("layer", JSON.stringify([
       coordinates, width, height, layer, timeFrom, timeTo,
     ]), 20, async () => fetchLayerImage({
@@ -37,7 +38,12 @@ export async function GET(request: NextRequest) {
       accessToken: await getCopernicusAccessToken(),
     }));
     return new Response(image, {
-      headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=300" },
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=300",
+        "Vercel-CDN-Cache-Control": "public, s-maxage=300",
+        "Server-Timing": `raster;dur=${Math.round(performance.now() - started)}`,
+      },
     });
   } catch (error) {
     return providerFailure("layer", error);

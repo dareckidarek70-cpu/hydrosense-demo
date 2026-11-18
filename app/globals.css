@@ -156,6 +156,7 @@ main { flex: 1; }
 .satellite-layer-toolbar button[aria-pressed="true"] { background: var(--surface); border-color: #bed1fa; color: var(--primary-hover); }
 .satellite-layer-status, .satellite-legend { padding: 10px 15px; font-size: .82rem; color: var(--body); }
 .satellite-layer-status { display: flex; align-items: center; gap: 7px; background: var(--inset); border-bottom: 1px solid var(--border); }
+.satellite-layer-retry { margin: 7px 15px 0; }
 .satellite-legend summary, .observation-quality summary { cursor: pointer; color: var(--text); font-weight: 700; }
 .satellite-legend p { margin-top: 6px; }
 .layer-swatch-list { display: flex; flex-wrap: wrap; gap: 5px 9px; list-style: none; padding: 0; margin-top: 9px; }

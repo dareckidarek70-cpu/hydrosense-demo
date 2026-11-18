@@ -16,10 +16,9 @@ export class MapRasterCache {
     return entry.url;
   }
 
-  store(key: string, blob: Blob, now = Date.now()) {
+  store(key: string, blob: Blob, now = Date.now(), url = URL.createObjectURL(blob)) {
     const previous = this.entries.get(key);
     if (previous) this.remove(key, previous);
-    const url = URL.createObjectURL(blob);
     this.entries.set(key, { url, size: blob.size, expires: now + 5 * 60_000 });
     this.bytes += blob.size;
     for (const [oldKey, entry] of this.entries) {
@@ -31,6 +30,11 @@ export class MapRasterCache {
 
   clear() {
     for (const [key, entry] of this.entries) this.remove(key, entry);
+  }
+
+  delete(key: string) {
+    const entry = this.entries.get(key);
+    if (entry) this.remove(key, entry);
   }
 
   private remove(key: string, entry: Entry) {
