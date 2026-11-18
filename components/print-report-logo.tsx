@@ -1,10 +1,15 @@
+import Image from "next/image";
+
 export function PrintReportLogo() {
   return (
     <div className="print-report-logo">
       <div className="print-report-main-brand">
-        <img
+        <Image
           src="/hydrosense-logo.png"
           alt="HydroSense logo"
+          width={40}
+          height={40}
+          unoptimized
           className="print-report-hydrosense-mark"
         />
 
@@ -15,15 +20,21 @@ export function PrintReportLogo() {
       </div>
 
       <div className="print-report-partner-logos">
-        <img
+        <Image
           src="/Projekt_Logo.png"
           alt="LEOO project logo"
+          width={40}
+          height={40}
+          unoptimized
           className="print-report-partner-logo"
         />
 
-        <img
+        <Image
           src="/sketch_Logo.jpg"
           alt="Astro Youth Camp logo"
+          width={40}
+          height={40}
+          unoptimized
           className="print-report-partner-logo"
         />
       </div>

@@ -1,18 +1,25 @@
 import Link from "next/link";
 import { FeatureCard } from "@/components/cards/feature-card";
-import { HydroSenseWordmark } from "@/components/hydrosense-wordmark";
 import { MetricCard } from "@/components/cards/metric-card";
 import { SectionHeader } from "@/components/section-header";
+import { getDemoAnalysis } from "@/lib/mock-analysis";
 import { demoHighlights, investorReasons, workflowSteps } from "@/lib/mock-content";
 
 export default function HomePage() {
+  const { meta, executiveSummary, riskAndSustainability } = getDemoAnalysis("parcel-b");
+  const featuredScores = [
+    ["Investment", executiveSummary.investmentReadiness],
+    ["Irrigation", executiveSummary.irrigationReadiness],
+    ["Crop fit", executiveSummary.cropFitScore],
+    ["Sustainability", riskAndSustainability.sustainabilityScore],
+  ];
   return (
     <div className="container">
       <section className="page-section hero-grid hero-grid--home">
         <div className="hero-panel hero-panel--home">
           <div className="section-heading">
           
-            <span className="eyebrow">AI-assisted parcel review</span>
+            <span className="eyebrow">Satellite parcel review</span>
 
             <h1
               className="display-title"
@@ -35,16 +42,16 @@ export default function HomePage() {
                 marginTop: "1.5rem",
               }}
             >
-              HydroSense transforms parcel’s satellite data into a concise executive brief covering water access, soil profile, crop fit, irrigation potential, and decision risk.
+              Review Sentinel-2 observations for a selected area, or explore a sample brief to see how a parcel assessment could be presented.
             </p>
           </div>
 
           <div className="hero-actions hero-actions--home">
             <Link className="button" href="/select-area">
-              Start Demo
+              Select Area
             </Link>
             <Link className="button-secondary" href="/results?parcel=parcel-b">
-              View Brief
+              View Demo Brief
             </Link>
           </div>
         </div>
@@ -57,102 +64,20 @@ export default function HomePage() {
           }}
         >
           <div className="map-overlay">
-  <div className="label-row">
-    <span className="signal hero-preview-microtext">
-      AI-assisted parcel intelligence
-    </span>
-    <span className="pill hero-preview-microtext hero-preview-pill">
-      Veneto demo parcel set
-    </span>
-  </div>
-
-  <div>
-    <p className="supporting-label hero-preview-kicker">
-      Featured parcel for live review
-    </p>
-
-    <h2
-      className="section-title hero-feature-title"
-      style={{
-        color: "#f2fff5",
-        fontSize: "clamp(1.8rem, 3.2vw, 3.2rem)",
-        lineHeight: 0.95,
-        letterSpacing: "-0.035em",
-        maxWidth: "9.5ch",
-        marginBottom: "1.75rem",
-      }}
-    
-              >
-                Parcel B — Mestre Plain
-              </h2>
+            <div className="label-row">
+              <span className="pill hero-preview-microtext hero-preview-pill">Illustrative demo</span>
             </div>
-
-            <div
-              className="stats-grid hero-stats-grid"
-              style={{
-                position: "relative",
-                zIndex: 2,
-              }}
-            >
-              <div className="metric-card hero-stat-card">
-                <p
-                  className="metric-value"
-                  style={{
-                    color: "#f2fff5",
-                    fontSize: "4.2rem",
-                    lineHeight: 1,
-                    marginBottom: "1rem",
-                  }}
-                >
-                  84%
-                </p>
-                <p className="metric-label">Investment suitability</p>
-              </div>
-
-              <div className="metric-card hero-stat-card">
-                <p
-                  className="metric-value"
-                  style={{
-                    color: "#f2fff5",
-                    fontSize: "4.2rem",
-                    lineHeight: 1,
-                    marginBottom: "1rem",
-                  }}
-                >
-                  81%
-                </p>
-                <p className="metric-label">Irrigation readiness</p>
-              </div>
-
-              <div className="metric-card hero-stat-card">
-                <p
-                  className="metric-value"
-                  style={{
-                    color: "#f2fff5",
-                    fontSize: "4.2rem",
-                    lineHeight: 1,
-                    marginBottom: "1rem",
-                  }}
-                >
-                  86%
-                </p>
-                <p className="metric-label">Crop fit score</p>
-              </div>
-
-              <div className="metric-card hero-stat-card">
-                <p
-                  className="metric-value"
-                  style={{
-                    color: "#f2fff5",
-                    fontSize: "4.2rem",
-                    lineHeight: 1,
-                    marginBottom: "1rem",
-                  }}
-                >
-                  82%
-                </p>
-                <p className="metric-label">Agricultural productivity</p>
-              </div>
+            <div>
+              <p className="supporting-label hero-preview-kicker">Featured demo parcel</p>
+              <h2 className="section-title hero-feature-title" style={{ color: "#f2fff5" }}>{meta.label}</h2>
+            </div>
+            <div className="stats-grid hero-stats-grid">
+              {featuredScores.map(([label, score]) => (
+                <div className="metric-card hero-stat-card" key={label}>
+                  <p className="metric-value">{score}%</p>
+                  <p className="metric-label">{label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -162,7 +87,7 @@ export default function HomePage() {
         <SectionHeader
           eyebrow="What HydroSense does"
           title="A premium parcel-intelligence demo built for live explanation."
-          description="The prototype is designed to present groundwater potential, crop fit, irrigation opportunities and risks in a concise agriculture industry context."
+          description="Screen real locations with optical satellite data. Use the demo briefs to explore how verified land and water evidence could support a broader review."
         />
         <div className="card-grid">
           {demoHighlights.map((item) => (
@@ -181,7 +106,7 @@ export default function HomePage() {
           <SectionHeader
           eyebrow="3-step story"
           title="Select parcel → Analyze signals → Present the brief"
-          description="HydroSense guides the user from parcel selection to satellite-based scoring and a concise executive brief ready for presentation."
+          description="Select an area, review available satellite observations, and open a brief with the evidence needed for the next decision."
         />
           <div className="metric-stack workflow-stack">
   {workflowSteps.map((step, index) => (

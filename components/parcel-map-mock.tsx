@@ -11,7 +11,8 @@ type ParcelMapMockProps = {
 const parcelClassMap: Record<DemoParcel["id"], string> = {
   "parcel-a": "parcel-shape parcel-shape--a",
   "parcel-b": "parcel-shape parcel-shape--b",
-  "parcel-c": "parcel-shape parcel-shape--c"
+  "parcel-c": "parcel-shape parcel-shape--c",
+  "parcel-d": "parcel-shape parcel-shape--d",
 };
 
 export function ParcelMapMock({ parcels, selectedParcelId, onSelect }: ParcelMapMockProps) {
@@ -20,7 +21,7 @@ export function ParcelMapMock({ parcels, selectedParcelId, onSelect }: ParcelMap
       <div className="map-overlay">
         <div className="label-row">
           <span className="signal">Satellite parcel review</span>
-          <span className="pill">Three Veneto demo parcels</span>
+          <span className="pill">Veneto demo parcels</span>
         </div>
         <div>
           <p className="supporting-label" style={{ color: "rgba(232, 247, 236, 0.68)" }}>

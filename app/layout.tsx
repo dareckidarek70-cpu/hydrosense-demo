@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>
         <div className="app-shell">
           <header className="site-header">
@@ -42,9 +42,8 @@ export default function RootLayout({
           </header>
           <main>{children}</main>
           <footer className="container footer-note">
-          <strong>Prototype note:</strong> HydroSense is a concept prototype. All parcel
-            analysis and recommendations are demo-only and based on mocked
-            Copernicus/GIS-style interpretation.{" "}
+          <strong>Prototype note:</strong> Demo parcels use illustrative scores. Custom
+            selections can show Sentinel-2 observations for preliminary screening.{" "}
           <strong>IT support: DS</strong>
           </footer>
         </div>

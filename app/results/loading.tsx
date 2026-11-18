@@ -5,9 +5,9 @@ export default function Loading() {
         <div className="glass-card report-hero loading-card">
           <div className="section-heading">
             <span className="eyebrow">Generating report</span>
-            <h1 className="section-title">Compiling parcel intelligence from mocked Copernicus and GIS signals</h1>
+            <h1 className="section-title">Preparing the area brief</h1>
             <p className="lead">
-              Preparing the executive summary, scorecards, and parcel-level recommendations for presentation.
+              Loading the selected area and its report.
             </p>
           </div>
           <div className="report-summary-band">

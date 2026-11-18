@@ -23,12 +23,12 @@ export const workflowSteps = [
   {
     title: "Select parcel",
     summary:
-      "Choose one of three Veneto parcels from a guided satellite-style selection view.",
+      "Choose a Veneto demo parcel or mark your own area on the map.",
   },
   {
     title: "Analyze satellite signals",
     summary:
-      "HydroSense interprets seasonal satellite-style signals for water, moisture, vegetation, terrain, and sustainability potential.",
+      "Review dated vegetation, water and canopy-moisture indices where Sentinel-2 coverage permits.",
   },
   {
     title: "Present the brief",

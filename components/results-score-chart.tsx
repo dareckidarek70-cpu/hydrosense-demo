@@ -41,7 +41,7 @@ export function ResultsScoreChart({
       {/* EKRAN */}
       <div className="report-chart-screen">
         <div className="report-chart-wrap">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 280 }}>
             <BarChart
               data={data}
               margin={{ top: 18, right: 18, left: 6, bottom: 12 }}
@@ -62,7 +62,7 @@ export function ResultsScoreChart({
                 width={36}
               />
               <Tooltip
-                formatter={(value: any) => [`Score: ${Number(value ?? 0)}%`, undefined]}
+                formatter={(value) => [`Demo score: ${Number(value ?? 0)}%`, undefined]}
                 contentStyle={{
                   borderRadius: 16,
                   border: "1px solid rgba(17,49,34,0.08)",
@@ -109,8 +109,7 @@ export function ResultsScoreChart({
       </div>
 
       <p className="report-chart-note">
-        This score is generated from satellite-derived indicators such as vegetation,
-        moisture, terrain, and long-term sustainability signals.
+        Illustrative scores for this sample scenario.
       </p>
     </section>
   );
