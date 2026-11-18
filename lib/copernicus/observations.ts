@@ -4,6 +4,9 @@ type Entry = {
   outputs?: Record<string, { bands?: Record<string, { stats?: Band }> }>;
 };
 
+export const MIN_CLEAR_COVERAGE = 0.5;
+export const MIN_INDEX_PIXELS = 20;
+
 function readBand(entry: Entry, output: string, band = "B0") {
   const stats = entry.outputs?.[output]?.bands?.[band]?.stats;
   const valid = Math.max(0, (stats?.sampleCount ?? 0) - (stats?.noDataCount ?? 0));
@@ -22,15 +25,15 @@ export function summarizeObservations(entries: Entry[], expectedPixels: number) 
     const water = readBand(entry, "surface", "water");
     const indicator = (key: string) => {
       const { value, valid } = readBand(entry, key);
-      return valid >= 20 && value !== null && Math.abs(value) <= 1 ? value : null;
+      return valid >= MIN_INDEX_PIXELS && value !== null && Math.abs(value) <= 1 ? value : null;
     };
     return [{
       from,
       to,
       cloudFraction: cloud.value,
       clearCoverage: Math.min(1, water.valid / expectedPixels),
-      waterFraction: water.valid >= 20 ? water.value : null,
-      vegetationFraction: water.valid >= 20 ? readBand(entry, "surface", "vegetation").value : null,
+      waterFraction: water.valid >= MIN_INDEX_PIXELS ? water.value : null,
+      vegetationFraction: water.valid >= MIN_INDEX_PIXELS ? readBand(entry, "surface", "vegetation").value : null,
       clearPixels: water.valid,
       ndvi: indicator("ndvi"),
       ndwi: indicator("ndwi"),
@@ -38,14 +41,21 @@ export function summarizeObservations(entries: Entry[], expectedPixels: number) 
     }];
   }).sort((a, b) => Date.parse(b.from) - Date.parse(a.from));
 
-  const observation = days.find((day) =>
-    day.clearCoverage >= 0.5 && day.clearPixels >= 20
-    && (day.ndvi !== null || day.ndwi !== null || day.ndmi !== null)
-  ) ?? null;
-  return { observation, latestObserved: days[0] ?? null, observedDays: days.length };
+  const uniqueDays = [...new Map(days.map((day) => [day.from.slice(0, 10), day])).values()];
+  const observation = uniqueDays.find(isUsableDay) ?? null;
+  return { observation, latestObserved: uniqueDays[0] ?? null, observedDays: uniqueDays.length, days: uniqueDays };
 }
 
-export type Observation = NonNullable<ReturnType<typeof summarizeObservations>["observation"]>;
+export type Observation = {
+  from: string; to: string; cloudFraction: number; clearCoverage: number;
+  waterFraction: number | null; vegetationFraction: number | null; clearPixels: number;
+  ndvi: number | null; ndwi: number | null; ndmi: number | null;
+};
+
+export function isUsableDay(day: Observation) {
+  return day.clearCoverage >= MIN_CLEAR_COVERAGE && day.clearPixels >= MIN_INDEX_PIXELS
+    && (day.ndvi !== null || day.ndwi !== null || day.ndmi !== null);
+}
 export type AreaStats = ReturnType<typeof summarizeObservations> & {
   window: { from: string; to: string };
   areaHectares: number;

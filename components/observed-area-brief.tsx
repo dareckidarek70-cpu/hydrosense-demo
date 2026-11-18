@@ -1,28 +1,43 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { isUsableDay } from "@/lib/copernicus/observations";
+import { radiusAreaHectares, type ObservationWindow } from "@/lib/copernicus/request";
 import { ObservationDetails, useAreaObservation, type PointArea } from "./area-observation";
+import { ObservationHistory } from "./observation-history";
+import { ObservationMap, observationMapUrl } from "./observation-map";
+import { ObservationPeriod } from "./observation-period";
 import { PrintReportLogo } from "./print-report-logo";
 import { PrintBriefButton } from "./print-brief-button";
-import { ReportSectionCard } from "./cards/report-section-card";
-import { radiusAreaHectares } from "@/lib/copernicus/request";
+import { RadiusComparison } from "./radius-comparison";
 
 const requiredEvidence = [
-  ["Investment", "Land title, planning rules, access, costs and market assumptions."],
-  ["Irrigation", "Water rights, dependable supply, water quality and crop demand."],
-  ["Crop fit", "Verified land use, soil profile, local climate and crop requirements."],
-  ["Sustainability", "Verified baselines for water use, habitat, emissions and related impacts."],
+  ["Investment", "Check land title, planning rules, access, costs and market assumptions."],
+  ["Irrigation", "Confirm water rights, dependable supply, water quality and crop demand."],
+  ["Crop fit", "Verify land use, soil profile, local climate and crop requirements."],
+  ["Sustainability", "Establish baselines for water use, habitat, emissions and related impacts."],
 ];
 
-export function ObservedAreaBrief({ area, generated }: { area: PointArea; generated: string }) {
-  const { state, retry } = useAreaObservation(area);
+export function ObservedAreaBrief({ area, generated, initialPeriod }: {
+  area: PointArea;
+  generated: string;
+  initialPeriod: ObservationWindow;
+}) {
+  const [period, setPeriod] = useState(initialPeriod);
+  const [selectedDay, setSelectedDay] = useState("");
+  const { state, retry } = useAreaObservation(area, period);
   const data = state && "data" in state ? state.data : undefined;
+  const day = data?.days.find((entry) => entry.from.slice(0, 10) === selectedDay && isUsableDay(entry))
+    ?? data?.observation ?? null;
   const [lat, lng] = area.coordinates;
-  const water = (data?.observation?.waterFraction ?? 0) >= 0.8;
+  const raster = observationMapUrl(area, day);
+  const map = <ObservationMap key={raster ?? "outline"} area={area} url={raster} date={day?.from.slice(0, 10)} />;
+  const water = (day?.waterFraction ?? 0) >= 0.8;
 
   return (
     <div className="container">
-      <section className="page-section brief-shell report-layout">
+      <section className="page-section brief-shell observation-document">
         <div className="report-hero glass-card">
           <div className="report-hero-top">
             <div className="report-brand-summary">
@@ -33,42 +48,65 @@ export function ObservedAreaBrief({ area, generated }: { area: PointArea; genera
             {state ? <div className="report-hero-actions print-hidden"><PrintBriefButton /></div> : null}
           </div>
           <p className="lead">
-            {lat.toFixed(5)}, {lng.toFixed(5)} · {area.radiusMeters} m radius ·
+            {lat.toFixed(5)}, {lng.toFixed(5)} · {area.radiusMeters === 1000 ? "1 km" : "500 m"} radius ·
             {" "}approximately {radiusAreaHectares(area.radiusMeters).toFixed(1)} ha
           </p>
-          <p className="report-quiet-note">Optical screening for field verification. Agricultural and investment scores are not assessed.</p>
           <p className="report-generated">Generated on {generated} UTC</p>
         </div>
 
-        <div className="report-section-card">
+        <ObservationPeriod period={period} onApply={(next) => {
+          setSelectedDay("");
+          setPeriod(next);
+        }} />
+
+        <section className="observation-section">
           <h2>Satellite evidence</h2>
-          <div role="status">
-            {!state ? <p>Loading observations for this area…</p> : null}
-            {state && "error" in state ? <p>{state.error}</p> : null}
-            {data ? <ObservationDetails data={data} /> : null}
-          </div>
+          {!state ? <p role="status">Requesting and screening Sentinel-2 observations…</p> : null}
           {state && "error" in state ? (
-            <button type="button" className="button-secondary print-hidden" onClick={retry}>Retry analysis</button>
+            <div>
+              <p role="alert">{state.error} No replacement values were generated.</p>
+              <button type="button" className="button-secondary print-hidden" onClick={retry}>Retry analysis</button>
+            </div>
           ) : null}
-          {water ? <p>Surface water dominates the clear pixels on the reported day. Verify the boundary before agricultural screening.</p> : null}
-        </div>
+          {data ? <ObservationDetails data={data} day={day} map={map} full /> : state ? map : null}
+          {water ? <p>Water dominates the clear pixels on this day. Verify the area boundary before agricultural screening.</p> : null}
+        </section>
 
-        <div className="report-section-card">
-          <h2>Evidence needed for a decision</h2>
-          <dl className="summary-grid">
-            {requiredEvidence.map(([label, evidence]) => (
-              <div key={label}>
-                <dt><strong>{label} · Not assessed</strong></dt>
-                <dd className="body-copy">{evidence}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+        {data ? (
+          <>
+            <section className="observation-section">
+              <ObservationHistory key={data.window.from + data.window.to} data={data} current={day} onSelect={setSelectedDay} />
+            </section>
+            <RadiusComparison area={area} period={period} data={data} />
+          </>
+        ) : null}
 
-        <ReportSectionCard
-          title="Recommended next actions"
-          body="Verify the parcel boundary and land use, then obtain local soil, water and regulatory records before drawing agricultural or investment conclusions."
-        />
+        <div className="observation-followup">
+          <section className="observation-section">
+            <h2>Method and limitations</h2>
+            <p>
+              Sentinel-2 L2A daily mosaics on an approximately 20 m grid. We exclude cloud, shadow, snow and invalid
+              pixels. A usable day needs 50% approximate clear area and 20 valid pixels for at least one index.
+              NDVI and NDMI exclude water.
+            </p>
+            <p>
+              A buffer can include multiple surface types. Optical indices cannot establish groundwater levels,
+              soil moisture, ownership, crop fit or investment viability.
+            </p>
+          </section>
+
+          <section className="observation-section">
+            <h2>Recommended next actions</h2>
+            <dl className="observation-evidence">
+              {requiredEvidence.map(([label, evidence]) => (
+                <div key={label}>
+                  <dt><strong>{label} · Not assessed</strong></dt>
+                  <dd>{evidence}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </div>
         <Link href="/select-area" className="button-secondary print-hidden">Select another area</Link>
       </section>
     </div>

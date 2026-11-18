@@ -4,8 +4,9 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
 import { demoParcels, getDemoAnalysis } from "@/lib/mock-analysis";
-import { radiusAreaHectares } from "@/lib/copernicus/request";
+import { inclusiveEnd, observationWindow, radiusAreaHectares } from "@/lib/copernicus/request";
 import { ObservationDetails, useAreaObservation, type PointArea } from "./area-observation";
+import { ObservationPeriod } from "./observation-period";
 
 const LiveParcelMap = dynamic(() => import("@/components/live-parcel-map"), {
   ssr: false,
@@ -49,12 +50,14 @@ export function FieldSelectorPanel() {
   const [selectedParcelId, setSelectedParcelId] = useState("parcel-b");
   const [pickedPoint, setPickedPoint] = useState<[number, number] | null>(null);
   const [analysisRadius, setAnalysisRadius] = useState<500 | 1000>(500);
+  const [period, setPeriod] = useState(() => observationWindow());
   const area: PointArea | null = pickedPoint ? {
     type: "PointBuffer", coordinates: pickedPoint, radiusMeters: analysisRadius,
   } : null;
-  const { state, retry } = useAreaObservation(area);
+  const { state, retry } = useAreaObservation(area, period);
   const parcel = getDemoAnalysis(selectedParcelId);
   const summary = parcel.executiveSummary;
+  const recentMosaic = observationWindow(new Date(period.to));
 
   function selectDemo(id: string) {
     setSelectedParcelId(id);
@@ -62,7 +65,7 @@ export function FieldSelectorPanel() {
   }
 
   const briefHref = area
-    ? `/results?mode=custom&lat=${area.coordinates[0]}&lng=${area.coordinates[1]}&radius=${analysisRadius}`
+    ? `/results?mode=custom&lat=${area.coordinates[0]}&lng=${area.coordinates[1]}&radius=${analysisRadius}&from=${period.from.slice(0, 10)}&to=${inclusiveEnd(period)}`
     : `/results?parcel=${parcel.meta.id}`;
 
   return (
@@ -77,6 +80,8 @@ export function FieldSelectorPanel() {
           onPickPoint={setPickedPoint}
           analysisRadius={analysisRadius}
           observation={state && "data" in state ? state.data.observation : null}
+          observationPending={Boolean(area && !state)}
+          referenceWindow={area ? { from: period.from > recentMosaic.from ? period.from : recentMosaic.from, to: period.to } : undefined}
         />
         <div className="glass-card">
           <p className="supporting-label">Demo parcels</p>
@@ -122,8 +127,9 @@ export function FieldSelectorPanel() {
                 ))}
               </div>
             </div>
+            <ObservationPeriod period={period} onApply={setPeriod} />
             <div role="status">
-              {!state ? <p>Loading Sentinel-2 observations…</p> : null}
+              {!state ? <p>Requesting and screening Sentinel-2 observations…</p> : null}
               {state && "data" in state ? <ObservationDetails data={state.data} /> : null}
               {state && "error" in state ? <p>{state.error}</p> : null}
             </div>

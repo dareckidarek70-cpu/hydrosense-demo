@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { Observation } from "@/lib/copernicus/observations";
-import { observationWindow } from "@/lib/copernicus/request";
-import { palettes } from "@/lib/copernicus/palettes";
+import { observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
+import { SatelliteLegend } from "./satellite-legend";
 import {
   Circle,
   ImageOverlay,
@@ -35,6 +35,8 @@ type LiveParcelMapProps = {
   onPickPoint?: (point: [number, number]) => void;
   analysisRadius?: 500 | 1000;
   observation?: Observation | null;
+  observationPending?: boolean;
+  referenceWindow?: ObservationWindow;
 };
 
 type LayerMode = "BASEMAP" | "TRUE_COLOR" | "NDVI" | "NDWI" | "MOISTURE_INDEX";
@@ -142,105 +144,18 @@ function LayerControl({
   selectedLayer: LayerMode;
   onChange: (layer: LayerMode) => void;
 }) {
-  const buttonStyle = (active: boolean): React.CSSProperties => ({
-    padding: "10px 14px",
-    borderRadius: "999px",
-    border: "1px solid rgba(17,49,34,0.12)",
-    background: active ? "#164b35" : "rgba(255,255,255,0.92)",
-    color: active ? "#ffffff" : "#173728",
-    fontWeight: 600,
-    fontSize: "0.95rem",
-    cursor: "pointer",
-    boxShadow: active ? "0 8px 18px rgba(22,75,53,0.18)" : "none",
-    pointerEvents: "auto",
-  });
+  const layers = [
+    ["BASEMAP", "Base map"], ["TRUE_COLOR", "True Color"],
+    ["NDVI", "NDVI"], ["NDWI", "NDWI"], ["MOISTURE_INDEX", "NDMI"],
+  ] as const;
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 18,
-        left: 18,
-        zIndex: 500,
-        display: "flex",
-        gap: 8,
-        flexWrap: "wrap",
-        maxWidth: "calc(100% - 36px)",
-        pointerEvents: "none",
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => onChange("BASEMAP")}
-        aria-pressed={selectedLayer === "BASEMAP"}
-        style={buttonStyle(selectedLayer === "BASEMAP")}
-      >
-        Base map
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("TRUE_COLOR")}
-        aria-pressed={selectedLayer === "TRUE_COLOR"}
-        style={buttonStyle(selectedLayer === "TRUE_COLOR")}
-      >
-        True Color
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("NDVI")}
-        aria-pressed={selectedLayer === "NDVI"}
-        style={buttonStyle(selectedLayer === "NDVI")}
-      >
-        NDVI
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("NDWI")}
-        aria-pressed={selectedLayer === "NDWI"}
-        style={buttonStyle(selectedLayer === "NDWI")}
-      >
-        NDWI
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("MOISTURE_INDEX")}
-        aria-pressed={selectedLayer === "MOISTURE_INDEX"}
-        style={buttonStyle(selectedLayer === "MOISTURE_INDEX")}
-      >
-        NDMI
-      </button>
-    </div>
-  );
-}
-
-const legendDescriptions = {
-  NDVI: "NDVI · Vegetation greenness (red and near-infrared)",
-  NDWI: "NDWI · Surface water contrast (green and near-infrared)",
-  MOISTURE_INDEX: "NDMI · Canopy moisture proxy (near- and shortwave infrared)",
-};
-
-function LayerLegend({ selectedLayer }: { selectedLayer: LayerMode }) {
-  if (selectedLayer === "BASEMAP" || selectedLayer === "TRUE_COLOR") return null;
-
-  return (
-    <div className="map-layer-legends">
-      <h3>{legendDescriptions[selectedLayer]}</h3>
-      <ul className="layer-swatch-list" aria-label="Map display intervals">
-        {palettes[selectedLayer].map(({ below, rgb }, index, palette) => {
-          const from = palette[index - 1]?.below ?? -1;
-          return (
-            <li key={below}>
-              <span aria-hidden="true" style={{ background: `rgb(${rgb.join(",")})` }} />
-              {from} to {below}
-            </li>
-          );
-        })}
-      </ul>
-      <p className="body-copy">Display ranges only. NDWI and NDMI do not measure soil moisture.</p>
+    <div className="satellite-layer-toolbar" role="group" aria-label="Map layer">
+      {layers.map(([id, name]) => (
+        <button key={id} type="button" onClick={() => onChange(id)} aria-pressed={selectedLayer === id}>
+          {name}
+        </button>
+      ))}
     </div>
   );
 }
@@ -254,10 +169,12 @@ export function LiveParcelMap({
   onPickPoint,
   analysisRadius = 500,
   observation = null,
+  observationPending = false,
+  referenceWindow,
 }: LiveParcelMapProps) {
   const [selectedLayer, setSelectedLayer] = useState<LayerMode>("BASEMAP");
   const [overlayStatus, setOverlayStatus] = useState("");
-  const window = observation ?? observationWindow();
+  const window = observation ?? referenceWindow ?? observationWindow();
 
   const safeParcels = Array.isArray(parcels)
     ? parcels.filter(
@@ -311,7 +228,7 @@ export function LiveParcelMap({
 />
 
 
-        {selectedOverlayLayer ? (
+        {selectedOverlayLayer && !observationPending ? (
           <SatelliteOverlay
             key={`${selectedOverlayLayer}:${window.from}:${window.to}`}
             selectedLayer={selectedOverlayLayer}
@@ -402,13 +319,17 @@ export function LiveParcelMap({
       </MapContainer>
 
       {selectedOverlayLayer ? (
-        <p className="body-copy" style={{ padding: "12px 18px" }} role="status">
-          Sentinel-2 L2A · {observation ? `observation day ${window.from.slice(0, 10)} UTC` :
-            `mosaic window ${window.from.slice(0, 10)} to ${window.to.slice(0, 10)} (end excluded, UTC)`}
-          {overlayStatus ? ` · ${overlayStatus}` : ""}
-        </p>
+        <>
+          <p className="satellite-layer-status" role="status">
+            {observationPending ? "Choosing an observation day…" : (
+              <>Sentinel-2 L2A · {observation ? `observation day ${window.from.slice(0, 10)} UTC` :
+                `reference mosaic ${window.from.slice(0, 10)} to ${window.to.slice(0, 10)} (end excluded, UTC)`}
+              {overlayStatus ? ` · ${overlayStatus}` : ""}</>
+            )}
+          </p>
+          <SatelliteLegend key={selectedOverlayLayer} layer={selectedOverlayLayer} />
+        </>
       ) : null}
-      <LayerLegend selectedLayer={selectedLayer} />
     </div>
   );
 }

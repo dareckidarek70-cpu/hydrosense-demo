@@ -79,7 +79,11 @@ export async function fetchAreaStats(area: NonNullable<ReturnType<typeof getAnal
   const body = await response.json();
   if (!Array.isArray(body?.data)) throw new Error("Invalid Statistical API response");
   return {
-    ...summarizeObservations(body.data, area.areaHectares * 10_000 / RESOLUTION_METERS ** 2),
+    ...summarizeObservations(body.data.filter((entry: { interval?: { from?: string; to?: string } }) => {
+      const start = Date.parse(entry?.interval?.from ?? "");
+      const end = Date.parse(entry?.interval?.to ?? "");
+      return start >= Date.parse(window.from) && end <= Date.parse(window.to) && start < end;
+    }), area.areaHectares * 10_000 / RESOLUTION_METERS ** 2),
     window,
     areaHectares: area.areaHectares,
     resolutionMeters: RESOLUTION_METERS,

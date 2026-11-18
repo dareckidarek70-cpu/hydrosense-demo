@@ -7,7 +7,7 @@ import { ParcelAiChat } from "@/components/parcel-ai-chat";
 import { PrintReportLogo } from "@/components/print-report-logo";
 import { ObservedAreaBrief } from "@/components/observed-area-brief";
 import { getDemoAnalysis } from "@/lib/mock-analysis";
-import { pointFromQuery } from "@/lib/copernicus/request";
+import { dateObservationWindow, observationWindow, pointFromQuery } from "@/lib/copernicus/request";
 
 type ResultsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -20,9 +20,11 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
   }).format(new Date());
   if (params.mode === "custom" || params.mode === "water") {
     const area = pointFromQuery(params.lat, params.lng, params.radius);
-    return area ? <ObservedAreaBrief area={area} generated={generated} /> : (
+    const period = params.from === undefined && params.to === undefined
+      ? observationWindow() : dateObservationWindow(params.from, params.to);
+    return area && period ? <ObservedAreaBrief area={area} generated={generated} initialPeriod={period} /> : (
       <section className="container page-section">
-        <h1 className="section-title">Invalid area selection</h1>
+        <h1 className="section-title">Invalid area or date range</h1>
         <Link className="button-secondary" href="/select-area">Choose an area</Link>
       </section>
     );
@@ -42,7 +44,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
 
   return (
     <div className="container">
-      <section className="page-section brief-shell report-layout">
+      <section className="page-section brief-shell demo-brief-shell report-layout">
         <div className="report-hero glass-card">
           <div className="report-hero-top">
             <div className="report-brand-summary">
@@ -82,12 +84,14 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
         </div>
 
         <section className="report-section-card print-chart-card"><ResultsScoreChart {...scores} /></section>
-        <ReportSectionCard title="Water & Ground Conditions" body={groundwaterAndMoisture.narrative} />
-        <ReportSectionCard title="Soil & Land Profile" body={soilAndLandProfile.narrative} />
-        <ReportSectionCard title="Crop Suitability" body={cropRecommendations.narrative} />
-        <ReportSectionCard title="Irrigation Opportunity" body={irrigationPlan.narrative} />
-        <ReportSectionCard title="Risks & Sustainability" body={riskAndSustainability.narrative} />
-        <ReportSectionCard title="Recommended Next Actions" body="Verify the example assumptions before considering an investment." bullets={recommendedNextActions} />
+        <div className="demo-brief-sections">
+          <ReportSectionCard title="Water & Ground Conditions" body={groundwaterAndMoisture.narrative} />
+          <ReportSectionCard title="Soil & Land Profile" body={soilAndLandProfile.narrative} />
+          <ReportSectionCard title="Crop Suitability" body={cropRecommendations.narrative} />
+          <ReportSectionCard title="Irrigation Opportunity" body={irrigationPlan.narrative} />
+          <ReportSectionCard title="Risks & Sustainability" body={riskAndSustainability.narrative} />
+          <ReportSectionCard title="Recommended Next Actions" body="Verify the example assumptions before considering an investment." bullets={recommendedNextActions} />
+        </div>
         <div className="print-hidden">
           <ParcelAiChat initialAnswer="Ask what records and field checks to gather before evaluating a parcel." />
         </div>
