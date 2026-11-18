@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/components/locale";
+
 import {
   BarChart,
   Bar,
@@ -24,18 +26,19 @@ export function ResultsScoreChart({
   cropFit,
   sustainability,
 }: ResultsScoreChartProps) {
+  const { t, percent } = useLocale();
   const data = [
-    { name: "Investment", value: investment, color: "#73b17d" },
-    { name: "Irrigation", value: irrigation, color: "#79c1b2" },
-    { name: "Crop Fit", value: cropFit, color: "#9aca84" },
-    { name: "Sustainability", value: sustainability, color: "#b6c979" },
+    { name: t("investment"), value: investment, color: "#73b17d" },
+    { name: t("irrigation"), value: irrigation, color: "#79c1b2" },
+    { name: t("cropFit"), value: cropFit, color: "#9aca84" },
+    { name: t("sustainability"), value: sustainability, color: "#b6c979" },
   ];
 
   return (
     <section className="glass-card report-chart-card">
       <div className="report-chart-header">
-        <p className="eyebrow report-chart-eyebrow">Visual comparison</p>
-        <h3 className="report-chart-title">Core indicator chart</h3>
+        <p className="eyebrow report-chart-eyebrow">{t("visualComparison")}</p>
+        <h3 className="report-chart-title">{t("demoChart")}</h3>
       </div>
 
       {/* EKRAN */}
@@ -62,7 +65,7 @@ export function ResultsScoreChart({
                 width={36}
               />
               <Tooltip
-                formatter={(value) => [`Demo score: ${Number(value ?? 0)}%`, undefined]}
+                formatter={(value) => [percent(Number(value ?? 0) / 100), t("scoreDemo")]}
                 contentStyle={{
                   borderRadius: 16,
                   border: "1px solid rgba(17,49,34,0.08)",
@@ -89,7 +92,7 @@ export function ResultsScoreChart({
           <div className="print-bars-vertical">
             {data.map((item) => (
               <div key={item.name} className="print-bar-vertical-item">
-                <div className="print-bar-vertical-value">{item.value}</div>
+                <div className="print-bar-vertical-value">{percent(item.value / 100)}</div>
 
                 <div className="print-bar-vertical-track">
                   <div
@@ -108,9 +111,7 @@ export function ResultsScoreChart({
         </div>
       </div>
 
-      <p className="report-chart-note">
-        Illustrative scores for this sample scenario.
-      </p>
+      <p className="report-chart-note">{t("demoChartNote")}</p>
     </section>
   );
 }

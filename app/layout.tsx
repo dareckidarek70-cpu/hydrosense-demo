@@ -1,52 +1,56 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HydroSenseWordmark } from "@/components/hydrosense-wordmark";
+import { LanguageSwitcher, LocaleProvider } from "@/components/locale";
+import { getLocalization } from "@/lib/i18n/server";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "HydroSense | AI-Assisted Satellite Field Intelligence",
-  description:
-    "HydroSense is an investor-facing concept for Copernicus/GIS-informed parcel intelligence and decision-ready agricultural land analysis."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getLocalization();
+  return { title: t("siteTitle"), description: t("siteDescription") };
+}
 
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/select-area", label: "Select Area" },
-  { href: "/results", label: "Brief" }
-];
+  { href: "/", label: "home" },
+  { href: "/select-area", label: "selectArea" },
+  { href: "/results", label: "brief" }
+] as const;
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { locale, t } = await getLocalization();
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    <html lang={locale} data-scroll-behavior="smooth">
       <body>
+        <LocaleProvider locale={locale}>
         <div className="app-shell">
           <header className="site-header">
             <div className="container site-nav">
-              <HydroSenseWordmark href="/" subline="Parcel Intelligence" />
-              <nav className="nav-links" aria-label="Main navigation">
+              <HydroSenseWordmark href="/" subline={t("brand")} partnersLabel={t("partners")} />
+              <nav className="nav-links" aria-label={t("nav")}>
                 {navItems.map((item, index) => (
                   <Link
                     key={item.href}
                     className={index === navItems.length - 1 ? "nav-link nav-link--cta" : "nav-link"}
                     href={item.href}
                   >
-                    {item.label}
+                    {t(item.label)}
                   </Link>
                 ))}
               </nav>
+              <LanguageSwitcher />
             </div>
           </header>
           <main>{children}</main>
           <footer className="container footer-note">
-          <strong>Prototype note:</strong> Demo parcels use illustrative scores. Custom
-            selections can show Sentinel-2 observations for preliminary screening.{" "}
-          <strong>IT support: DS</strong>
+          <strong>{t("prototype")}</strong> {t("foot")}{" "}
+          <strong>{t("support")}</strong>
           </footer>
         </div>
+        </LocaleProvider>
       </body>
     </html>
   );

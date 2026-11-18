@@ -1,4 +1,5 @@
 import { getCopernicusAccessToken } from "./auth";
+import { CopernicusHttpError } from "./errors";
 import { summarizeObservations, type AreaStats } from "./observations";
 import { radiusAreaHectares, type AreaGeometry } from "./request";
 import { STATS_EVALSCRIPT } from "./stats-evalscripts";
@@ -75,7 +76,7 @@ export async function fetchAreaStats(area: NonNullable<ReturnType<typeof getAnal
     }),
   });
 
-  if (!response.ok) throw new Error(`Copernicus Statistical API HTTP ${response.status}`);
+  if (!response.ok) throw new CopernicusHttpError(response.status, response.headers.get("Retry-After"));
   const body = await response.json();
   if (!Array.isArray(body?.data)) throw new Error("Invalid Statistical API response");
   return {

@@ -5,10 +5,13 @@ import type { AreaStats, Observation } from "@/lib/copernicus/observations";
 import { inclusiveEnd, type AreaGeometry, type ObservationWindow } from "@/lib/copernicus/request";
 import { indexKeys, indices, interpretIndex } from "@/lib/copernicus/interpretation";
 import { IndexScale } from "./satellite-legend";
+import { responseFailure, type FailureCode } from "@/lib/copernicus/errors";
+import { useLocale } from "./locale";
+import { localIndex } from "@/lib/copernicus/interpretation";
 
 export type PointArea = Extract<AreaGeometry, { type: "PointBuffer" }>;
 
-type ObservationState = { data: AreaStats } | { error: string };
+type ObservationState = { data: AreaStats } | { error: FailureCode };
 const recent = new Map<string, { data: AreaStats; expires: number }>();
 
 export function useAreaObservation(area: PointArea | null, period: ObservationWindow) {
@@ -19,6 +22,8 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
   useEffect(() => {
     if (!key) return;
     const controller = new AbortController();
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
 
     const timer = window.setTimeout(async () => {
       const cached = recent.get(key);
@@ -26,6 +31,10 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
         setResult({ key, attempt, state: { data: cached.data } });
         return;
       }
+      deadline = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, 35_000);
       try {
         const response = await fetch("/api/copernicus/stats", {
           method: "POST",
@@ -33,24 +42,35 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
           body: key,
           signal: controller.signal,
         });
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.error ?? "Sentinel-2 data is unavailable.");
+        if (!response.ok) {
+          const error = await responseFailure(response);
+          if (!controller.signal.aborted) setResult({ key, attempt, state: { error } });
+          return;
+        }
+        const body = await response.json() as AreaStats;
+        if (!Array.isArray(body.days)) {
+          if (!controller.signal.aborted) setResult({ key, attempt, state: { error: "providerError" } });
+          return;
+        }
         if (controller.signal.aborted) return;
         const first = recent.keys().next().value;
         if (recent.size >= 8 && first) recent.delete(first);
         recent.set(key, { data: body, expires: Date.now() + 5 * 60_000 });
         setResult({ key, attempt, state: { data: body } });
-      } catch (error) {
-        if (!controller.signal.aborted) {
+      } catch {
+        if (timedOut || !controller.signal.aborted) {
           setResult({
-            key, attempt, state: { error: error instanceof Error ? error.message : "Analysis unavailable." },
+            key, attempt, state: { error: timedOut ? "timeout" : "networkError" },
           });
         }
+      } finally {
+        clearTimeout(deadline);
       }
     }, 350);
 
     return () => {
       window.clearTimeout(timer);
+      clearTimeout(deadline);
       controller.abort();
     };
   }, [key, attempt]);
@@ -61,16 +81,13 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
   };
 }
 
-export function percent(value: number | null) {
-  return value === null ? "Unavailable" : `${Math.round(value * 100)}%`;
-}
-
 export function ObservationDetails({ data, day = data.observation, full = false, map }: {
   data: AreaStats;
   day?: Observation | null;
   full?: boolean;
   map?: ReactNode;
 }) {
+  const { locale, t, date, num, percent } = useLocale();
   const quality = day ?? data.latestObserved;
 
   return (
@@ -79,15 +96,14 @@ export function ObservationDetails({ data, day = data.observation, full = false,
         {map}
         <div className="observation-source">
           <p className="body-copy">
-            <strong>Copernicus Sentinel-2 L2A</strong> · {data.resolutionMeters} m sampling grid
+            <strong>Copernicus Sentinel-2 L2A</strong> · {t("grid", { resolution: data.resolutionMeters })}
           </p>
-          <p className="body-copy">{data.window.from.slice(0, 10)} to {inclusiveEnd(data.window)} UTC</p>
+          <p className="body-copy">{t("dateRange", { from: date(data.window.from), to: date(inclusiveEnd(data.window)) })}</p>
           {quality ? (
             <>
-              <p className="body-copy">{day ? "Observation day" : "Latest candidate"} <strong>{quality.from.slice(0, 10)} UTC</strong></p>
+              <p className="body-copy">{t(day ? "observationDay" : "candidate")} <strong>{date(quality.from)} UTC</strong></p>
               <p className="body-copy">
-                {percent(quality.cloudFraction)} cloud over observed pixels · {percent(quality.clearCoverage)} approximate clear area coverage
-                {" · "}{data.observedDays} observed day{data.observedDays === 1 ? "" : "s"} in range
+                {t("qualitySummary", { cloud: percent(quality.cloudFraction), clear: percent(quality.clearCoverage), count: data.observedDays })}
               </p>
             </>
           ) : null}
@@ -98,12 +114,12 @@ export function ObservationDetails({ data, day = data.observation, full = false,
           <dl className={full ? "observation-index-grid" : "summary-grid"}>
             {indexKeys.map((key) => (
               <div key={key}>
-                <dt className="supporting-label">{indices[key].label} · {indices[key].title}</dt>
-                <dd><strong>{day[key]?.toFixed(2) ?? "Unavailable"}</strong></dd>
-                <dd className="body-copy">{interpretIndex(key, day[key]) ?? "Too few eligible pixels for this index."}</dd>
+                <dt className="supporting-label">{indices[key].label} · {localIndex(key, locale).title}</dt>
+                <dd><strong>{day[key] === null ? t("unavailable") : num(day[key], 2)}</strong></dd>
+                <dd className="body-copy">{interpretIndex(key, day[key], locale) ?? t("fewPixels")}</dd>
                 {full ? (
                   <>
-                    <dd className="body-copy">{indices[key].limitation}</dd>
+                    <dd className="body-copy">{localIndex(key, locale).limitation}</dd>
                     <dd><IndexScale index={key} /></dd>
                   </>
                 ) : null}
@@ -111,18 +127,17 @@ export function ObservationDetails({ data, day = data.observation, full = false,
             ))}
           </dl>
           <p className="body-copy">
-            <strong>Among clear pixels (Sentinel-2 SCL):</strong>{" "}
-            {percent(day.waterFraction)} water · {percent(day.vegetationFraction)} vegetation
+            <strong>{t("scl")}</strong>{" "}
+            {t("surfaceShare", { water: percent(day.waterFraction), vegetation: percent(day.vegetationFraction) })}
           </p>
           <p className="body-copy">
-            Indices are daily area means. Colour breaks are for display and do not classify the land.
+            {t("means")}
           </p>
         </>
       ) : (
         <p className="body-copy">
           {data.observedDays === 0
-            ? "No satellite observations were returned for this area and period."
-            : "No day met the clear coverage and valid pixel requirements. No indices are reported."}
+            ? t("noData") : t("noUsable")}
         </p>
       )}
     </div>

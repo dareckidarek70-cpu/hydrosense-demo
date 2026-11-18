@@ -1,4 +1,5 @@
 import { EVALSCRIPTS, LayerType } from "./evalscripts";
+import { CopernicusHttpError } from "./errors";
 
 type BBox = [number, number, number, number];
 
@@ -65,7 +66,7 @@ export async function fetchLayerImage(params: {
   });
 
   if (!response.ok) {
-    throw new Error(`Copernicus Process API HTTP ${response.status}`);
+    throw new CopernicusHttpError(response.status, response.headers.get("Retry-After"));
   }
 
   return response.arrayBuffer();

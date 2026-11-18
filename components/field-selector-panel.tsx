@@ -3,14 +3,21 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
-import { demoParcels, getDemoAnalysis } from "@/lib/mock-analysis";
+import { demoParcels } from "@/lib/mock-analysis";
+import { demoPresentation } from "@/lib/i18n/demo";
 import { inclusiveEnd, observationWindow, radiusAreaHectares } from "@/lib/copernicus/request";
 import { ObservationDetails, useAreaObservation, type PointArea } from "./area-observation";
 import { ObservationPeriod } from "./observation-period";
+import { useLocale } from "./locale";
+
+function MapPlaceholder() {
+  const { t } = useLocale();
+  return <div className="glass-card" style={{ minHeight: 360 }} role="status">{t("mapLoading")}</div>;
+}
 
 const LiveParcelMap = dynamic(() => import("@/components/live-parcel-map"), {
   ssr: false,
-  loading: () => <div className="glass-card" style={{ minHeight: 360 }} role="status">Loading map…</div>,
+  loading: MapPlaceholder,
 });
 
 const boundaries: [number, number][][] = [
@@ -47,6 +54,7 @@ const parcels = demoParcels.map((parcel, i) => ({
 }));
 
 export function FieldSelectorPanel() {
+  const { locale, t, num, percent, coordinates } = useLocale();
   const [selectedParcelId, setSelectedParcelId] = useState("parcel-b");
   const [pickedPoint, setPickedPoint] = useState<[number, number] | null>(null);
   const [analysisRadius, setAnalysisRadius] = useState<500 | 1000>(500);
@@ -55,8 +63,7 @@ export function FieldSelectorPanel() {
     type: "PointBuffer", coordinates: pickedPoint, radiusMeters: analysisRadius,
   } : null;
   const { state, retry } = useAreaObservation(area, period);
-  const parcel = getDemoAnalysis(selectedParcelId);
-  const summary = parcel.executiveSummary;
+  const parcel = demoPresentation(selectedParcelId, locale);
   const recentMosaic = observationWindow(new Date(period.to));
 
   function selectDemo(id: string) {
@@ -72,7 +79,7 @@ export function FieldSelectorPanel() {
     <div className="selection-layout">
       <div className="metric-stack">
         <LiveParcelMap
-          parcels={parcels}
+          parcels={parcels.map((option) => ({ ...option, label: demoPresentation(option.id, locale).copy.label }))}
           selectedParcelId={selectedParcelId}
           onSelect={selectDemo}
           selectionMode={area ? "custom" : "demo"}
@@ -84,7 +91,7 @@ export function FieldSelectorPanel() {
           referenceWindow={area ? { from: period.from > recentMosaic.from ? period.from : recentMosaic.from, to: period.to } : undefined}
         />
         <div className="glass-card">
-          <p className="supporting-label">Demo parcels</p>
+          <p className="supporting-label">{t("demoParcels")}</p>
           <div className="button-row">
             {parcels.map((option) => (
               <button
@@ -94,7 +101,7 @@ export function FieldSelectorPanel() {
                 aria-pressed={!area && option.id === selectedParcelId}
                 onClick={() => selectDemo(option.id)}
               >
-                {option.label.split(" — ")[0]}
+                {t("parcel", { id: option.id.slice(-1).toUpperCase() })}
               </button>
             ))}
           </div>
@@ -104,16 +111,16 @@ export function FieldSelectorPanel() {
       <div className="glass-card summary-card summary-card--active">
         <div className="summary-row">
           <div>
-            <p className="supporting-label">{area ? "Custom area" : "Demonstration"}</p>
-            <h3>{area ? "Selected location" : parcel.meta.label}</h3>
+            <p className="supporting-label">{t(area ? "customArea" : "demo")}</p>
+            <h3>{area ? t("location") : parcel.copy.label}</h3>
           </div>
         </div>
         {area ? (
           <>
-            <p className="body-copy">{area.coordinates.map((value) => value.toFixed(5)).join(", ")}</p>
+            <p className="body-copy">{coordinates(area.coordinates)}</p>
             <div>
-              <p className="supporting-label">Analysis radius · approx. {radiusAreaHectares(analysisRadius).toFixed(1)} ha</p>
-              <div className="button-row" role="group" aria-label="Analysis radius">
+              <p className="supporting-label">{t("radiusArea", { area: num(radiusAreaHectares(analysisRadius), 1) })}</p>
+              <div className="button-row" role="group" aria-label={t("radius")}>
                 {([500, 1000] as const).map((radius) => (
                   <button
                     key={radius}
@@ -129,36 +136,31 @@ export function FieldSelectorPanel() {
             </div>
             <ObservationPeriod period={period} onApply={setPeriod} />
             <div role="status">
-              {!state ? <p>Requesting and screening Sentinel-2 observations…</p> : null}
+              {!state ? <p>{t("loadingStats")}</p> : null}
               {state && "data" in state ? <ObservationDetails data={state.data} /> : null}
-              {state && "error" in state ? <p>{state.error}</p> : null}
+              {state && "error" in state ? <p>{t(state.error)}</p> : null}
             </div>
             {state && "error" in state ? (
-              <button type="button" className="button-secondary" onClick={retry}>Retry analysis</button>
+              <button type="button" className="button-secondary" onClick={retry}>{t("retry")}</button>
             ) : null}
-            <p className="body-copy">Investment, irrigation, crop fit and sustainability require additional evidence.</p>
+            <p className="body-copy">{t("needed")}</p>
           </>
         ) : (
           <>
-            <p className="body-copy">Illustrative scores and parcel details. Click the map outside a demo parcel to analyze a custom area.</p>
+            <p className="body-copy">{t("demoHelp")}</p>
             <dl className="summary-grid">
-              <div><dt className="supporting-label">Illustrative area</dt><dd>{parcel.meta.areaHectares} ha</dd></div>
-              <div><dt className="supporting-label">Terrain</dt><dd>{parcel.meta.terrainType}</dd></div>
-              <div><dt className="supporting-label">Crop model</dt><dd>{parcel.meta.cropModel}</dd></div>
+              <div><dt className="supporting-label">{t("demoArea")}</dt><dd>{num(parcel.meta.areaHectares)} ha</dd></div>
+              <div><dt className="supporting-label">{t("terrain")}</dt><dd>{parcel.copy.terrain}</dd></div>
+              <div><dt className="supporting-label">{t("cropModel")}</dt><dd>{parcel.copy.crop}</dd></div>
             </dl>
             <div className="summary-score-strip">
-              {[
-                ["Investment", summary.investmentReadiness],
-                ["Irrigation", summary.irrigationReadiness],
-                ["Crop fit", summary.cropFitScore],
-                ["Sustainability", parcel.riskAndSustainability.sustainabilityScore],
-              ].map(([label, value]) => (
-                <div className="summary-score-pill" key={label}><span>{label}</span><strong>{value}%</strong></div>
+              {(["investment", "irrigation", "cropFit", "sustainability"] as const).map((key) => (
+                <div className="summary-score-pill" key={key}><span>{t(key)}</span><strong>{percent(parcel.scores[key] / 100)}</strong></div>
               ))}
             </div>
           </>
         )}
-        <Link href={briefHref} className="button">{area ? "Open observation brief" : "Open demo brief"}</Link>
+        <Link href={briefHref} className="button">{t(area ? "openObserved" : "openDemo")}</Link>
       </div>
     </div>
   );

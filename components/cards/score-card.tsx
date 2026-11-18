@@ -1,3 +1,7 @@
+"use client";
+
+import { useLocale } from "@/components/locale";
+
 type ScoreCardProps = {
   title: string;
   score?: number;
@@ -19,6 +23,7 @@ export function ScoreCard({
   body,
   className,
 }: ScoreCardProps) {
+  const { percent } = useLocale();
   const resolvedScore =
     typeof score === "number"
       ? score
@@ -31,7 +36,7 @@ export function ScoreCard({
 
   return (
     <article className={`glass-card score-card${className ? ` ${className}` : ""}`}>
-      <p className="score-value">{resolvedScore}%</p>
+      <p className="score-value">{percent(resolvedScore / 100)}</p>
 
       <div>
         <h3>{title}</h3>

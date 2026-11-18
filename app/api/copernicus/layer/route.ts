@@ -3,7 +3,8 @@ import { isValidWindow, observationWindow } from "@/lib/copernicus/request";
 import { fetchLayerImage } from "@/lib/copernicus/process";
 import { EVALSCRIPTS, type LayerType } from "@/lib/copernicus/evalscripts";
 import { getCopernicusAccessToken } from "@/lib/copernicus/auth";
-import { cachedRequest, RequestLimitError } from "@/lib/request-budget";
+import { cachedRequest } from "@/lib/request-budget";
+import { apiFailure, providerFailure } from "@/lib/copernicus/api-error";
 
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams;
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     || east - west > 1 || north - south > 1
     || ![width, height].every((value) => Number.isInteger(value) && value >= 64 && value <= 768)
     || !Object.hasOwn(EVALSCRIPTS, layer) || !isValidWindow(timeFrom, timeTo)) {
-    return new Response("Invalid layer request. Zoom in to use satellite layers.", { status: 400 });
+    return apiFailure("badLayer", 400);
   }
 
   try {
@@ -39,10 +40,6 @@ export async function GET(request: NextRequest) {
       headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=300" },
     });
   } catch (error) {
-    if (error instanceof RequestLimitError) {
-      return new Response("Layer request limit reached.", { status: 429, headers: { "Retry-After": "60" } });
-    }
-    console.error("[Copernicus layer]", error instanceof Error ? error.message : "Request failed");
-    return new Response("Satellite layer temporarily unavailable.", { status: 503 });
+    return providerFailure("layer", error);
   }
 }

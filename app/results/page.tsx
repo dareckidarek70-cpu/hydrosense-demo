@@ -6,7 +6,8 @@ import { ResultsScoreChart } from "@/components/results-score-chart";
 import { ParcelAiChat } from "@/components/parcel-ai-chat";
 import { PrintReportLogo } from "@/components/print-report-logo";
 import { ObservedAreaBrief } from "@/components/observed-area-brief";
-import { getDemoAnalysis } from "@/lib/mock-analysis";
+import { getLocalization } from "@/lib/i18n/server";
+import { demoPresentation } from "@/lib/i18n/demo";
 import { dateObservationWindow, observationWindow, pointFromQuery } from "@/lib/copernicus/request";
 
 type ResultsPageProps = {
@@ -15,32 +16,21 @@ type ResultsPageProps = {
 
 export default async function ResultsPage({ searchParams }: ResultsPageProps) {
   const params = searchParams ? await searchParams : {};
-  const generated = new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium", timeStyle: "short", timeZone: "UTC",
-  }).format(new Date());
+  const { locale, t, dateTime, num } = await getLocalization();
+  const generatedAt = new Date().toISOString();
   if (params.mode === "custom" || params.mode === "water") {
     const area = pointFromQuery(params.lat, params.lng, params.radius);
     const period = params.from === undefined && params.to === undefined
       ? observationWindow() : dateObservationWindow(params.from, params.to);
-    return area && period ? <ObservedAreaBrief area={area} generated={generated} initialPeriod={period} /> : (
+    return area && period ? <ObservedAreaBrief area={area} generatedAt={generatedAt} initialPeriod={period} /> : (
       <section className="container page-section">
-        <h1 className="section-title">Invalid area or date range</h1>
-        <Link className="button-secondary" href="/select-area">Choose an area</Link>
+        <h1 className="section-title">{t("invalidArea")}</h1>
+        <Link className="button-secondary" href="/select-area">{t("chooseArea")}</Link>
       </section>
     );
   }
 
-  const {
-    meta, executiveSummary, groundwaterAndMoisture, soilAndLandProfile,
-    cropRecommendations, irrigationPlan, riskAndSustainability, recommendedNextActions,
-  } = getDemoAnalysis(typeof params.parcel === "string" ? params.parcel : undefined);
-
-  const scores = {
-    investment: executiveSummary.investmentReadiness,
-    irrigation: executiveSummary.irrigationReadiness,
-    cropFit: executiveSummary.cropFitScore,
-    sustainability: riskAndSustainability.sustainabilityScore,
-  };
+  const { meta, copy, scores } = demoPresentation(typeof params.parcel === "string" ? params.parcel : undefined, locale);
 
   return (
     <div className="container">
@@ -49,51 +39,49 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
           <div className="report-hero-top">
             <div className="report-brand-summary">
               <div className="print-only"><PrintReportLogo /></div>
-              <p className="eyebrow">Sample brief · Demonstration</p>
-              <h1 className="section-title">{meta.label}</h1>
+              <p className="eyebrow">{t("sampleBrief")}</p>
+              <h1 className="section-title">{copy.label}</h1>
             </div>
             <div className="report-hero-actions print-hidden"><PrintBriefButton /></div>
           </div>
 
-          <p className="lead">{executiveSummary.summary}</p>
+          <p className="lead">{copy.summary}</p>
           <div className="report-meta-row">
-            <p className="report-quiet-note">
-              Scores, site descriptions and recommendations are illustrative. No satellite measurements are used in this sample.
-            </p>
-            <div className="report-generated"><span>Generated on</span><strong>{generated} UTC</strong></div>
+            <p className="report-quiet-note">{t("demoNote")}</p>
+            <div className="report-generated"><span>{t("generated")}</span><strong>{dateTime(generatedAt)} UTC</strong></div>
           </div>
 
           <div className="report-summary-band">
             <div className="report-summary-copy">
-              <p className="supporting-label">Example verdict</p>
-              <h3>{executiveSummary.headline}</h3>
-              <p className="body-copy">{executiveSummary.verdict}</p>
+              <p className="supporting-label">{t("verdict")}</p>
+              <h3>{copy.headline}</h3>
+              <p className="body-copy">{copy.verdict}</p>
               <div className="badge-row">
-                <span className="pill">{meta.region}</span>
-                <span className="pill">{meta.areaHectares} hectares</span>
-                <span className="pill">{meta.terrainType}</span>
+                <span className="pill">{copy.region}</span>
+                <span className="pill">{num(meta.areaHectares)} ha</span>
+                <span className="pill">{copy.terrain}</span>
               </div>
             </div>
             <div className="report-score-grid">
-              <ScoreCard title="Investment" score={scores.investment} label="Demo score" />
-              <ScoreCard title="Irrigation" score={scores.irrigation} label="Demo score" />
-              <ScoreCard title="Crop Fit" score={scores.cropFit} label="Demo score" />
-              <ScoreCard title="Sustainability" score={scores.sustainability} label="Demo score" />
+              <ScoreCard title={t("investment")} score={scores.investment} label={t("scoreDemo")} />
+              <ScoreCard title={t("irrigation")} score={scores.irrigation} label={t("scoreDemo")} />
+              <ScoreCard title={t("cropFit")} score={scores.cropFit} label={t("scoreDemo")} />
+              <ScoreCard title={t("sustainability")} score={scores.sustainability} label={t("scoreDemo")} />
             </div>
           </div>
         </div>
 
         <section className="report-section-card print-chart-card"><ResultsScoreChart {...scores} /></section>
         <div className="demo-brief-sections">
-          <ReportSectionCard title="Water & Ground Conditions" body={groundwaterAndMoisture.narrative} />
-          <ReportSectionCard title="Soil & Land Profile" body={soilAndLandProfile.narrative} />
-          <ReportSectionCard title="Crop Suitability" body={cropRecommendations.narrative} />
-          <ReportSectionCard title="Irrigation Opportunity" body={irrigationPlan.narrative} />
-          <ReportSectionCard title="Risks & Sustainability" body={riskAndSustainability.narrative} />
-          <ReportSectionCard title="Recommended Next Actions" body="Verify the example assumptions before considering an investment." bullets={recommendedNextActions} />
+          <ReportSectionCard title={t("waterGround")} body={copy.water} />
+          <ReportSectionCard title={t("soilLand")} body={copy.soil} />
+          <ReportSectionCard title={t("cropSuitability")} body={copy.crops} />
+          <ReportSectionCard title={t("irrigationOpportunity")} body={copy.irrigation} />
+          <ReportSectionCard title={t("riskSustainability")} body={copy.risk} />
+          <ReportSectionCard title={t("nextActions")} body={t("verifyDemo")} bullets={copy.next} />
         </div>
         <div className="print-hidden">
-          <ParcelAiChat initialAnswer="Ask what records and field checks to gather before evaluating a parcel." />
+          <ParcelAiChat />
         </div>
       </section>
     </div>

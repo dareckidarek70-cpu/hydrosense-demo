@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/components/locale";
+
 import { useState } from "react";
 import { dateObservationWindow, inclusiveEnd, observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
 
@@ -7,10 +9,11 @@ export function ObservationPeriod({ period, onApply }: {
   period: ObservationWindow;
   onApply: (period: ObservationWindow) => void;
 }) {
+  const { t } = useLocale();
   const [preset, setPreset] = useState("current");
   const [first, setFirst] = useState(period.from.slice(0, 10));
   const [last, setLast] = useState(inclusiveEnd(period));
-  const [error, setError] = useState("");
+  const [error, setError] = useState(false);
   const maxDay = inclusiveEnd(observationWindow());
 
   return (
@@ -19,30 +22,30 @@ export function ObservationPeriod({ period, onApply }: {
       const next = preset === "current" ? period : preset === "custom"
         ? dateObservationWindow(first, last) : observationWindow(new Date(), Number(preset));
       if (!next) {
-        setError("Choose complete UTC dates in order, within 366 days and ending no later than yesterday.");
+        setError(true);
         return;
       }
-      setError("");
+      setError(false);
       onApply(next);
     }}>
       <label>
-        <span>Observation period</span>
+        <span>{t("period")}</span>
         <select value={preset} onChange={(event) => setPreset(event.target.value)}>
-          <option value="current">Current range</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="365">Last 12 months (365 days)</option>
-          <option value="custom">Custom dates</option>
+          <option value="current">{t("periodCurrent")}</option>
+          <option value="30">{t("period30")}</option>
+          <option value="90">{t("period90")}</option>
+          <option value="365">{t("period365")}</option>
+          <option value="custom">{t("customDates")}</option>
         </select>
       </label>
       {preset === "custom" ? (
         <>
-          <label><span>Start date (UTC)</span><input type="date" value={first} max={maxDay} required onChange={(event) => setFirst(event.target.value)} /></label>
-          <label><span>End date (UTC)</span><input type="date" value={last} max={maxDay} required onChange={(event) => setLast(event.target.value)} /></label>
+          <label><span>{t("startUtc")}</span><input type="date" value={first} max={maxDay} required onChange={(event) => setFirst(event.target.value)} /></label>
+          <label><span>{t("endUtc")}</span><input type="date" value={last} max={maxDay} required onChange={(event) => setLast(event.target.value)} /></label>
         </>
       ) : null}
-      <button className="button-secondary" type="submit">Apply period</button>
-      {error ? <p role="alert">{error}</p> : null}
+      <button className="button-secondary" type="submit">{t("applyPeriod")}</button>
+      {error ? <p role="alert">{t("dateError")}</p> : null}
     </form>
   );
 }

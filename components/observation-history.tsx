@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { isUsableDay, type AreaStats, type Observation } from "@/lib/copernicus/observations";
-import { compareDays, describeHistory, indexKeys, indices, observedValue, signedDifference, type HistoryIndex } from "@/lib/copernicus/interpretation";
+import { compareDays, describeHistory, indexKeys, indices, observedValue, type HistoryIndex } from "@/lib/copernicus/interpretation";
 import { DAY, inclusiveEnd } from "@/lib/copernicus/request";
-import { percent } from "./area-observation";
+import { useLocale } from "./locale";
 
 const historyIndices = ["ndvi", "ndmi"] as const;
 const dateKey = (day: Observation) => day.from.slice(0, 10);
-const indexValue = (value: number | null | undefined) => value == null ? "—" : value.toFixed(2);
 
 function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex }) {
+  const { t, num, date, percent } = useLocale();
   const start = Date.parse(data.window.from);
   const end = Date.parse(data.window.to) - DAY;
   const x = (time: number) => 38 + (end === start ? 0.5 : (time - start) / (end - start)) * 407;
@@ -23,9 +23,9 @@ function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex })
 
   return (
     <figure className="history-chart">
-      <h3>{indices[index].label} history</h3>
+      <h3>{t("historyIndex", { index: indices[index].label })}</h3>
       <svg className="history-plot" viewBox="0 0 467 132" role="img"
-        aria-label={`${indices[index].label} by UTC date. Observed values are shown as points, and rejected days as crosses.`}>
+        aria-label={t("chartA11y", { index: indices[index].label })}>
         {[1, 0, -1].map((tick) => (
           <g key={tick}>
             <line x1="38" y1={y(tick)} x2="445" y2={y(tick)} stroke="#a6b6ae" strokeWidth="0.6" />
@@ -35,13 +35,13 @@ function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex })
         {ticks.map((tick, i) => (
           <text key={tick} x={x(tick)} y="130"
             textAnchor={i === 0 ? "start" : i === ticks.length - 1 ? "end" : "middle"}>
-            {new Date(tick).toISOString().slice(0, 10)}
+            {date(tick)}
           </text>
         ))}
-        <text x="29" y="112" textAnchor="end">N/A</text>
+        <text x="29" y="112" textAnchor="end">{t("noReading")}</text>
         {readings.map(({ day, value }) => {
           const px = x(Date.parse(day.from));
-          const label = `${dateKey(day)}: ${indexValue(value)}; cloud ${percent(day.cloudFraction)}, clear area ${percent(day.clearCoverage)}`;
+          const label = t("pointQuality", { date: date(day.from), value: value === null ? t("noReading") : num(value, 2), cloud: percent(day.cloudFraction), clear: percent(day.clearCoverage) });
           return value === null ? (
             <text key={day.from} x={px} y="112" textAnchor="middle" fill="#5e6a65"><title>{label}</title>×</text>
           ) : (
@@ -53,8 +53,8 @@ function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex })
       </svg>
       <figcaption>
         {summary
-          ? `Median, first three usable days: ${summary.early.toFixed(2)}. Last three: ${summary.late.toFixed(2)} (${signedDifference(summary.late - summary.early)}).`
-          : "Fewer than six usable observations. A period change is not estimated."}
+          ? t("median", { early: num(summary.early, 2), late: num(summary.late, 2), delta: num(summary.late - summary.early, 2, true) })
+          : t("fewDays")}
       </figcaption>
     </figure>
   );
@@ -65,6 +65,7 @@ export function ObservationHistory({ data, current, onSelect }: {
   current: Observation | null;
   onSelect: (day: string) => void;
 }) {
+  const { t, num, date, percent } = useLocale();
   const [reference, setReference] = useState("");
   const usable = data.days.filter(isUsableDay);
   const baseline = usable.find((day) => dateKey(day) === reference) ?? null;
@@ -73,34 +74,34 @@ export function ObservationHistory({ data, current, onSelect }: {
 
   return (
     <div className="observation-history">
-      <h2>Observation history</h2>
-      <p>{data.window.from.slice(0, 10)} to {inclusiveEnd(data.window)} UTC · {usable.length} usable, {data.observedDays - usable.length} rejected and {unobserved} days without an observation.</p>
+      <h2>{t("history")}</h2>
+      <p>{t("dateRange", { from: date(data.window.from), to: date(inclusiveEnd(data.window)) })} · {t("historyCounts", { usable: usable.length, rejected: data.observedDays - usable.length, missing: unobserved })}</p>
       {data.observedDays > 0 ? (
         <>
           <div className="history-charts">
             {historyIndices.map((index) => <HistoryChart key={index} data={data} index={index} />)}
           </div>
-          <p>Points show daily means. Crosses mark unavailable values and blank dates are unsampled. Differences may reflect seasonality or surface change.</p>
+          <p>{t("chartGuide")}</p>
         </>
       ) : null}
       {usable.length > 0 ? (
         <div className="observation-period print-hidden">
           <label>
-            <span>Report observation</span>
+            <span>{t("reportDay")}</span>
             <select value={current ? dateKey(current) : ""} onChange={(event) => onSelect(event.target.value)}>
               {usable.map((day) => (
                 <option key={day.from} value={dateKey(day)}>
-                  {dateKey(day)} · {percent(day.cloudFraction)} cloud
+                  {t("cloudOption", { date: date(day.from), cloud: percent(day.cloudFraction) })}
                 </option>
               ))}
             </select>
           </label>
           {usable.length > 1 ? (
             <label>
-              <span>Compare with earlier or later date</span>
+              <span>{t("compareDate")}</span>
               <select value={reference} onChange={(event) => setReference(event.target.value)}>
-                <option value="">Choose a date</option>
-                {usable.map((day) => <option key={day.from} value={dateKey(day)}>{dateKey(day)}</option>)}
+                <option value="">{t("chooseDate")}</option>
+                {usable.map((day) => <option key={day.from} value={dateKey(day)}>{date(day.from)}</option>)}
               </select>
             </label>
           ) : null}
@@ -108,24 +109,27 @@ export function ObservationHistory({ data, current, onSelect }: {
       ) : null}
       {baseline && current ? (
         <div className="observation-date-comparison">
-          <h3>Difference between dates</h3>
-          <p>{dateKey(baseline)} → {dateKey(current)} UTC. Change is descriptive and may reflect seasonality or differences in clear coverage.</p>
+          <h3>{t("differenceDates")}</h3>
+          <p>{t("descriptiveChange", { from: date(baseline.from), to: date(current.from) })}</p>
+          <p>{t("clear")}: {percent(baseline.clearCoverage)} → {percent(current.clearCoverage)} · {t("cloud")}: {percent(baseline.cloudFraction)} → {percent(current.cloudFraction)}</p>
           <dl className="observation-deltas">
             {indexKeys.map((key) => {
               const delta = compareDays(baseline, current, key);
-              return <div key={key}><dt>{indices[key].label}</dt><dd>{indexValue(baseline[key])} → {indexValue(current[key])} ({delta === null ? "no comparable value" : signedDifference(delta)})</dd></div>;
+              const a = baseline[key];
+              const b = current[key];
+              return <div key={key}><dt>{indices[key].label}</dt><dd>{a === null ? "—" : num(a, 2)} → {b === null ? "—" : num(b, 2)} ({delta === null ? t("noComparison") : num(delta, 2, true)})</dd></div>;
             })}
           </dl>
         </div>
       ) : null}
       {data.observedDays > 0 ? (
         <details className="observation-quality print-hidden">
-          <summary>Daily observation quality</summary>
+          <summary>{t("qualityDaily")}</summary>
           <table>
-            <thead><tr><th scope="col">Date (UTC)</th><th scope="col">Cloud</th><th scope="col">Clear area</th><th scope="col">Quality</th></tr></thead>
+            <thead><tr><th scope="col">{t("dateUtc")}</th><th scope="col">{t("cloud")}</th><th scope="col">{t("clear")}</th><th scope="col">{t("quality")}</th></tr></thead>
             <tbody>
               {data.days.map((day) => (
-                <tr key={day.from}><th scope="row">{dateKey(day)}</th><td>{percent(day.cloudFraction)}</td><td>{percent(day.clearCoverage)}</td><td>{isUsableDay(day) ? "Usable" : "Rejected"}</td></tr>
+                <tr key={day.from}><th scope="row">{date(day.from)}</th><td>{percent(day.cloudFraction)}</td><td>{percent(day.clearCoverage)}</td><td>{t(isUsableDay(day) ? "usable" : "rejected")}</td></tr>
               ))}
             </tbody>
           </table>

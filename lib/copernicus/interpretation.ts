@@ -1,5 +1,6 @@
 import { isUsableDay, type Observation } from "./observations.ts";
 import { palettes } from "./palettes.ts";
+import type { Locale } from "../i18n/index.ts";
 
 export const indexKeys = ["ndvi", "ndwi", "ndmi"] as const;
 export type IndexKey = typeof indexKeys[number];
@@ -26,12 +27,34 @@ export const indices = {
   },
 } as const satisfies Record<IndexKey, { layer: keyof typeof palettes } & Record<string, unknown>>;
 
-export function interpretIndex(key: IndexKey, value: number | null) {
+const polishIndices = {
+  ndvi: {
+    title: "Zieleń roślinności",
+    bands: ["Kontrast ujemny", "Słaby kontrast dodatni", "Umiarkowana zieleń", "Wyraźna zieleń", "Silny kontrast dodatni"],
+    limitation: "Sygnał może pochodzić z upraw, lasu lub innych roślin. Sam NDVI nie określa użytkowania terenu, zdrowia roślin, plonów ani przydatności do upraw.",
+  },
+  ndwi: {
+    title: "Kontrast wód powierzchniowych",
+    bands: ["Silniejszy sygnał NIR", "Słaby kontrast ujemny", "Słaby kontrast dodatni", "Silniejszy sygnał zielony"],
+    limitation: "Dodatnie wartości mogą wskazywać otwartą wodę, ale podobny sygnał mogą dawać dachy i inne powierzchnie. NDWI nie mierzy głębokości wody ani poziomu wód gruntowych.",
+  },
+  ndmi: {
+    title: "Sygnał uwodnienia roślin",
+    bands: ["Silniejszy sygnał SWIR", "Słaby kontrast ujemny", "Słaby kontrast dodatni", "Kontrast dodatni", "Silniejszy sygnał NIR"],
+    limitation: "Na obszarach z roślinnością zmiany mogą wiązać się z zawartością wody w roślinach. Wpływa na nie także gleba i pokrycie roślinne. NDMI nie mierzy wilgotności gleby.",
+  },
+} as const;
+
+export function localIndex(key: IndexKey, locale: Locale) {
+  return locale === "pl" ? polishIndices[key] : indices[key];
+}
+
+export function interpretIndex(key: IndexKey, value: number | null, locale: Locale = "en") {
   if (value === null) return null;
   const definition = indices[key];
   const bins = palettes[definition.layer];
   const index = bins.findIndex(({ below }, i) => value < below || i === bins.length - 1);
-  return definition.bands[index];
+  return localIndex(key, locale).bands[index];
 }
 
 export function observedValue(day: Observation, key: IndexKey) {

@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { Observation } from "@/lib/copernicus/observations";
-import { observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
+import { inclusiveEnd, observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
 import { SatelliteLegend } from "./satellite-legend";
+import { useLocale } from "./locale";
+import { responseFailure } from "@/lib/copernicus/errors";
+import type { MessageKey } from "@/lib/i18n";
 import {
   Circle,
   ImageOverlay,
@@ -12,6 +15,7 @@ import {
   Polygon,
   Popup,
   TileLayer,
+  ZoomControl,
   useMap,
   useMapEvents,
 } from "react-leaflet";
@@ -74,17 +78,19 @@ function SatelliteOverlay({ selectedLayer, from, to, onStatus }: {
   selectedLayer: Exclude<LayerMode, "BASEMAP">;
   from: string;
   to: string;
-  onStatus: (status: string) => void;
+  onStatus: (status: MessageKey) => void;
 }) {
   const map = useMap();
   const [image, setImage] = useState<{ url: string; bounds: L.LatLngBounds } | null>(null);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
+    let deadline: ReturnType<typeof setTimeout> | undefined;
     let controller: AbortController | undefined;
     let imageUrl: string | undefined;
     function refresh() {
       clearTimeout(timer);
+      clearTimeout(deadline);
       controller?.abort();
       timer = setTimeout(async () => {
         setImage(null);
@@ -97,7 +103,7 @@ function SatelliteOverlay({ selectedLayer, from, to, onStatus }: {
         ];
         if (east - west > 1 || north - south > 1 || west < -180 || east > 180
           || south < -84 || north > 84) {
-          onStatus("Zoom in to view Sentinel-2 imagery.");
+          onStatus("zoomMap");
           return;
         }
         const scale = Math.min(1, 768 / Math.max(size.x, size.y));
@@ -110,17 +116,27 @@ function SatelliteOverlay({ selectedLayer, from, to, onStatus }: {
         });
         controller = new AbortController();
         const { signal } = controller;
-        onStatus("Loading Sentinel-2…");
+        onStatus("mapRequest");
+        deadline = setTimeout(() => {
+          controller?.abort();
+          onStatus("timeout");
+        }, 24_000);
         try {
           const response = await fetch(`/api/copernicus/layer?${search}`, { signal });
-          if (!response.ok) throw new Error(String(response.status));
+          if (!response.ok) {
+            const code = await responseFailure(response);
+            if (!signal.aborted) onStatus(code);
+            return;
+          }
           const blob = await response.blob();
           if (signal.aborted) return;
           imageUrl = URL.createObjectURL(blob);
           setImage({ url: imageUrl, bounds });
-          onStatus("Clouds and invalid pixels are transparent; base map may show through.");
+          onStatus("mapReady");
         } catch {
-          if (!signal.aborted) onStatus("Satellite layer unavailable. The base map is still available.");
+          if (!signal.aborted) onStatus("mapFallback");
+        } finally {
+          if (!signal.aborted) clearTimeout(deadline);
         }
       }, 250);
     }
@@ -129,6 +145,7 @@ function SatelliteOverlay({ selectedLayer, from, to, onStatus }: {
     return () => {
       map.off("moveend resize", refresh);
       clearTimeout(timer);
+      clearTimeout(deadline);
       controller?.abort();
       if (imageUrl) URL.revokeObjectURL(imageUrl);
     };
@@ -144,13 +161,14 @@ function LayerControl({
   selectedLayer: LayerMode;
   onChange: (layer: LayerMode) => void;
 }) {
+  const { t } = useLocale();
   const layers = [
-    ["BASEMAP", "Base map"], ["TRUE_COLOR", "True Color"],
+    ["BASEMAP", t("baseMap")], ["TRUE_COLOR", t("trueColor")],
     ["NDVI", "NDVI"], ["NDWI", "NDWI"], ["MOISTURE_INDEX", "NDMI"],
   ] as const;
 
   return (
-    <div className="satellite-layer-toolbar" role="group" aria-label="Map layer">
+    <div className="satellite-layer-toolbar" role="group" aria-label={t("mapLayer")}>
       {layers.map(([id, name]) => (
         <button key={id} type="button" onClick={() => onChange(id)} aria-pressed={selectedLayer === id}>
           {name}
@@ -172,8 +190,9 @@ export function LiveParcelMap({
   observationPending = false,
   referenceWindow,
 }: LiveParcelMapProps) {
+  const { t, locale, date, coordinates, num } = useLocale();
   const [selectedLayer, setSelectedLayer] = useState<LayerMode>("BASEMAP");
-  const [overlayStatus, setOverlayStatus] = useState("");
+  const [overlayStatus, setOverlayStatus] = useState<MessageKey | null>(null);
   const window = observation ?? referenceWindow ?? observationWindow();
 
   const safeParcels = Array.isArray(parcels)
@@ -212,18 +231,20 @@ export function LiveParcelMap({
       }}
     >
       <LayerControl selectedLayer={selectedLayer} onChange={(layer) => {
-        if (layer !== selectedLayer) setOverlayStatus("");
+        if (layer !== selectedLayer) setOverlayStatus(null);
         setSelectedLayer(layer);
       }} />
 
       <MapContainer
         center={mapCenter}
         zoom={10}
+        zoomControl={false}
         scrollWheelZoom={false}
         style={{ height: "clamp(360px, 62vh, 560px)", width: "100%" }}
- >     
+ >
+        <ZoomControl key={locale} zoomInTitle={t("zoomIn")} zoomOutTitle={t("zoomOut")} />
 <TileLayer
-  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  attribution={locale === "pl" ? '© autorzy <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
   url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 />
 
@@ -284,7 +305,7 @@ export function LiveParcelMap({
               <Popup>
                 <strong>{parcel.label}</strong>
                 <br />
-                {parcel.areaHectares ?? "—"} hectares
+                {parcel.areaHectares === undefined ? "—" : num(parcel.areaHectares)} ha
               </Popup>
             </Polygon>
           );
@@ -292,11 +313,11 @@ export function LiveParcelMap({
 
         {selectionMode === "custom" && pickedPoint ? (
           <>
-            <Marker position={pickedPoint} icon={markerIcon}>
+            <Marker key={locale} position={pickedPoint} icon={markerIcon} alt={t("point")}>
               <Popup>
-                Selected point
+                {t("point")}
                 <br />
-                {pickedPoint[0].toFixed(5)}, {pickedPoint[1].toFixed(5)}
+                {coordinates(pickedPoint)}
               </Popup>
             </Marker>
 
@@ -312,7 +333,7 @@ export function LiveParcelMap({
             />
           </>
         ) : selectedParcel ? (
-          <Marker position={selectedParcel.center} icon={markerIcon}>
+          <Marker key={`${locale}-${selectedParcel.id}`} position={selectedParcel.center} icon={markerIcon} alt={selectedParcel.label}>
             <Popup>{selectedParcel.label}</Popup>
           </Marker>
         ) : null}
@@ -321,10 +342,10 @@ export function LiveParcelMap({
       {selectedOverlayLayer ? (
         <>
           <p className="satellite-layer-status" role="status">
-            {observationPending ? "Choosing an observation day…" : (
-              <>Sentinel-2 L2A · {observation ? `observation day ${window.from.slice(0, 10)} UTC` :
-                `reference mosaic ${window.from.slice(0, 10)} to ${window.to.slice(0, 10)} (end excluded, UTC)`}
-              {overlayStatus ? ` · ${overlayStatus}` : ""}</>
+            {observationPending ? t("findingDate") : (
+              <>Sentinel-2 L2A · {observation ? t("overlayDay", { date: date(window.from) }) :
+                t("referenceMosaic", { from: date(window.from), to: date(inclusiveEnd(window)) })}
+              {overlayStatus ? ` · ${t(overlayStatus)}` : ""}</>
             )}
           </p>
           <SatelliteLegend key={selectedOverlayLayer} layer={selectedOverlayLayer} />

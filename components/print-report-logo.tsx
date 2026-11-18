@@ -1,12 +1,16 @@
+"use client";
+
+import { useLocale } from "@/components/locale";
 import Image from "next/image";
 
 export function PrintReportLogo() {
+  const { t } = useLocale();
   return (
     <div className="print-report-logo">
       <div className="print-report-main-brand">
         <Image
           src="/hydrosense-logo.png"
-          alt="HydroSense logo"
+          alt={t("logo")}
           width={40}
           height={40}
           unoptimized
@@ -15,14 +19,14 @@ export function PrintReportLogo() {
 
         <div className="print-report-brand-text">
           <strong>HydroSense</strong>
-          <span>PARCEL INTELLIGENCE</span>
+          <span>{t("brand")}</span>
         </div>
       </div>
 
       <div className="print-report-partner-logos">
         <Image
           src="/Projekt_Logo.png"
-          alt="LEOO project logo"
+          alt={t("leo")}
           width={40}
           height={40}
           unoptimized
@@ -31,7 +35,7 @@ export function PrintReportLogo() {
 
         <Image
           src="/sketch_Logo.jpg"
-          alt="Astro Youth Camp logo"
+          alt={t("ayc")}
           width={40}
           height={40}
           unoptimized

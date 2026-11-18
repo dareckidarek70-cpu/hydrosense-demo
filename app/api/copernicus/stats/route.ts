@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { DAY, geometrySchema, isValidHistoryWindow, observationWindow } from "@/lib/copernicus/request";
 import { fetchAreaStats, getAnalysisArea } from "@/lib/copernicus/stats";
-import { cachedRequest, readJson, RequestLimitError } from "@/lib/request-budget";
+import { cachedRequest, readJson } from "@/lib/request-budget";
+import { apiFailure, providerFailure } from "@/lib/copernicus/api-error";
 
 const inputSchema = z.object({
   geometry: geometrySchema,
@@ -11,13 +12,13 @@ const inputSchema = z.object({
 
 export async function POST(request: Request) {
   const input = inputSchema.safeParse(await readJson(request, 8192).catch(() => null));
-  if (!input.success) return Response.json({ error: "Invalid geometry or dates." }, { status: 400 });
+  if (!input.success) return apiFailure("badRequest", 400);
 
   const { geometry, from, to } = input.data;
   const area = getAnalysisArea(geometry);
   const window = from && to ? { from, to } : observationWindow();
   if (!area || Boolean(from) !== Boolean(to) || !isValidHistoryWindow(window)) {
-    return Response.json({ error: "Unsupported area or observation window." }, { status: 400 });
+    return apiFailure("badRequest", 400);
   }
 
   try {
@@ -27,12 +28,6 @@ export async function POST(request: Request) {
       longRange ? 3 : 10, () => fetchAreaStats(area, canonicalWindow));
     return Response.json(stats);
   } catch (error) {
-    if (error instanceof RequestLimitError) {
-      return Response.json({ error: "Analysis limit reached. Try again in one minute." }, {
-        status: 429, headers: { "Retry-After": "60" },
-      });
-    }
-    console.error("[Copernicus stats]", error instanceof Error ? error.message : "Request failed");
-    return Response.json({ error: "Sentinel-2 data is temporarily unavailable." }, { status: 503 });
+    return providerFailure("statistics", error);
   }
 }

@@ -6,6 +6,7 @@ type HydroSenseWordmarkProps = {
   tone?: "dark" | "light";
   subline?: string;
   compact?: boolean;
+  partnersLabel?: string;
 };
 
 export function HydroSenseWordmark({
@@ -13,6 +14,7 @@ export function HydroSenseWordmark({
   tone = "dark",
   subline,
   compact = false,
+  partnersLabel,
 }: HydroSenseWordmarkProps) {
   const className = `hydrosense-lockup hydrosense-lockup--${tone}${
     compact ? " hydrosense-lockup--compact" : ""
@@ -30,7 +32,7 @@ export function HydroSenseWordmark({
       </span>
 
       {!compact ? (
-        <span className="partner-logos" aria-label="Project partner logos">
+        <span className="partner-logos" aria-label={partnersLabel}>
           <Image src="/Projekt_Logo.png" alt="LEOO" width={40} height={40} />
           <Image src="/sketch_Logo.jpg" alt="Astro Youth" width={40} height={40} />
         </span>

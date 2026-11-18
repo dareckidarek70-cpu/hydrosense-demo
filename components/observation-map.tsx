@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Observation } from "@/lib/copernicus/observations";
 import type { PointArea } from "./area-observation";
+import { useLocale } from "./locale";
 
 const WIDTH = 480;
 const HEIGHT = 216;
@@ -26,24 +27,30 @@ export function observationMapUrl(area: PointArea, day: Observation | null) {
 }
 
 export function ObservationMap({ area, url, date }: { area: PointArea; url: string | null; date?: string }) {
+  const { t, date: formatDate } = useLocale();
   const [status, setStatus] = useState<"loading" | "ready" | "error">(url ? "loading" : "error");
+  useEffect(() => {
+    if (status !== "loading") return;
+    const timeout = setTimeout(() => setStatus("error"), 24_000);
+    return () => clearTimeout(timeout);
+  }, [status]);
   return (
     <figure className="observation-map">
       <div className="observation-map-frame">
         {url ? (
-          <Image src={url} alt="True Color Sentinel-2 scene under the outlined area" fill unoptimized
+          <Image src={url} alt={t("mapAlt")} fill unoptimized
             loading="eager" data-report-raster data-raster-ready={status === "ready"}
             onLoad={() => setStatus("ready")} onError={() => setStatus("error")} />
         ) : null}
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="North-up map, with the analysis boundary and a distance scale">
+        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={t("mapA11y")}>
           {status !== "ready" ? (
             <g stroke="#c5d2c8" strokeWidth="0.7">
               {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${i * 35} 0v216`} />)}
               {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M0 ${i * 36}h480`} />)}
             </g>
           ) : null}
-          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="#9cf6c5" fillOpacity=".2" stroke="#143d2e" strokeWidth="4" />
-          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="none" stroke="#f9fff7" strokeWidth="2" />
+          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="#9cf6c5" fillOpacity=".14" stroke="#143d2e" strokeWidth="5" />
+          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="none" stroke="#f9fff7" strokeWidth="2.5" />
           <circle cx="240" cy="108" r="3.4" fill="#fff" stroke="#143d2e" strokeWidth="1.2" />
           <g fill="#143d2e" stroke="#143d2e">
             <rect x="443" y="11" width="24" height="39" rx="4" fill="#fff" stroke="none" />
@@ -56,9 +63,12 @@ export function ObservationMap({ area, url, date }: { area: PointArea; url: stri
         </svg>
       </div>
       <figcaption>
-        {status === "ready" ? `Sentinel-2 L2A True Color · ${date} UTC · approximate scale at centre`
-          : status === "loading" ? "Loading satellite image…"
-          : "Area outline only · satellite imagery unavailable · approximate scale at centre"}
+        {status === "loading" ? (
+          <>
+            <span className="print-hidden">{t("mapImageLoading")}</span>
+            <span className="print-only">{t("mapOutline")}</span>
+          </>
+        ) : status === "ready" && date ? t("mapCaption", { date: formatDate(date) }) : t("mapOutline")}
       </figcaption>
     </figure>
   );

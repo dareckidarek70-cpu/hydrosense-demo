@@ -1,22 +1,15 @@
 "use client";
 
+import { useLocale } from "@/components/locale";
+
 import { useState } from "react";
 
-type Props = {
-  initialAnswer: string;
-};
+const normalQuestions = ["q1", "q2", "q3", "q4", "q5"] as const;
 
-const normalQuestions = [
-  "Is this parcel suitable for irrigation investment?",
-  "What type of irrigation would be the most optimal?",
-  "Which crops look most profitable for this parcel?",
-  "What are the most common risks for plants in this environment?",
-  "What should be verified before investment?",
-];
-
-export function ParcelAiChat({ initialAnswer }: Props) {
+export function ParcelAiChat() {
+  const { t, locale } = useLocale();
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState(initialAnswer);
+  const [answer, setAnswer] = useState<{ content: string; locale: string }>();
   const [loading, setLoading] = useState(false);
 
   async function askAI(q: string) {
@@ -33,9 +26,9 @@ export function ParcelAiChat({ initialAnswer }: Props) {
       });
 
       const data = await res.json();
-      setAnswer(res.ok ? data.answer : data.error ?? "Guidance unavailable.");
+      setAnswer({ locale, content: res.ok ? data.answer : data.error ?? t("guidanceError") });
     } catch {
-      setAnswer("Guidance unavailable. Please try again.");
+      setAnswer({ locale, content: t("guidanceError") });
     } finally {
       setLoading(false);
     }
@@ -46,20 +39,18 @@ export function ParcelAiChat({ initialAnswer }: Props) {
       {/* HEADER */}
       <div className="ai-header">
         <div>
-          <p className="ai-label">
-            DUE DILIGENCE
-          </p>
-          <h2>Review guidance</h2>
+          <p className="ai-label">{t("diligence")}</p>
+          <h2>{t("guidance")}</h2>
         </div>
 
-        <div className="ai-badges"><span>General guidance</span></div>
+        <div className="ai-badges"><span>{t("generalGuidance")}</span></div>
       </div>
 
       {/* QUICK QUESTIONS */}
       <div className="ai-questions">
         {normalQuestions.map((q) => (
-          <button key={q} type="button" disabled={loading} onClick={() => askAI(q)}>
-            {q}
+          <button key={q} type="button" disabled={loading} onClick={() => askAI(t(q))}>
+            {t(q)}
           </button>
         ))}
       </div>
@@ -67,30 +58,28 @@ export function ParcelAiChat({ initialAnswer }: Props) {
       {/* CURRENT QUESTION */}
       {question && (
         <div className="ai-current-question">
-          <span>CURRENT QUESTION</span>
+          <span>{t("question")}</span>
           <div>{question}</div>
         </div>
       )}
 
       {/* ANSWER */}
       <div className="ai-answer">
-        <h3>Response</h3>
-        <p>{loading ? "Thinking..." : answer}</p>
+        <h3>{t("response")}</h3>
+        <p>{loading ? t("thinking") : answer?.locale === locale ? answer.content : t("guidanceInitial")}</p>
       </div>
 
       {/* INPUT */}
       <div className="ai-input">
         <textarea
-          placeholder="Ask about field verification…"
-          aria-label="Follow-up question"
+          placeholder={t("askField")}
+          aria-label={t("followUp")}
           maxLength={600}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
         />
 
-        <button type="button" disabled={loading} onClick={() => askAI(question)}>
-          Ask
-        </button>
+        <button type="button" disabled={loading} onClick={() => askAI(question)}>{t("ask")}</button>
       </div>
     </div>
   );

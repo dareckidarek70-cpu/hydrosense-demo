@@ -1,24 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { compareDays, indexKeys, indices, latestSharedDay, signedDifference } from "@/lib/copernicus/interpretation";
+import { compareDays, indexKeys, indices, latestSharedDay } from "@/lib/copernicus/interpretation";
 import type { AreaStats } from "@/lib/copernicus/observations";
 import { radiusAreaHectares, type ObservationWindow } from "@/lib/copernicus/request";
-import { percent, useAreaObservation, type PointArea } from "./area-observation";
+import { useAreaObservation, type PointArea } from "./area-observation";
+import { useLocale } from "./locale";
 
 function IndexBar({ value, variant }: { value: number | null; variant: string }) {
+  const { num } = useLocale();
   if (value === null) return <span>—</span>;
   return (
     <div className="comparison-reading">
       <span className="comparison-track" aria-hidden="true">
         <span className={variant} style={{ width: `${Math.abs(value) * 50}%`, left: `${50 + Math.min(0, value) * 50}%` }} />
       </span>
-      <span>{value.toFixed(2)}</span>
+      <span>{num(value, 2)}</span>
     </div>
   );
 }
 
 export function RadiusComparison({ area, period, data }: { area: PointArea; period: ObservationWindow; data: AreaStats }) {
+  const { t, num, date, percent } = useLocale();
   const [compare, setCompare] = useState(false);
   const otherRadius = area.radiusMeters === 500 ? 1000 : 500;
   const { state, retry } = useAreaObservation(compare ? { ...area, radiusMeters: otherRadius } : null, period);
@@ -31,33 +34,33 @@ export function RadiusComparison({ area, period, data }: { area: PointArea; peri
 
   return (
     <div className={compare && other ? "radius-comparison" : "radius-comparison print-hidden"}>
-      <h2>Compare analysis radii</h2>
-      <p className="print-hidden">Compare 500 m and 1 km around this point, using the same period.</p>
+      <h2>{t("compareRadius")}</h2>
+      <p className="print-hidden">{t("compareBlurb")}</p>
       <button type="button" className="button-secondary print-hidden" aria-expanded={compare} onClick={() => setCompare(!compare)}>
-        {compare ? "Hide comparison" : "Compare 500 m and 1 km"}
+        {t(compare ? "hideComparison" : "compareBoth")}
       </button>
-      {compare && !state ? <p role="status" className="print-hidden">Loading observations for the second radius…</p> : null}
+      {compare && !state ? <p role="status" className="print-hidden">{t("compareLoading")}</p> : null}
       {compare && state && "error" in state ? (
-        <div className="print-hidden"><p role="alert">{state.error}</p><button className="button-secondary" type="button" onClick={retry}>Retry comparison</button></div>
+        <div className="print-hidden"><p role="alert">{t(state.error)}</p><button className="button-secondary" type="button" onClick={retry}>{t("compareRetry")}</button></div>
       ) : null}
       {compare && other ? (
         <>
           <p>
             {shared
-              ? `Common observation: ${left?.from.slice(0, 10)} UTC. Delta is the 1 km mean minus the 500 m mean.`
-              : "No common usable date. The most recent usable readings are shown separately and no delta is calculated."}
-            {" "}The buffers overlap, and different surface mixes and clear coverage can affect the values.
+              ? t("sharedDate", { date: date(shared.left.from) }) : t("noShared")}
+            {" "}{t("overlap")}
           </p>
           <table className="radius-table">
             <thead><tr>
-              <th scope="col">Index</th>
-              <th scope="col">500 m · {radiusAreaHectares(500).toFixed(1)} ha</th>
-              <th scope="col">1 km · {radiusAreaHectares(1000).toFixed(1)} ha</th>
-              <th scope="col">Delta</th>
+              <th scope="col">{t("index")}</th>
+              <th scope="col">500 m · {num(radiusAreaHectares(500), 1)} ha</th>
+              <th scope="col">1 km · {num(radiusAreaHectares(1000), 1)} ha</th>
+              <th scope="col">{t("delta")}</th>
             </tr></thead>
             <tbody>
-              <tr><th scope="row">Date</th><td>{left?.from.slice(0, 10) ?? "—"}</td><td>{right?.from.slice(0, 10) ?? "—"}</td><td>—</td></tr>
-              <tr><th scope="row">Clear area</th><td>{percent(left?.clearCoverage ?? null)}</td><td>{percent(right?.clearCoverage ?? null)}</td><td>—</td></tr>
+              <tr><th scope="row">{t("dateUtc")}</th><td>{left ? date(left.from) : "—"}</td><td>{right ? date(right.from) : "—"}</td><td>—</td></tr>
+              <tr><th scope="row">{t("clear")}</th><td>{percent(left?.clearCoverage ?? null)}</td><td>{percent(right?.clearCoverage ?? null)}</td><td>—</td></tr>
+              <tr><th scope="row">{t("cloud")}</th><td>{percent(left?.cloudFraction ?? null)}</td><td>{percent(right?.cloudFraction ?? null)}</td><td>—</td></tr>
               {indexKeys.map((key) => {
                 const delta = shared ? compareDays(left, right, key) : null;
                 return (
@@ -65,7 +68,7 @@ export function RadiusComparison({ area, period, data }: { area: PointArea; peri
                     <th scope="row">{indices[key].label}</th>
                     <td><IndexBar value={left?.[key] ?? null} variant="comparison-bar-a" /></td>
                     <td><IndexBar value={right?.[key] ?? null} variant="comparison-bar-b" /></td>
-                    <td>{delta === null ? "—" : signedDifference(delta)}</td>
+                    <td>{delta === null ? "—" : num(delta, 2, true)}</td>
                   </tr>
                 );
               })}

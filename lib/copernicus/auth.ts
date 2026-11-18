@@ -1,3 +1,5 @@
+import { CopernicusHttpError } from "./errors";
+
 let cachedToken: { value: string; expires: number } | undefined;
 let tokenRequest: Promise<string> | undefined;
 
@@ -14,7 +16,7 @@ async function fetchToken(clientId: string, clientSecret: string) {
       cache: "no-store",
     },
   );
-  if (!response.ok) throw new Error(`Copernicus auth HTTP ${response.status}`);
+  if (!response.ok) throw new CopernicusHttpError(response.status, response.headers.get("Retry-After"));
   const data = await response.json();
   if (typeof data.access_token !== "string" || !Number.isFinite(data.expires_in)) {
     throw new Error("Invalid Copernicus token response");
