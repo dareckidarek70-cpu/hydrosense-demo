@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, ChartNoAxesCombined, FileText, Layers3, ScanLine } from "lucide-react";
 import { getLocalization } from "@/lib/i18n/server";
+import sentinelScene from "@/public/sentinel-biala-20260816.webp";
 
 const capabilities = [
   { icon: ScanLine, title: "toolArea", copy: "toolAreaText" },
@@ -27,7 +28,7 @@ export default async function HomePage() {
           <p className="lead">{t("heroLead")}</p>
           <div className="button-row home-actions">
             <Link className="button" href="/select-area">{t("selectArea")} <ArrowRight size={17} aria-hidden="true" /></Link>
-            <Link className="button-secondary" href="/results?parcel=parcel-b">{t("demoBrief")}</Link>
+            <Link className="button-secondary" href="/results?parcel=parcel-b" prefetch={false}>{t("demoBrief")}</Link>
           </div>
           <ul className="hero-sensors" aria-label={t("index")}>
             <li>NDVI</li><li>NDWI</li><li>NDMI</li>
@@ -39,8 +40,8 @@ export default async function HomePage() {
             <span><ScanLine size={17} aria-hidden="true" /> Sentinel-2 L2A</span>
             <span className="scene-tag">{t("sampleScene")}</span>
           </div>
-          <Link className="scene-preview" href={sample.href} aria-label={t("openScene")}>
-            <Image src="/sentinel-biala-20260816.webp" fill priority sizes="(max-width: 860px) 92vw, 640px" alt={t("sampleImage")} />
+          <Link className="scene-preview" href={sample.href} aria-label={t("openScene")} prefetch={false}>
+            <Image src={sentinelScene} fill unoptimized preload alt={t("sampleImage")} />
             <svg viewBox="0 0 768 460" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
               <path d="M26 65V26h39m638 0h39v39m0 330v39h-39m-638 0H26v-39" fill="none" stroke="#c2f6fc" strokeWidth="1.5" opacity=".8" />
               <circle cx="384" cy="230" r="121" fill="#1baee7" fillOpacity=".08" stroke="#a5f3fc" strokeWidth="2.5" />
@@ -57,7 +58,7 @@ export default async function HomePage() {
                 <h2>{t("sampleLocation")}</h2>
                 <p>{date(sample.date)} UTC · 500 m</p>
               </div>
-              <Link className="scene-link" href={sample.href} aria-label={t("openScene")}><ArrowDownRight size={20} aria-hidden="true" /></Link>
+              <Link className="scene-link" href={sample.href} aria-label={t("openScene")} prefetch={false}><ArrowDownRight size={20} aria-hidden="true" /></Link>
             </div>
             <p className="scene-credit">Contains modified Copernicus Sentinel data [2026], processed by Sentinel Hub</p>
           </figcaption>

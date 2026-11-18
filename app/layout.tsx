@@ -25,7 +25,7 @@ export default async function RootLayout({
             <a className="skip-link" href="#main-content">{t("skipContent")}</a>
             <header className="site-header">
               <div className="container site-nav">
-                <HydroSenseWordmark href="/" compact subline={t("brand")} />
+                <HydroSenseWordmark href="/" subline={t("brand")} partnersLabel={t("partners")} />
                 <SiteNavigation />
                 <LanguageSwitcher />
               </div>

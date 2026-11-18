@@ -5,8 +5,8 @@ export default function Loading() {
   const { t } = useLocale();
   return (
     <div className="container">
-      <section className="page-section report-layout">
-        <div className="glass-card report-hero loading-card">
+      <section className="page-section brief-shell">
+        <div className="report-hero">
           <div className="section-heading">
             <span className="eyebrow">{t("generating")}</span>
             <h1 className="section-title">{t("preparing")}</h1>

@@ -5,7 +5,7 @@
   body { background: #fff; color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .app-shell, main { display: block; min-height: 0; }
   .site-header, .site-footer, .skip-link, .print-hidden, .report-chart-screen { display: none !important; }
-  .print-only, .report-chart-print { display: block; }
+  .print-only { display: block; }
   .container { width: 100%; }
   .page-section { padding: 0; }
 
@@ -72,7 +72,7 @@
   .index-card > dd.body-copy { font-size: 8pt; margin-top: .6mm; }
   .index-card .layer-swatch-list { margin-top: .7mm; padding-top: .7mm; gap: .6mm 1.25mm; }
   .layer-swatch-list li { gap: .55mm; font-size: 7pt; }
-  .layer-swatch-list li span { width: 2.2mm; height: 2.2mm; }
+  .layer-swatch { width: 2.2mm; height: 2.2mm; }
   .surface-share { padding-top: .8mm; }
 
   .observation-history > p { font-size: 8.5pt; margin-bottom: .8mm; }

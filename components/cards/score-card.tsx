@@ -35,7 +35,7 @@ export function ScoreCard({
   const resolvedDescription = description ?? body ?? "";
 
   return (
-    <article className={`glass-card score-card${className ? ` ${className}` : ""}`}>
+    <article className={`score-card${className ? ` ${className}` : ""}`}>
       <p className="score-value">{percent(resolvedScore / 100)}</p>
 
       <div>

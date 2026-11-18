@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ArrowRight, Crosshair, LoaderCircle, MapPin } from "lucide-react";
 import { demoParcels } from "@/lib/mock-analysis";
 import { demoPresentation } from "@/lib/i18n/demo";
@@ -63,14 +63,21 @@ export function FieldSelectorPanel() {
   const area: PointArea | null = pickedPoint ? {
     type: "PointBuffer", coordinates: pickedPoint, radiusMeters: analysisRadius,
   } : null;
-  const { state, retry } = useAreaObservation(area, period);
+  const { state, retry } = useAreaObservation(area, period, 350);
   const parcel = demoPresentation(selectedParcelId, locale);
-  const recentMosaic = observationWindow(new Date(period.to));
+  const mapParcels = useMemo(() => parcels.map(({ id, center, polygon, areaHectares }) => ({
+    id, center, polygon, areaHectares, label: demoPresentation(id, locale).copy.label,
+  })), [locale]);
+  const referenceWindow = useMemo(() => {
+    const mosaic = observationWindow(new Date(period.to));
+    return { from: period.from > mosaic.from ? period.from : mosaic.from, to: period.to };
+  }, [period]);
+  const observation = state && "data" in state ? state.data.observation : null;
 
-  function selectDemo(id: string) {
+  const selectDemo = useCallback((id: string) => {
     setSelectedParcelId(id);
     setPickedPoint(null);
-  }
+  }, []);
 
   const briefHref = area
     ? `/results?mode=custom&lat=${area.coordinates[0]}&lng=${area.coordinates[1]}&radius=${analysisRadius}&from=${period.from.slice(0, 10)}&to=${inclusiveEnd(period)}`
@@ -85,16 +92,15 @@ export function FieldSelectorPanel() {
             <p>{t("mapInstruction")}</p>
           </div>
           <LiveParcelMap
-          parcels={parcels.map((option) => ({ ...option, label: demoPresentation(option.id, locale).copy.label }))}
-          selectedParcelId={selectedParcelId}
-          onSelect={selectDemo}
-          selectionMode={area ? "custom" : "demo"}
-          pickedPoint={pickedPoint}
-          onPickPoint={setPickedPoint}
-          analysisRadius={analysisRadius}
-          observation={state && "data" in state ? state.data.observation : null}
-          observationPending={Boolean(area && !state)}
-          referenceWindow={area ? { from: period.from > recentMosaic.from ? period.from : recentMosaic.from, to: period.to } : undefined}
+            parcels={mapParcels}
+            selectedParcelId={selectedParcelId}
+            onSelect={selectDemo}
+            pickedPoint={pickedPoint}
+            onPickPoint={setPickedPoint}
+            analysisRadius={analysisRadius}
+            observation={observation}
+            observationPending={Boolean(area && !state)}
+            referenceWindow={area ? referenceWindow : undefined}
           />
         </section>
         <section className="demo-picker" aria-labelledby="demo-picker-title">

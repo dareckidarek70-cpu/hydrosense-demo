@@ -3,32 +3,39 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { AreaStats, Observation } from "@/lib/copernicus/observations";
 import { inclusiveEnd, type AreaGeometry, type ObservationWindow } from "@/lib/copernicus/request";
-import { indexKeys, indices, interpretIndex } from "@/lib/copernicus/interpretation";
+import { indexKeys, indices, interpretIndex, localIndex } from "@/lib/copernicus/interpretation";
 import { IndexScale } from "./satellite-legend";
 import { responseFailure, type FailureCode } from "@/lib/copernicus/errors";
 import { useLocale } from "./locale";
-import { localIndex } from "@/lib/copernicus/interpretation";
+import { getCachedObservation, rememberObservation } from "@/lib/observation-cache";
 
 export type PointArea = Extract<AreaGeometry, { type: "PointBuffer" }>;
 
 type ObservationState = { data: AreaStats } | { error: FailureCode };
 const recent = new Map<string, { data: AreaStats; expires: number }>();
 
-export function useAreaObservation(area: PointArea | null, period: ObservationWindow) {
+function session() {
+  try { return window.sessionStorage; } catch { return null; }
+}
+
+export function useAreaObservation(area: PointArea | null, period: ObservationWindow, debounceMs = 0) {
   const key = area ? JSON.stringify({ geometry: area, from: period.from, to: period.to }) : null;
   const [result, setResult] = useState<{ key: string; attempt: number; state: ObservationState }>();
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!key) return;
+    const storage = session();
+    const recentEntry = recent.get(key);
+    const cached = recentEntry && recentEntry.expires > Date.now() ? recentEntry.data
+      : storage ? getCachedObservation(storage, key) : undefined;
     const controller = new AbortController();
     let deadline: ReturnType<typeof setTimeout> | undefined;
     let timedOut = false;
 
     const timer = window.setTimeout(async () => {
-      const cached = recent.get(key);
-      if (cached && cached.expires > Date.now()) {
-        setResult({ key, attempt, state: { data: cached.data } });
+      if (cached) {
+        setResult({ key, attempt, state: { data: cached } });
         return;
       }
       deadline = setTimeout(() => {
@@ -56,6 +63,7 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
         const first = recent.keys().next().value;
         if (recent.size >= 8 && first) recent.delete(first);
         recent.set(key, { data: body, expires: Date.now() + 5 * 60_000 });
+        if (storage) rememberObservation(storage, key, body);
         setResult({ key, attempt, state: { data: body } });
       } catch {
         if (timedOut || !controller.signal.aborted) {
@@ -66,14 +74,14 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
       } finally {
         clearTimeout(deadline);
       }
-    }, 350);
+    }, cached ? 0 : debounceMs);
 
     return () => {
       window.clearTimeout(timer);
       clearTimeout(deadline);
       controller.abort();
     };
-  }, [key, attempt]);
+  }, [key, attempt, debounceMs]);
 
   return {
     state: result && result.key === key && result.attempt === attempt ? result.state : undefined,
@@ -91,7 +99,7 @@ export function ObservationDetails({ data, day = data.observation, full = false,
   const quality = day ?? data.latestObserved;
 
   return (
-    <div className={full ? "metric-stack observation-details" : "metric-stack"}>
+    <div className="metric-stack">
       <div className={map ? "observation-overview" : undefined}>
         {map}
         <div className="observation-source">
@@ -117,19 +125,20 @@ export function ObservationDetails({ data, day = data.observation, full = false,
       {day ? (
         <>
           <dl className={full ? "observation-index-grid" : "observation-index-grid observation-index-grid--compact"}>
-            {indexKeys.map((key) => (
-              <div key={key} className={`index-card index-card--${key}`}>
-                <dt><span className="index-tag">{indices[key].label}</span> <span>{localIndex(key, locale).title}</span></dt>
+            {indexKeys.map((key) => {
+              const copy = localIndex(key, locale);
+              return <div key={key} className={`index-card index-card--${key}`}>
+                <dt><span className="index-tag">{indices[key].label}</span> <span>{copy.title}</span></dt>
                 <dd><strong>{day[key] === null ? t("unavailable") : num(day[key], 2)}</strong></dd>
                 <dd className="body-copy">{interpretIndex(key, day[key], locale) ?? t("fewPixels")}</dd>
                 {full ? (
                   <>
-                    <dd className="body-copy">{localIndex(key, locale).limitation}</dd>
+                    <dd className="body-copy">{copy.limitation}</dd>
                     <dd><IndexScale index={key} /></dd>
                   </>
                 ) : null}
-              </div>
-            ))}
+              </div>;
+            })}
           </dl>
           <p className="body-copy surface-share">
             <strong>{t("scl")}</strong>{" "}

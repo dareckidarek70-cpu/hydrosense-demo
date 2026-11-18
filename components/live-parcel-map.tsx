@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Crosshair } from "lucide-react";
+import { memo, useEffect, useState } from "react";
+import { Crosshair, LoaderCircle } from "lucide-react";
 import type { Observation } from "@/lib/copernicus/observations";
 import { inclusiveEnd, observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
 import { SatelliteLegend } from "./satellite-legend";
 import { useLocale } from "./locale";
 import { responseFailure } from "@/lib/copernicus/errors";
 import type { MessageKey } from "@/lib/i18n";
+import { MapRasterCache } from "@/lib/map-raster-cache";
 import {
   Circle,
   ImageOverlay,
@@ -27,17 +28,16 @@ type Parcel = {
   id: string;
   label: string;
   center: [number, number];
-  polygon?: [number, number][];
-  areaHectares?: number;
+  polygon: [number, number][];
+  areaHectares: number;
 };
 
 type LiveParcelMapProps = {
-  parcels?: Parcel[];
+  parcels: Parcel[];
   selectedParcelId: string;
   onSelect: (id: string) => void;
-  selectionMode?: "demo" | "custom";
   pickedPoint?: [number, number] | null;
-  onPickPoint?: (point: [number, number]) => void;
+  onPickPoint: (point: [number, number]) => void;
   analysisRadius?: 500 | 1000;
   observation?: Observation | null;
   observationPending?: boolean;
@@ -47,22 +47,25 @@ type LiveParcelMapProps = {
 type LayerMode = "BASEMAP" | "TRUE_COLOR" | "NDVI" | "NDWI" | "MOISTURE_INDEX";
 
 const markerIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconUrl: "/leaflet-marker-1.9.4.png",
+  shadowUrl: "/leaflet-marker-shadow-1.9.4.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
 
+function normalizedPoint(latLng: L.LatLng): [number, number] {
+  const point = latLng.wrap();
+  return [Number(point.lat.toFixed(6)), Number(point.lng.toFixed(6))];
+}
+
 function MapClickHandler({
   onPickPoint,
 }: {
-  onPickPoint?: (point: [number, number]) => void;
+  onPickPoint: (point: [number, number]) => void;
 }) {
   useMapEvents({
     click(event) {
-      if (!onPickPoint) return;
-      const point = event.latlng.wrap();
-      onPickPoint([Number(point.lat.toFixed(6)), Number(point.lng.toFixed(6))]);
+      onPickPoint(normalizedPoint(event.latlng));
     },
   });
 
@@ -74,14 +77,28 @@ function PickMapCenter({ onPickPoint }: { onPickPoint: (point: [number, number])
   const { t } = useLocale();
   return (
     <div className="map-center-control" ref={(control) => { if (control) L.DomEvent.disableClickPropagation(control); }}>
-      <button type="button" className="button-secondary" onClick={() => {
-        const point = map.getCenter().wrap();
-        onPickPoint([Number(point.lat.toFixed(6)), Number(point.lng.toFixed(6))]);
-      }}>
+      <button type="button" className="button-secondary" onClick={() => onPickPoint(normalizedPoint(map.getCenter()))}>
         <Crosshair size={16} aria-hidden="true" /> {t("useMapCenter")}
       </button>
     </div>
   );
+}
+
+function SyncMapSize() {
+  const map = useMap();
+  useEffect(() => {
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => map.invalidateSize({ animate: false }));
+    });
+    observer.observe(map.getContainer());
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [map]);
+  return null;
 }
 
 function DemoFocus({ lat, lng }: { lat: number; lng: number }) {
@@ -90,82 +107,97 @@ function DemoFocus({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
-function SatelliteOverlay({ selectedLayer, from, to, onStatus }: {
+function SatelliteOverlay({ selectedLayer, from, to, onStatus, cache }: {
   selectedLayer: Exclude<LayerMode, "BASEMAP">;
   from: string;
   to: string;
   onStatus: (status: MessageKey) => void;
+  cache: MapRasterCache;
 }) {
   const map = useMap();
   const [image, setImage] = useState<{ url: string; bounds: L.LatLngBounds } | null>(null);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     let deadline: ReturnType<typeof setTimeout> | undefined;
     let controller: AbortController | undefined;
-    let imageUrl: string | undefined;
-    function refresh() {
+    let requested: string | undefined;
+
+    function refresh(delay: number) {
+      const bounds = map.getBounds();
+      const { x, y } = map.getSize();
+      const west = bounds.getWest(), south = bounds.getSouth(), east = bounds.getEast(), north = bounds.getNorth();
+      const withinLimits = east - west <= 1 && north - south <= 1 && west >= -180 && east <= 180
+        && south >= -84 && north <= 84 && x > 0 && y > 0;
+      const scale = Math.min(1, 768 / Math.max(x, y));
+      const key = withinLimits ? new URLSearchParams({
+        minLng: west.toFixed(6), minLat: south.toFixed(6),
+        maxLng: east.toFixed(6), maxLat: north.toFixed(6),
+        width: String(Math.max(64, Math.round(x * scale))),
+        height: String(Math.max(64, Math.round(y * scale))),
+        layer: selectedLayer, from, to,
+      }).toString() : "";
+
+      if (key === requested) return;
+      requested = key;
       clearTimeout(timer);
       clearTimeout(deadline);
       controller?.abort();
+      const cached = key ? cache.get(key) : undefined;
       timer = setTimeout(async () => {
-        setImage(null);
-        if (imageUrl) URL.revokeObjectURL(imageUrl);
-        imageUrl = undefined;
-        const bounds = map.getBounds();
-        const size = map.getSize();
-        const [west, south, east, north] = [
-          bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth(),
-        ];
-        if (east - west > 1 || north - south > 1 || west < -180 || east > 180
-          || south < -84 || north > 84) {
+        if (!key) {
+          setImage(null);
           onStatus("zoomMap");
           return;
         }
-        const scale = Math.min(1, 768 / Math.max(size.x, size.y));
-        const search = new URLSearchParams({
-          minLng: west.toFixed(6), minLat: south.toFixed(6),
-          maxLng: east.toFixed(6), maxLat: north.toFixed(6),
-          width: String(Math.max(64, Math.round(size.x * scale))),
-          height: String(Math.max(64, Math.round(size.y * scale))),
-          layer: selectedLayer, from, to,
-        });
+        if (cached) {
+          setImage({ url: cached, bounds });
+          onStatus("mapReady");
+          return;
+        }
+        setImage(null);
         controller = new AbortController();
         const { signal } = controller;
         onStatus("mapRequest");
         deadline = setTimeout(() => {
           controller?.abort();
+          requested = undefined;
           onStatus("timeout");
         }, 24_000);
         try {
-          const response = await fetch(`/api/copernicus/layer?${search}`, { signal });
+          const response = await fetch(`/api/copernicus/layer?${key}`, { signal });
           if (!response.ok) {
             const code = await responseFailure(response);
-            if (!signal.aborted) onStatus(code);
+            if (!signal.aborted) {
+              requested = undefined;
+              onStatus(code);
+            }
             return;
           }
           const blob = await response.blob();
           if (signal.aborted) return;
-          imageUrl = URL.createObjectURL(blob);
-          setImage({ url: imageUrl, bounds });
+          setImage({ url: cache.store(key, blob), bounds });
           onStatus("mapReady");
         } catch {
-          if (!signal.aborted) onStatus("mapFallback");
+          if (!signal.aborted) {
+            requested = undefined;
+            onStatus("mapFallback");
+          }
         } finally {
           if (!signal.aborted) clearTimeout(deadline);
         }
-      }, 250);
+      }, cached || !key ? 0 : delay);
     }
-    refresh();
-    map.on("moveend resize", refresh);
+    const onViewportChange = () => refresh(160);
+    refresh(0);
+    map.on("moveend resize", onViewportChange);
     return () => {
-      map.off("moveend resize", refresh);
+      map.off("moveend resize", onViewportChange);
       clearTimeout(timer);
       clearTimeout(deadline);
       controller?.abort();
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
     };
-  }, [map, selectedLayer, from, to, onStatus]);
+  }, [map, selectedLayer, from, to, onStatus, cache]);
 
   return image ? <ImageOverlay url={image.url} bounds={image.bounds} opacity={0.9} zIndex={20} /> : null;
 }
@@ -194,11 +226,10 @@ function LayerControl({
   );
 }
 
-export function LiveParcelMap({
-  parcels = [],
+const LiveParcelMap = memo(function LiveParcelMap({
+  parcels,
   selectedParcelId,
   onSelect,
-  selectionMode = "demo",
   pickedPoint = null,
   onPickPoint,
   analysisRadius = 500,
@@ -209,23 +240,14 @@ export function LiveParcelMap({
   const { t, locale, date, coordinates, num } = useLocale();
   const [selectedLayer, setSelectedLayer] = useState<LayerMode>("BASEMAP");
   const [overlayStatus, setOverlayStatus] = useState<MessageKey | null>(null);
-  const window = observation ?? referenceWindow ?? observationWindow();
-
-  const safeParcels = Array.isArray(parcels)
-    ? parcels.filter(
-        (parcel) =>
-          parcel &&
-          typeof parcel.id === "string" &&
-          Array.isArray(parcel.center) &&
-          parcel.center.length === 2 &&
-          typeof parcel.center[0] === "number" &&
-          typeof parcel.center[1] === "number"
-      )
-    : [];
+  const [defaultWindow] = useState(() => observationWindow());
+  const [cache] = useState(() => new MapRasterCache());
+  useEffect(() => () => cache.clear(), [cache]);
+  const window = observation ?? referenceWindow ?? defaultWindow;
 
   const selectedParcel =
-    safeParcels.find((parcel) => parcel.id === selectedParcelId) ??
-    safeParcels[0] ??
+    parcels.find((parcel) => parcel.id === selectedParcelId) ??
+    parcels[0] ??
     null;
 
   const fallbackCenter: [number, number] = [45.4372, 12.3346];
@@ -245,14 +267,15 @@ export function LiveParcelMap({
         zoom={10}
         zoomControl={false}
         scrollWheelZoom={false}
+        trackResize={false}
         className="map-canvas"
- >
+      >
+        <SyncMapSize />
         <ZoomControl key={locale} zoomInTitle={t("zoomIn")} zoomOutTitle={t("zoomOut")} />
-<TileLayer
-  attribution={locale === "pl" ? '© autorzy <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
-  url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-/>
-
+        <TileLayer
+          attribution={locale === "pl" ? '© autorzy <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
         {selectedOverlayLayer && !observationPending ? (
           <SatelliteOverlay
@@ -261,48 +284,29 @@ export function LiveParcelMap({
             from={window.from}
             to={window.to}
             onStatus={setOverlayStatus}
+            cache={cache}
           />
         ) : null}
 
         <MapClickHandler onPickPoint={onPickPoint} />
-        {onPickPoint ? <PickMapCenter onPickPoint={onPickPoint} /> : null}
-        {selectionMode === "demo" && selectedParcel ? (
+        <PickMapCenter onPickPoint={onPickPoint} />
+        {!pickedPoint && selectedParcel ? (
           <DemoFocus lat={selectedParcel.center[0]} lng={selectedParcel.center[1]} />
         ) : null}
 
-        {safeParcels.map((parcel) => {
-          const hasPolygon =
-            Array.isArray(parcel.polygon) &&
-            parcel.polygon.length >= 3 &&
-            parcel.polygon.every(
-              (point) =>
-                Array.isArray(point) &&
-                point.length === 2 &&
-                typeof point[0] === "number" &&
-                typeof point[1] === "number"
-            );
-
-          if (!hasPolygon) return null;
-
+        {parcels.map((parcel) => {
           const isSelected = parcel.id === selectedParcelId;
 
           return (
             <Polygon
               key={parcel.id}
               bubblingMouseEvents={false}
-              positions={parcel.polygon as [number, number][]}
+              positions={parcel.polygon}
               pathOptions={{
                 color: isSelected ? "#1d4ed8" : "#64748b",
                 weight: isSelected ? 3 : 2,
                 fillColor: isSelected ? "#60a5fa" : "#94a3b8",
-                fillOpacity:
-                  selectionMode === "custom"
-                    ? isSelected
-                      ? 0.16
-                      : 0.08
-                    : isSelected
-                    ? 0.28
-                    : 0.12,
+                fillOpacity: isSelected ? (pickedPoint ? 0.16 : 0.28) : (pickedPoint ? 0.08 : 0.12),
               }}
               eventHandlers={{
                 click: () => onSelect(parcel.id),
@@ -311,13 +315,13 @@ export function LiveParcelMap({
               <Popup>
                 <strong>{parcel.label}</strong>
                 <br />
-                {parcel.areaHectares === undefined ? "—" : num(parcel.areaHectares)} ha
+                {num(parcel.areaHectares)} ha
               </Popup>
             </Polygon>
           );
         })}
 
-        {selectionMode === "custom" && pickedPoint ? (
+        {pickedPoint ? (
           <>
             <Marker key={locale} position={pickedPoint} icon={markerIcon} alt={t("point")}>
               <Popup>
@@ -348,17 +352,18 @@ export function LiveParcelMap({
       {selectedOverlayLayer ? (
         <>
           <p className="satellite-layer-status" role="status">
-            {observationPending ? t("findingDate") : (
+            {observationPending || overlayStatus === "mapRequest" ? <LoaderCircle className="loading-icon" size={15} aria-hidden="true" /> : null}
+            <span>{observationPending ? t("findingDate") : (
               <>Sentinel-2 L2A · {observation ? t("overlayDay", { date: date(window.from) }) :
                 t("referenceMosaic", { from: date(window.from), to: date(inclusiveEnd(window)) })}
               {overlayStatus ? ` · ${t(overlayStatus)}` : ""}</>
-            )}
+            )}</span>
           </p>
           <SatelliteLegend key={selectedOverlayLayer} layer={selectedOverlayLayer} />
         </>
       ) : null}
     </div>
   );
-}
+});
 
 export default LiveParcelMap;

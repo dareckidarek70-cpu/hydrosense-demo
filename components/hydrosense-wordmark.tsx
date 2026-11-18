@@ -1,29 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
+import { brandAssets } from "@/lib/brand-assets";
 
 type HydroSenseWordmarkProps = {
   href?: string;
-  tone?: "dark" | "light";
   subline?: string;
-  compact?: boolean;
   partnersLabel?: string;
 };
 
 export function HydroSenseWordmark({
   href,
-  tone = "dark",
   subline,
-  compact = false,
   partnersLabel,
 }: HydroSenseWordmarkProps) {
-  const className = `hydrosense-lockup hydrosense-lockup--${tone}${
-    compact ? " hydrosense-lockup--compact" : ""
-  }`;
-
   const content = (
     <>
-      <span className="hydrosense-mark hydrosense-mark--image" aria-hidden="true">
-        <Image src="/hydrosense-logo.png" alt="" width={40} height={40} priority />
+      <span className="hydrosense-mark" aria-hidden="true">
+        <Image src={brandAssets.hydroSense} alt="" width={40} height={40} unoptimized />
       </span>
 
       <span className="hydrosense-copy">
@@ -31,21 +24,19 @@ export function HydroSenseWordmark({
         {subline ? <span className="hydrosense-subline">{subline}</span> : null}
       </span>
 
-      {!compact ? (
-        <span className="partner-logos" aria-label={partnersLabel}>
-          <Image src="/Projekt_Logo.png" alt="LEOO" width={40} height={40} />
-          <Image src="/sketch_Logo.jpg" alt="Astro Youth" width={40} height={40} />
-        </span>
-      ) : null}
+      <span className="partner-logos" role="group" aria-label={partnersLabel}>
+        <Image src={brandAssets.leo} alt="LEOO" width={40} height={40} unoptimized />
+        <Image src={brandAssets.astroYouth} alt="Astro Youth" width={40} height={40} unoptimized />
+      </span>
     </>
   );
 
   if (!href) {
-    return <div className={className}>{content}</div>;
+    return <div className="hydrosense-lockup">{content}</div>;
   }
 
   return (
-    <Link className={className} href={href}>
+    <Link className="hydrosense-lockup" href={href}>
       {content}
     </Link>
   );

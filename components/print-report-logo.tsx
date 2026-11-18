@@ -2,6 +2,7 @@
 
 import { useLocale } from "@/components/locale";
 import Image from "next/image";
+import { brandAssets } from "@/lib/brand-assets";
 
 export function PrintReportLogo() {
   const { t } = useLocale();
@@ -9,7 +10,7 @@ export function PrintReportLogo() {
     <div className="print-report-logo">
       <div className="print-report-main-brand">
         <Image
-          src="/hydrosense-logo.png"
+          src={brandAssets.hydroSense}
           alt={t("logo")}
           width={40}
           height={40}
@@ -25,7 +26,7 @@ export function PrintReportLogo() {
 
       <div className="print-report-partner-logos">
         <Image
-          src="/Projekt_Logo.png"
+          src={brandAssets.leo}
           alt={t("leo")}
           width={40}
           height={40}
@@ -34,7 +35,7 @@ export function PrintReportLogo() {
         />
 
         <Image
-          src="/sketch_Logo.jpg"
+          src={brandAssets.astroYouth}
           alt={t("ayc")}
           width={40}
           height={40}

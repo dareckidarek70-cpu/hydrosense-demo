@@ -5,15 +5,16 @@ import { palettes } from "@/lib/copernicus/palettes";
 import type { LayerType } from "@/lib/copernicus/evalscripts";
 import { useLocale } from "./locale";
 
-export function IndexScale({ index }: { index: IndexKey }) {
-  const { t, num } = useLocale();
+export function IndexScale({ index, describe = false }: { index: IndexKey; describe?: boolean }) {
+  const { t, num, locale } = useLocale();
   const definition = indices[index];
   return (
     <ul className="layer-swatch-list" aria-label={t("mapLegend", { index: definition.label })}>
       {palettes[definition.layer].map(({ below, rgb }, i, bins) => (
         <li key={below}>
-          <span aria-hidden="true" style={{ background: `rgb(${rgb.join(",")})` }} />
-          [{num(bins[i - 1]?.below ?? -1, 1)}; {num(below, 1)}{i === bins.length - 1 ? "]" : ")"}
+          <span className="layer-swatch" aria-hidden="true" style={{ background: `rgb(${rgb.join(",")})` }} />
+          <span>[{num(bins[i - 1]?.below ?? -1, 1)}; {num(below, 1)}{i === bins.length - 1 ? "]" : ")"}</span>
+          {describe ? <span className="layer-swatch-description">{localIndex(index, locale).bands[i]}</span> : null}
         </li>
       ))}
     </ul>
@@ -24,11 +25,11 @@ export function SatelliteLegend({ layer }: { layer: LayerType }) {
   const { t, locale } = useLocale();
   const index = indexKeys.find((key) => indices[key].layer === layer);
   return (
-    <details className="map-layer-legends satellite-legend" open>
+    <details className="satellite-legend" open>
       <summary>{index ? `${indices[index].label} · ${localIndex(index, locale).title}` : t("trueColorLegend")}</summary>
       {index ? (
         <>
-          <IndexScale index={index} />
+          <IndexScale index={index} describe />
           <p><strong>{indices[index].formula}</strong></p>
           <p>{localIndex(index, locale).limitation} {t("intervalLimit")}</p>
         </>

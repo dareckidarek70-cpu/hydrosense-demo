@@ -39,7 +39,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod }: {
   return (
     <div className="container">
       <section className="page-section brief-shell observation-document">
-        <div className="report-hero glass-card">
+        <div className="report-hero">
           <div className="report-hero-top">
             <div className="report-brand-summary">
               <div className="print-only"><PrintReportLogo /></div>

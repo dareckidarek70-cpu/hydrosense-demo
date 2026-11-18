@@ -57,3 +57,28 @@ Lasy i uprawy mogą mieć podobny NDVI. Grunty odsłonięte, zabudowa i nieużyt
 - Strona główna używa lokalnego obrazu referencyjnego: okolice Białej Podlaskiej, 16 sierpnia 2026 UTC, Copernicus Sentinel-2 L2A True Color. Plik jest przetworzoną odpowiedzią istniejącego endpointu warstw z podanym źródłem, a nie nowym wywołaniem przy odwiedzinach strony. Odnośnik prowadzi do rzeczywistej analizy z tego dnia.
 - Obok wyboru punktu kliknięciem można użyć przycisku wyboru środka aktualnego widoku mapy. Raport wyodrębnia okres, jakość danych i wartości wskaźników od interpretacji. Wydruk zachowuje metodę, zalecenia, mapę i historię; porównania są drukowane, jeśli zostały otwarte.
 - Bez zmian w algorytmach, progach i barwach legend, odczytach Sentinel-2, integracjach, limitach ani ocenach działek demonstracyjnych A–D.
+
+### Pomiary wydajności po akceptacji wyglądu
+
+Porównanie z `be556b6`: lokalny produkcyjny build, ten sam Chrome i viewport 1280 × 900 px. Cache przeglądarki opróżniany przed zimnym otwarciem strony, mapy i raportu. Dla porównania poniżej obie instancje Next miały rozgrzany cache serwerowy na tych samych zapytaniach. Pomiar strony głównej to mediana trzech wejść, a powrotu do rastra mediana pięciu zmian między True Color i NDVI na tym samym przybliżeniu i w tym samym oknie. Raport: 500 m, punkt 52,0423 / 23,0804, 3 czerwca–31 sierpnia 2026 UTC. Czasy pojedynczych prób nie są laboratoryjną oceną sieci zewnętrznej ani gwarancją wyników na Vercel.
+
+| Miernik | Przed | Po |
+| --- | ---: | ---: |
+| Wysokość hero | 654 px | 486 px (−26%) |
+| Transfer zdjęcia na stronie głównej | 15 988 B | 12 890 B |
+| Żądania podczas wejścia na stronę główną | 25 | 21 |
+| LCP strony głównej, mediana lokalna | 40 ms | 36 ms |
+| Mapa bazowa: wszystkie początkowe kafelki gotowe | 2065 ms | 2014 ms |
+| Wczytanie rastra w przeglądarce, cache serwera: True Color / NDVI | 268 / 283 ms | 25 / 20 ms |
+| Powrót do poprzedniej warstwy | 277 ms, 1 odczyt HTTP z cache przeglądarki | 19 ms, bez odczytu HTTP |
+| Historia raportu gotowa przy wejściu, cache serwerowy | 423 ms | 65 ms |
+| Historia raportu po odświeżeniu w tej samej karcie | 411 ms, 1 POST | 44 ms, bez POST |
+| Transfer JS na stronie raportu (obserwacyjnego i demo) | 307 355 B | 201 365 B |
+| Rozmiar polskiego PDF obserwacyjnego | 4 256 150 B | 489 038 B |
+
+- Zmienianie warstw nie odtwarzało mapy już przed optymalizacją. W pomiarze React liczba zatwierdzeń zmian korzenia przy powrocie do rastra spadła z 3 do 2, a przy otwarciu raportu demo z 64 do 6 w półsekundowym oknie. Nie jest to licznik wszystkich wywołań renderowania komponentów. Zmiana rozmiaru kontenera uruchamia teraz pojedynczą synchronizację Leaflet na klatkę; sprawdzono wypełnienie czterech narożników po zmniejszeniu widoku.
+- Przyczynami były stałe oczekiwanie 250 ms przy każdej warstwie, 350 ms przed odczytem do raportu i biblioteka wykresów demo w pakiecie obu raportów. Pierwsze żądanie obrazu hero przez optymalizator Next trwało w osobnej próbie 47 ms; pomiar obejmuje całe żądanie i nie izoluje samego przetwarzania obrazu. W rozgrzanym teście różnica LCP była niewielka. Dwa zasoby znacznika Leaflet przeniesiono z CDN lokalnie. Początkowy JS mapy pozostał zbliżony: ok. 251 → 252 kB.
+- Statystyki są odczytywane do 5 minut z sesji karty dla tej samej geometrii i dat. Raster jest zachowywany tylko na tej mapie dla identycznego zakresu, obszaru, wymiaru i warstwy: do 8 obrazów, z limitem pamięci i TTL 5 min. Nie pobieramy warstw z wyprzedzeniem. Klikanie punktów na mapie nadal ma zwłokę 350 ms ograniczającą nadmiarowe żądania.
+- Najwolniejszy początkowy kafelek OSM trwał 1747 ms przed i 1703 ms po. Brak dowodu na istotne przyspieszenie zimnej mapy bazowej. W niezbuforowanej próbie po zmianach pomiar po stronie serwera odnotował 125 ms na uwierzytelnienie Copernicus, 902–1233 ms na raster i 3977 ms na statystyki. Te czasy zależą od dostawców i okresu analizy.
+- Usunięto 11 nieużywanych plików (1253 linie). Z różnic kodu wynika 1555 linii usuniętych brutto i ok. 1144 mniej netto, bez lockfile, dokumentacji i licencji zasobów. W CSS zmieniono 13 istniejących reguł i usunięto lub scalono 5 starych selektorów. Wyeliminowano 6 wskazanych duplikatów: dawny czat, dawną legendę, dawną mapę demo, powtórzoną normalizację punktu, nadmiarowy kontener wykresu oraz powtórzony odczyt metadanych wskaźnika. Zamiast Recharts wykres demo jest renderowany bez biblioteki klienckiej, z wartościami i podpowiedzią dostępną także z klawiatury. Logotypy w nagłówku, stopce i PDF korzystają z lekkich kopii istniejących oryginałów.
+- Weryfikacja: 17 testów, ESLint i build; Chrome desktop, tablet i telefon, mapa i wszystkie warstwy, działki A–D, rzeczywiste obserwacje, porównanie dat i promieni, PL/EN. Sprawdzony raport obserwacji i raport demo w obu językach nadal mają po jednej stronie A4.

@@ -34,8 +34,8 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
 
   return (
     <div className="container">
-      <section className="page-section brief-shell demo-brief-shell report-layout">
-        <div className="report-hero glass-card">
+      <section className="page-section brief-shell demo-brief-shell">
+        <div className="report-hero">
           <div className="report-hero-top">
             <div className="report-brand-summary">
               <div className="print-only"><PrintReportLogo /></div>
@@ -71,7 +71,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
           </div>
         </div>
 
-        <section className="report-section-card print-chart-card"><ResultsScoreChart {...scores} /></section>
+        <ResultsScoreChart scores={scores} locale={locale} />
         <div className="demo-brief-sections">
           <ReportSectionCard title={t("waterGround")} body={copy.water} />
           <ReportSectionCard title={t("soilLand")} body={copy.soil} />
