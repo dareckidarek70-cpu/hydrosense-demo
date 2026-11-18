@@ -1,0 +1,119 @@
+@media print {
+  @page { size: A4; margin: 10mm 11mm; }
+
+  :root { --body: #273449; --muted: #44546a; }
+  body { background: #fff; color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .app-shell, main { display: block; min-height: 0; }
+  .site-header, .site-footer, .skip-link, .print-hidden, .report-chart-screen { display: none !important; }
+  .print-only, .report-chart-print { display: block; }
+  .container { width: 100%; }
+  .page-section { padding: 0; }
+
+  .brief-shell { display: block; font-size: 9pt; line-height: 1.26; }
+  .brief-shell > * + * { margin-top: 2mm; }
+  .brief-shell :is(h2, h3) { break-after: avoid; }
+  .brief-shell :is(.report-hero, .observation-section, .report-chart-card, .report-card, .radius-comparison, .observation-followup) {
+    box-shadow: none;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+  }
+  .brief-shell :is(.report-hero, .history-chart, .index-card, .report-card, .report-chart-card, .observation-followup, .print-footer) {
+    break-inside: avoid;
+  }
+  .brief-shell .report-hero {
+    padding: 0 0 2mm;
+    border-bottom: 1px solid #93b4f6;
+  }
+  .brief-shell .report-hero .eyebrow { font-size: 7pt; margin: 0 0 .5mm; }
+  .brief-shell .section-title { font-size: 17pt; letter-spacing: -.03em; }
+  .brief-shell .report-hero .lead { margin: .75mm 0 0; font-size: 9pt; max-width: none; }
+  .brief-shell .report-generated { margin: .75mm 0 0; font-size: 8pt; }
+  .brief-shell :is(.body-copy, .observation-section > p, .radius-comparison > p) { font-size: 8.6pt; line-height: 1.25; }
+
+  .print-report-logo, .print-report-main-brand, .print-report-partner-logos { display: flex; align-items: center; gap: 2.15mm; }
+  .print-report-logo { margin-bottom: 1.75mm; }
+  .print-report-hydrosense-mark { width: 8mm; height: 8mm; border-radius: 1.7mm; }
+  .print-report-brand-text { display: grid; line-height: 1.1; }
+  .print-report-brand-text strong { font-size: 11pt; letter-spacing: -.02em; }
+  .print-report-brand-text span { margin-top: .4mm; font-size: 6.5pt; color: var(--muted); }
+  .print-report-partner-logos { margin-left: 1mm; padding-left: 2mm; border-left: 1px solid var(--border); }
+  .print-report-partner-logo { width: 7mm; height: 7mm; object-fit: contain; }
+  .print-footer { padding-top: 1.2mm; border-top: 1px solid #93b4f6; color: var(--muted); font-size: 7.5pt; }
+
+  .observation-document .report-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0 3mm;
+  }
+  .observation-document .report-hero-top { grid-column: 1 / -1; }
+  .observation-document .report-hero .eyebrow { display: none; }
+  .observation-document :is(.observation-section, .radius-comparison) { padding: 1.5mm 0 0; border-top: 1px solid var(--border); }
+  .observation-document h2 { font-size: 11.5pt; margin-bottom: 1mm; }
+  .observation-document .metric-stack { gap: 1.3mm; }
+  .observation-overview { grid-template-columns: minmax(0, 1.13fr) minmax(0, 1fr); gap: 3mm; break-inside: avoid; }
+  .observation-map-frame { border-radius: 1.6mm; }
+  .observation-map figcaption { margin-top: .65mm; font-size: 7.5pt; }
+  .observation-overview .observation-source { background: #f7f9fd; gap: 1.1mm; padding: 1.4mm; border-radius: 1.6mm; }
+  .source-block:first-child .supporting-label { display: none; }
+  .source-block .supporting-label { font-size: 7pt; }
+  .source-block .body-copy, .source-title { margin: 0; }
+  .source-title { font-size: 9pt; }
+  .source-quality { gap: 1mm; }
+  .source-quality > div { padding-top: .75mm; }
+  .source-quality dt { font-size: 7pt; }
+  .source-quality dd { font-size: 9pt; }
+  .observation-index-grid, .history-charts, .observation-deltas { gap: 1.5mm; }
+  .index-card, .history-chart { padding: 1.4mm; border-radius: 1.6mm; background: #fff; }
+  .index-card dt { font-size: 8pt; gap: .8mm; }
+  .index-tag { padding: .4mm .85mm; font-size: 6.75pt; }
+  .index-card dd > strong { margin-block: .8mm .3mm; font-size: 11.5pt; }
+  .index-card > dd.body-copy { font-size: 8pt; margin-top: .6mm; }
+  .index-card .layer-swatch-list { margin-top: .7mm; padding-top: .7mm; gap: .6mm 1.25mm; }
+  .layer-swatch-list li { gap: .55mm; font-size: 7pt; }
+  .layer-swatch-list li span { width: 2.2mm; height: 2.2mm; }
+  .surface-share { padding-top: .8mm; }
+
+  .observation-history > p { font-size: 8.5pt; margin-bottom: .8mm; }
+  .history-charts { margin-bottom: .9mm; break-inside: avoid; }
+  .history-chart h3 { font-size: 9.5pt; margin-bottom: .55mm; }
+  .history-plot { max-height: 25mm; }
+  .history-plot text { font-size: 9.5px; }
+  .history-chart figcaption { min-height: 0; font-size: 7.6pt; }
+  .observation-date-comparison { padding: 1mm; margin-top: 1mm; break-inside: avoid; }
+  .observation-date-comparison h3 { font-size: 9pt; }
+  .observation-date-comparison p { font-size: 8pt; margin-top: .4mm; }
+  .observation-deltas { margin-top: .6mm; font-size: 8pt; }
+  .observation-deltas > div { padding: .7mm; }
+  .radius-table { font-size: 8pt; margin-top: 1mm; }
+  .radius-table :is(th, td) { padding: .8mm; }
+  .observation-followup { gap: 3mm; }
+  .observation-followup .observation-section > p + p { margin-top: .8mm; }
+  .observation-evidence { display: block; font-size: 9pt; line-height: 1.25; }
+  .observation-evidence > div + div { margin-top: .6mm; }
+  .observation-evidence :is(dt, dd) { display: inline; }
+  .observation-evidence dd::before { content: ". "; }
+
+  .demo-brief-shell .report-meta-row { display: grid; gap: .8mm; padding-block: 1mm; }
+  .demo-brief-shell .report-quiet-note { color: #6f4316; font-size: 8pt; padding: .65mm 1mm; }
+  .demo-brief-shell .report-summary-band { padding-top: 1mm; }
+  .report-summary-copy { gap: .65mm; }
+  .report-summary-copy h3 { font-size: 10.5pt; }
+  .report-summary-copy .badge-row { gap: 1mm; }
+  .report-summary-copy .pill { padding: .25mm 1mm; font-size: 7.5pt; border-radius: 1mm; }
+  .demo-brief-shell :is(.report-score-grid, .report-chart-eyebrow) { display: none; }
+  .demo-brief-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5mm 3mm; }
+  .demo-brief-shell :is(.report-card, .report-chart-card) { padding: 1mm 0 0; border-top: 1px solid var(--border); }
+  .demo-brief-sections .report-card h3 { margin-bottom: .6mm; font-size: 9.5pt; }
+  .demo-brief-sections .report-card :is(p, ul, li) { font-size: 9.5pt; }
+  .demo-brief-sections .report-card ul { margin-top: .5mm; padding-inline-start: 4mm; }
+  .report-chart-title { font-size: 10.5pt; margin-bottom: 1mm; }
+  .report-chart-note { margin-top: 1mm; font-size: 8pt; }
+  .print-bars-vertical { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5mm; }
+  .print-bar-vertical-item { display: grid; justify-items: center; grid-template-rows: auto 16mm auto; gap: .5mm; text-align: center; break-inside: avoid; }
+  .print-bar-vertical-value { font: 700 8.6pt var(--font-mono); }
+  .print-bar-vertical-track { width: min(10mm, 100%); height: 100%; display: flex; align-items: end; background: #eaf1ff; }
+  .print-bar-vertical-fill { width: 100%; }
+  .print-bar-vertical-label { font-size: 7.5pt; }
+}

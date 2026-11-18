@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LoaderCircle, ScanLine } from "lucide-react";
 import { compareDays, indexKeys, indices, latestSharedDay } from "@/lib/copernicus/interpretation";
 import type { AreaStats } from "@/lib/copernicus/observations";
 import { radiusAreaHectares, type ObservationWindow } from "@/lib/copernicus/request";
@@ -37,11 +38,12 @@ export function RadiusComparison({ area, period, data }: { area: PointArea; peri
       <h2>{t("compareRadius")}</h2>
       <p className="print-hidden">{t("compareBlurb")}</p>
       <button type="button" className="button-secondary print-hidden" aria-expanded={compare} onClick={() => setCompare(!compare)}>
+        <ScanLine size={16} aria-hidden="true" />
         {t(compare ? "hideComparison" : "compareBoth")}
       </button>
-      {compare && !state ? <p role="status" className="print-hidden">{t("compareLoading")}</p> : null}
+      {compare && !state ? <p role="status" className="status-note print-hidden"><LoaderCircle className="loading-icon" size={17} aria-hidden="true" />{t("compareLoading")}</p> : null}
       {compare && state && "error" in state ? (
-        <div className="print-hidden"><p role="alert">{t(state.error)}</p><button className="button-secondary" type="button" onClick={retry}>{t("compareRetry")}</button></div>
+        <div className="print-hidden"><p className="status-note status-note--error" role="alert">{t(state.error)}</p><button className="button-secondary" type="button" onClick={retry}>{t("compareRetry")}</button></div>
       ) : null}
       {compare && other ? (
         <>

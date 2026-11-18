@@ -91,30 +91,35 @@ export function ObservationDetails({ data, day = data.observation, full = false,
   const quality = day ?? data.latestObserved;
 
   return (
-    <div className="metric-stack">
+    <div className={full ? "metric-stack observation-details" : "metric-stack"}>
       <div className={map ? "observation-overview" : undefined}>
         {map}
         <div className="observation-source">
-          <p className="body-copy">
-            <strong>Copernicus Sentinel-2 L2A</strong> · {t("grid", { resolution: data.resolutionMeters })}
-          </p>
-          <p className="body-copy">{t("dateRange", { from: date(data.window.from), to: date(inclusiveEnd(data.window)) })}</p>
+          <div className="source-block">
+            <p className="supporting-label">{t("evidenceSource")}</p>
+            <p className="source-title">Copernicus Sentinel-2 L2A</p>
+            <p className="body-copy">{t("grid", { resolution: data.resolutionMeters })}</p>
+          </div>
+          <div className="source-block">
+            <p className="supporting-label">{t("period")}</p>
+            <p className="body-copy">{t("dateRange", { from: date(data.window.from), to: date(inclusiveEnd(data.window)) })}</p>
+            {quality ? <p className="body-copy">{t(day ? "observationDay" : "candidate")} <strong>{date(quality.from)} UTC</strong></p> : null}
+          </div>
           {quality ? (
-            <>
-              <p className="body-copy">{t(day ? "observationDay" : "candidate")} <strong>{date(quality.from)} UTC</strong></p>
-              <p className="body-copy">
-                {t("qualitySummary", { cloud: percent(quality.cloudFraction), clear: percent(quality.clearCoverage), count: data.observedDays })}
-              </p>
-            </>
+            <dl className="source-quality">
+              <div><dt>{t("cloud")}</dt><dd>{percent(quality.cloudFraction)}</dd></div>
+              <div><dt>{t("clear")}</dt><dd>{percent(quality.clearCoverage)}</dd></div>
+              <div><dt>{t("observationCount")}</dt><dd>{num(data.observedDays)}</dd></div>
+            </dl>
           ) : null}
         </div>
       </div>
       {day ? (
         <>
-          <dl className={full ? "observation-index-grid" : "summary-grid"}>
+          <dl className={full ? "observation-index-grid" : "observation-index-grid observation-index-grid--compact"}>
             {indexKeys.map((key) => (
-              <div key={key}>
-                <dt className="supporting-label">{indices[key].label} · {localIndex(key, locale).title}</dt>
+              <div key={key} className={`index-card index-card--${key}`}>
+                <dt><span className="index-tag">{indices[key].label}</span> <span>{localIndex(key, locale).title}</span></dt>
                 <dd><strong>{day[key] === null ? t("unavailable") : num(day[key], 2)}</strong></dd>
                 <dd className="body-copy">{interpretIndex(key, day[key], locale) ?? t("fewPixels")}</dd>
                 {full ? (
@@ -126,7 +131,7 @@ export function ObservationDetails({ data, day = data.observation, full = false,
               </div>
             ))}
           </dl>
-          <p className="body-copy">
+          <p className="body-copy surface-share">
             <strong>{t("scl")}</strong>{" "}
             {t("surfaceShare", { water: percent(day.waterFraction), vegetation: percent(day.vegetationFraction) })}
           </p>
@@ -135,7 +140,7 @@ export function ObservationDetails({ data, day = data.observation, full = false,
           </p>
         </>
       ) : (
-        <p className="body-copy">
+        <p className="status-note">
           {data.observedDays === 0
             ? t("noData") : t("noUsable")}
         </p>

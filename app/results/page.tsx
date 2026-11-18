@@ -83,6 +83,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
         <div className="print-hidden">
           <ParcelAiChat />
         </div>
+        <p className="print-only print-footer">{t("printDemoFooter")}</p>
       </section>
     </div>
   );

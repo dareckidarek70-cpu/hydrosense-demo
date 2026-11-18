@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale } from "@/components/locale";
+import { Download, LoaderCircle } from "lucide-react";
 
 import { useState } from "react";
 
@@ -26,6 +27,7 @@ export function PrintBriefButton() {
 
   return (
     <button className="button export-button print-hidden" onClick={handlePrint} type="button" disabled={preparing}>
+      {preparing ? <LoaderCircle size={17} className="loading-icon" aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
       {preparing ? t("printPreparing") : t("printAction")}
     </button>
   );

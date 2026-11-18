@@ -28,7 +28,7 @@ function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex })
         aria-label={t("chartA11y", { index: indices[index].label })}>
         {[1, 0, -1].map((tick) => (
           <g key={tick}>
-            <line x1="38" y1={y(tick)} x2="445" y2={y(tick)} stroke="#a6b6ae" strokeWidth="0.6" />
+            <line x1="38" y1={y(tick)} x2="445" y2={y(tick)} stroke={tick === 0 ? "#94a3b8" : "#cbd5e1"} strokeWidth="0.75" />
             <text x="29" y={y(tick) + 3} textAnchor="end">{tick}</text>
           </g>
         ))}

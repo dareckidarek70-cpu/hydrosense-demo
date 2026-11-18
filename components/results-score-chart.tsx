@@ -28,10 +28,10 @@ export function ResultsScoreChart({
 }: ResultsScoreChartProps) {
   const { t, percent } = useLocale();
   const data = [
-    { name: t("investment"), value: investment, color: "#73b17d" },
-    { name: t("irrigation"), value: irrigation, color: "#79c1b2" },
-    { name: t("cropFit"), value: cropFit, color: "#9aca84" },
-    { name: t("sustainability"), value: sustainability, color: "#b6c979" },
+    { name: t("investment"), value: investment, color: "#2563eb" },
+    { name: t("irrigation"), value: irrigation, color: "#0891b2" },
+    { name: t("cropFit"), value: cropFit, color: "#4d72b5" },
+    { name: t("sustainability"), value: sustainability, color: "#317fa9" },
   ];
 
   return (
@@ -47,34 +47,37 @@ export function ResultsScoreChart({
           <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 280 }}>
             <BarChart
               data={data}
-              margin={{ top: 18, right: 18, left: 6, bottom: 12 }}
-              barCategoryGap="28%"
+              layout="vertical"
+              margin={{ top: 8, right: 15, left: 2, bottom: 8 }}
+              barCategoryGap="33%"
             >
-              <CartesianGrid strokeDasharray="4 4" stroke="rgba(17,49,34,0.12)" />
+              <CartesianGrid strokeDasharray="4 4" stroke="#d6dfed" horizontal={false} />
               <XAxis
-                dataKey="name"
-                tick={{ fill: "#587160", fontSize: 12 }}
+                type="number"
+                domain={[0, 100]}
+                tick={{ fill: "#516179", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                domain={[0, 100]}
-                tick={{ fill: "#587160", fontSize: 13 }}
+                type="category"
+                dataKey="name"
+                tick={{ fill: "#516179", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
-                width={36}
+                width="auto"
               />
               <Tooltip
                 formatter={(value) => [percent(Number(value ?? 0) / 100), t("scoreDemo")]}
                 contentStyle={{
-                  borderRadius: 16,
-                  border: "1px solid rgba(17,49,34,0.08)",
-                  background: "rgba(255,255,255,0.96)",
-                  color: "#113122",
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  color: "#0f172a",
                 }}
-                cursor={{ fill: "rgba(17,49,34,0.05)" }}
+                cursor={{ fill: "#f2f5fa" }}
               />
-              <Bar dataKey="value" radius={[14, 14, 0, 0]} maxBarSize={96}>
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={28}>
                 {data.map((entry) => (
                   <Cell key={entry.name} fill={entry.color} />
                 ))}
@@ -85,7 +88,7 @@ export function ResultsScoreChart({
       </div>
 
       {/* DRUK / PDF */}
-      <div className="report-chart-print" aria-hidden="true">
+      <div className="report-chart-print">
         <div className="print-chart-inner">
           
 

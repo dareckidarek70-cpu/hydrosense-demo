@@ -1,138 +1,82 @@
+import Image from "next/image";
 import Link from "next/link";
-import { FeatureCard } from "@/components/cards/feature-card";
-import { MetricCard } from "@/components/cards/metric-card";
-import { SectionHeader } from "@/components/section-header";
+import { ArrowDownRight, ArrowRight, ChartNoAxesCombined, FileText, Layers3, ScanLine } from "lucide-react";
 import { getLocalization } from "@/lib/i18n/server";
-import { demoPresentation } from "@/lib/i18n/demo";
-import { getHomeCopy } from "@/lib/mock-content";
+
+const capabilities = [
+  { icon: ScanLine, title: "toolArea", copy: "toolAreaText" },
+  { icon: Layers3, title: "toolSignals", copy: "toolSignalsText" },
+  { icon: ChartNoAxesCombined, title: "toolHistory", copy: "toolHistoryText" },
+  { icon: FileText, title: "toolReport", copy: "toolReportText" },
+] as const;
+
+const sample = {
+  coordinates: [52.0423, 23.0804] as [number, number],
+  date: "2026-08-16",
+  href: "/results?mode=custom&lat=52.0423&lng=23.0804&radius=500&from=2026-08-16&to=2026-08-16",
+};
 
 export default async function HomePage() {
-  const { locale, t, percent } = await getLocalization();
-  const { demoHighlights, investorReasons, workflowSteps } = getHomeCopy(locale);
-  const { copy, scores } = demoPresentation("parcel-b", locale);
-  const featuredScores = [
-    [t("investment"), scores.investment],
-    [t("irrigation"), scores.irrigation],
-    [t("cropFit"), scores.cropFit],
-    [t("sustainability"), scores.sustainability],
-  ] as const;
+  const { t, date, coordinates } = await getLocalization();
   return (
-    <div className="container">
-      <section className="page-section hero-grid hero-grid--home">
-        <div className="hero-panel hero-panel--home">
-          <div className="section-heading">
-          
-            <span className="eyebrow">{t("heroIntro")}</span>
-
-            <h1
-              className="display-title"
-              style={{
-                fontSize: "clamp(2.1rem, 4vw, 3.6rem)",
-                lineHeight: 0.95,
-                letterSpacing: "-0.04em",
-                maxWidth: "14ch",
-              }}
-            >{t("heroTitle")}</h1>
-
-            <p
-              className="lead"
-              style={{
-                maxWidth: "32rem",
-                fontSize: "1.05rem",
-                lineHeight: 1.7,
-                marginTop: "1.5rem",
-              }}
-            >{t("heroLead")}</p>
-          </div>
-
-          <div className="hero-actions hero-actions--home">
-            <Link className="button" href="/select-area">{t("selectArea")}</Link>
+    <div className="home-page">
+      <section className="container home-hero">
+        <div className="home-hero-copy">
+          <p className="eyebrow home-hero-kicker"><span aria-hidden="true" />{t("heroIntro")}</p>
+          <h1 className="display-title">{t("heroTitle")}</h1>
+          <p className="lead">{t("heroLead")}</p>
+          <div className="button-row home-actions">
+            <Link className="button" href="/select-area">{t("selectArea")} <ArrowRight size={17} aria-hidden="true" /></Link>
             <Link className="button-secondary" href="/results?parcel=parcel-b">{t("demoBrief")}</Link>
           </div>
+          <ul className="hero-sensors" aria-label={t("index")}>
+            <li>NDVI</li><li>NDWI</li><li>NDMI</li>
+          </ul>
         </div>
 
-        <div
-          className="hero-card map-art hero-feature-panel"
-          style={{
-            overflow: "hidden",
-            position: "relative",
-          }}
-        >
-          <div className="map-overlay">
-            <div className="label-row">
-              <span className="pill hero-preview-microtext hero-preview-pill">{t("demoTag")}</span>
-            </div>
-            <div>
-              <p className="supporting-label hero-preview-kicker">{t("featured")}</p>
-              <h2 className="section-title hero-feature-title" style={{ color: "#f2fff5" }}>{copy.label}</h2>
-            </div>
-            <div className="stats-grid hero-stats-grid">
-              {featuredScores.map(([label, score]) => (
-                <div className="metric-card hero-stat-card" key={label}>
-                  <p className="metric-value">{percent(score / 100)}</p>
-                  <p className="metric-label">{label}</p>
-                </div>
-              ))}
-            </div>
+        <figure className="scene-card">
+          <div className="scene-head">
+            <span><ScanLine size={17} aria-hidden="true" /> Sentinel-2 L2A</span>
+            <span className="scene-tag">{t("sampleScene")}</span>
           </div>
-        </div>
+          <Link className="scene-preview" href={sample.href} aria-label={t("openScene")}>
+            <Image src="/sentinel-biala-20260816.webp" fill priority sizes="(max-width: 860px) 92vw, 640px" alt={t("sampleImage")} />
+            <svg viewBox="0 0 768 460" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+              <path d="M26 65V26h39m638 0h39v39m0 330v39h-39m-638 0H26v-39" fill="none" stroke="#c2f6fc" strokeWidth="1.5" opacity=".8" />
+              <circle cx="384" cy="230" r="121" fill="#1baee7" fillOpacity=".08" stroke="#a5f3fc" strokeWidth="2.5" />
+              <circle cx="384" cy="230" r="132" fill="none" stroke="#e0faff" strokeWidth="1" strokeDasharray="3 7" opacity=".85" />
+              <path d="M384 213v34m-17-17h34" stroke="#e0faff" strokeWidth="1.5" />
+              <circle cx="384" cy="230" r="4" fill="#e0faff" />
+            </svg>
+            <span className="scene-coordinates">{coordinates(sample.coordinates)}</span>
+            <span className="scene-layer">TRUE COLOR</span>
+          </Link>
+          <figcaption>
+            <div className="scene-caption">
+              <div>
+                <h2>{t("sampleLocation")}</h2>
+                <p>{date(sample.date)} UTC · 500 m</p>
+              </div>
+              <Link className="scene-link" href={sample.href} aria-label={t("openScene")}><ArrowDownRight size={20} aria-hidden="true" /></Link>
+            </div>
+            <p className="scene-credit">Contains modified Copernicus Sentinel data [2026], processed by Sentinel Hub</p>
+          </figcaption>
+        </figure>
       </section>
 
-      <section className="page-section">
-        <SectionHeader
-          eyebrow={t("homeWhat")}
-          title={t("homeWhatTitle")}
-          description={t("homeWhatText")}
-        />
-        <div className="card-grid">
-          {demoHighlights.map((item) => (
-            <FeatureCard
-              key={item.title}
-              title={item.title}
-              description={item.description}
-              detail={item.detail}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="page-section two-column-grid">
-        <div className="glass-card">
-          <SectionHeader
-          eyebrow={t("steps")}
-          title={t("stepsTitle")}
-          description={t("stepsText")}
-        />
-          <div className="metric-stack workflow-stack">
-  {workflowSteps.map((step, index) => (
-    <div className="workflow-step-wrap" key={step.title}>
-      <MetricCard
-        label={`0${index + 1}`}
-        title={step.title}
-        value={step.summary}
-      />
-
-      {index < workflowSteps.length - 1 ? (
-        <div className="workflow-arrow-down" aria-hidden="true">
-          ↓
-        </div>
-      ) : null}
-    </div>
-  ))}
-</div>
-        </div>
-
-        <div className="timeline-card">
-          <SectionHeader
-            eyebrow={t("investors")}
-            title={t("investorsTitle")}
-            description={t("investorsText")}
-          />
-          <div className="insight-grid">
-            {investorReasons.map((reason) => (
-              <article key={reason.title} className="field-chip-card">
-                <h3>{reason.title}</h3>
-                <p>{reason.description}</p>
+      <section className="home-toolkit" aria-labelledby="toolkit-heading">
+        <div className="container">
+          <p className="eyebrow">{t("toolset")}</p>
+          <h2 className="section-title" id="toolkit-heading">{t("toolsetTitle")}</h2>
+          <div className="toolkit-grid">
+            {capabilities.map(({ icon: Icon, title, copy }, i) => (
+              <article className="tool-card" key={title}>
+                <div className="tool-card-top">
+                  <span className="tool-icon"><Icon size={20} aria-hidden="true" /></span>
+                  <span className="tool-number" aria-hidden="true">0{i + 1}</span>
+                </div>
+                <h3>{t(title)}</h3>
+                <p>{t(copy)}</p>
               </article>
             ))}
           </div>

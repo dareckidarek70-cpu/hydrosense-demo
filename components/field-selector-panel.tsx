@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
+import { ArrowRight, Crosshair, LoaderCircle, MapPin } from "lucide-react";
 import { demoParcels } from "@/lib/mock-analysis";
 import { demoPresentation } from "@/lib/i18n/demo";
 import { inclusiveEnd, observationWindow, radiusAreaHectares } from "@/lib/copernicus/request";
@@ -12,7 +13,7 @@ import { useLocale } from "./locale";
 
 function MapPlaceholder() {
   const { t } = useLocale();
-  return <div className="glass-card" style={{ minHeight: 360 }} role="status">{t("mapLoading")}</div>;
+  return <div className="map-placeholder status-note" role="status"><LoaderCircle className="loading-icon" size={18} aria-hidden="true" />{t("mapLoading")}</div>;
 }
 
 const LiveParcelMap = dynamic(() => import("@/components/live-parcel-map"), {
@@ -77,8 +78,13 @@ export function FieldSelectorPanel() {
 
   return (
     <div className="selection-layout">
-      <div className="metric-stack">
-        <LiveParcelMap
+      <div className="map-column">
+        <section className="workspace-map" aria-labelledby="workspace-map-title">
+          <div className="workspace-map-head">
+            <h2 id="workspace-map-title"><Crosshair size={19} aria-hidden="true" /> {t("mapWorkspace")}</h2>
+            <p>{t("mapInstruction")}</p>
+          </div>
+          <LiveParcelMap
           parcels={parcels.map((option) => ({ ...option, label: demoPresentation(option.id, locale).copy.label }))}
           selectedParcelId={selectedParcelId}
           onSelect={selectDemo}
@@ -89,15 +95,16 @@ export function FieldSelectorPanel() {
           observation={state && "data" in state ? state.data.observation : null}
           observationPending={Boolean(area && !state)}
           referenceWindow={area ? { from: period.from > recentMosaic.from ? period.from : recentMosaic.from, to: period.to } : undefined}
-        />
-        <div className="glass-card">
-          <p className="supporting-label">{t("demoParcels")}</p>
-          <div className="button-row">
+          />
+        </section>
+        <section className="demo-picker" aria-labelledby="demo-picker-title">
+          <h2 id="demo-picker-title" className="supporting-label">{t("demoParcels")}</h2>
+          <div className="button-row" role="group" aria-labelledby="demo-picker-title">
             {parcels.map((option) => (
               <button
                 key={option.id}
                 type="button"
-                className={!area && option.id === selectedParcelId ? "button" : "button-secondary"}
+                className="button-secondary"
                 aria-pressed={!area && option.id === selectedParcelId}
                 onClick={() => selectDemo(option.id)}
               >
@@ -105,19 +112,20 @@ export function FieldSelectorPanel() {
               </button>
             ))}
           </div>
-        </div>
+        </section>
       </div>
 
-      <div className="glass-card summary-card summary-card--active">
+      <aside className="summary-card" aria-labelledby="selection-title">
         <div className="summary-row">
+          <span className="tool-icon"><MapPin size={19} aria-hidden="true" /></span>
           <div>
             <p className="supporting-label">{t(area ? "customArea" : "demo")}</p>
-            <h3>{area ? t("location") : parcel.copy.label}</h3>
+            <h2 id="selection-title">{area ? t("location") : parcel.copy.label}</h2>
           </div>
         </div>
         {area ? (
           <>
-            <p className="body-copy">{coordinates(area.coordinates)}</p>
+            <p className="coordinate-reading">{coordinates(area.coordinates)}</p>
             <div>
               <p className="supporting-label">{t("radiusArea", { area: num(radiusAreaHectares(analysisRadius), 1) })}</p>
               <div className="button-row" role="group" aria-label={t("radius")}>
@@ -125,7 +133,7 @@ export function FieldSelectorPanel() {
                   <button
                     key={radius}
                     type="button"
-                    className={analysisRadius === radius ? "button" : "button-secondary"}
+                    className="button-secondary"
                     aria-pressed={analysisRadius === radius}
                     onClick={() => setAnalysisRadius(radius)}
                   >
@@ -135,11 +143,9 @@ export function FieldSelectorPanel() {
               </div>
             </div>
             <ObservationPeriod period={period} onApply={setPeriod} />
-            <div role="status">
-              {!state ? <p>{t("loadingStats")}</p> : null}
-              {state && "data" in state ? <ObservationDetails data={state.data} /> : null}
-              {state && "error" in state ? <p>{t(state.error)}</p> : null}
-            </div>
+            {!state ? <p className="status-note" role="status"><LoaderCircle className="loading-icon" size={17} aria-hidden="true" />{t("loadingStats")}</p> : null}
+            {state && "data" in state ? <ObservationDetails data={state.data} /> : null}
+            {state && "error" in state ? <p className="status-note status-note--error" role="alert">{t(state.error)}</p> : null}
             {state && "error" in state ? (
               <button type="button" className="button-secondary" onClick={retry}>{t("retry")}</button>
             ) : null}
@@ -160,8 +166,8 @@ export function FieldSelectorPanel() {
             </div>
           </>
         )}
-        <Link href={briefHref} className="button">{t(area ? "openObserved" : "openDemo")}</Link>
-      </div>
+        <Link href={briefHref} className="button summary-action">{t(area ? "openObserved" : "openDemo")} <ArrowRight size={17} aria-hidden="true" /></Link>
+      </aside>
     </div>
   );
 }

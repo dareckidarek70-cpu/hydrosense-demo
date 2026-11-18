@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Crosshair } from "lucide-react";
 import type { Observation } from "@/lib/copernicus/observations";
 import { inclusiveEnd, observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
 import { SatelliteLegend } from "./satellite-legend";
@@ -66,6 +67,21 @@ function MapClickHandler({
   });
 
   return null;
+}
+
+function PickMapCenter({ onPickPoint }: { onPickPoint: (point: [number, number]) => void }) {
+  const map = useMap();
+  const { t } = useLocale();
+  return (
+    <div className="map-center-control" ref={(control) => { if (control) L.DomEvent.disableClickPropagation(control); }}>
+      <button type="button" className="button-secondary" onClick={() => {
+        const point = map.getCenter().wrap();
+        onPickPoint([Number(point.lat.toFixed(6)), Number(point.lng.toFixed(6))]);
+      }}>
+        <Crosshair size={16} aria-hidden="true" /> {t("useMapCenter")}
+      </button>
+    </div>
+  );
 }
 
 function DemoFocus({ lat, lng }: { lat: number; lng: number }) {
@@ -218,18 +234,7 @@ export function LiveParcelMap({
   const selectedOverlayLayer = selectedLayer === "BASEMAP" ? null : selectedLayer;
 
   return (
-    <div
-      style={{
-        position: "relative",
-        zIndex: 0,
-        minHeight: "360px",
-        borderRadius: "28px",
-        overflow: "hidden",
-        border: "1px solid rgba(17,49,34,0.12)",
-        boxShadow: "0 22px 64px rgba(19, 44, 30, 0.1)",
-        background: "#f6faf4",
-      }}
-    >
+    <div className="map-shell">
       <LayerControl selectedLayer={selectedLayer} onChange={(layer) => {
         if (layer !== selectedLayer) setOverlayStatus(null);
         setSelectedLayer(layer);
@@ -240,7 +245,7 @@ export function LiveParcelMap({
         zoom={10}
         zoomControl={false}
         scrollWheelZoom={false}
-        style={{ height: "clamp(360px, 62vh, 560px)", width: "100%" }}
+        className="map-canvas"
  >
         <ZoomControl key={locale} zoomInTitle={t("zoomIn")} zoomOutTitle={t("zoomOut")} />
 <TileLayer
@@ -260,6 +265,7 @@ export function LiveParcelMap({
         ) : null}
 
         <MapClickHandler onPickPoint={onPickPoint} />
+        {onPickPoint ? <PickMapCenter onPickPoint={onPickPoint} /> : null}
         {selectionMode === "demo" && selectedParcel ? (
           <DemoFocus lat={selectedParcel.center[0]} lng={selectedParcel.center[1]} />
         ) : null}
@@ -286,9 +292,9 @@ export function LiveParcelMap({
               bubblingMouseEvents={false}
               positions={parcel.polygon as [number, number][]}
               pathOptions={{
-                color: isSelected ? "#164b35" : "#6a8f75",
+                color: isSelected ? "#1d4ed8" : "#64748b",
                 weight: isSelected ? 3 : 2,
-                fillColor: isSelected ? "#87c38f" : "#b8d6ba",
+                fillColor: isSelected ? "#60a5fa" : "#94a3b8",
                 fillOpacity:
                   selectionMode === "custom"
                     ? isSelected
@@ -325,8 +331,8 @@ export function LiveParcelMap({
               center={pickedPoint}
               radius={analysisRadius}
               pathOptions={{
-                color: "#164b35",
-                fillColor: "#87c38f",
+                color: "#1d4ed8",
+                fillColor: "#67e8f9",
                 fillOpacity: 0.18,
                 weight: 2,
               }}

@@ -44,15 +44,15 @@ export function ObservationMap({ area, url, date }: { area: PointArea; url: stri
         ) : null}
         <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={t("mapA11y")}>
           {status !== "ready" ? (
-            <g stroke="#c5d2c8" strokeWidth="0.7">
+            <g stroke="#becfe4" strokeWidth="0.7">
               {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${i * 35} 0v216`} />)}
               {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M0 ${i * 36}h480`} />)}
             </g>
           ) : null}
-          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="#9cf6c5" fillOpacity=".14" stroke="#143d2e" strokeWidth="5" />
-          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="none" stroke="#f9fff7" strokeWidth="2.5" />
-          <circle cx="240" cy="108" r="3.4" fill="#fff" stroke="#143d2e" strokeWidth="1.2" />
-          <g fill="#143d2e" stroke="#143d2e">
+          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="#67e8f9" fillOpacity=".11" stroke="#0f172a" strokeWidth="5" />
+          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="none" stroke="#cffafe" strokeWidth="2.5" />
+          <circle cx="240" cy="108" r="3.4" fill="#fff" stroke="#0f172a" strokeWidth="1.2" />
+          <g fill="#0f172a" stroke="#0f172a">
             <rect x="443" y="11" width="24" height="39" rx="4" fill="#fff" stroke="none" />
             <path d="M455 16l-6 12 6-3 6 3z" />
             <text x="455" y="42" textAnchor="middle" stroke="none">N</text>

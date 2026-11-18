@@ -4,6 +4,7 @@ import { useLocale } from "@/components/locale";
 
 import Link from "next/link";
 import { useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import { isUsableDay } from "@/lib/copernicus/observations";
 import { radiusAreaHectares, type ObservationWindow } from "@/lib/copernicus/request";
 import { ObservationDetails, useAreaObservation, type PointArea } from "./area-observation";
@@ -60,10 +61,10 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod }: {
 
         <section className="observation-section">
           <h2>{t("evidence")}</h2>
-          {!state ? <p role="status">{t("loadingStats")}</p> : null}
+          {!state ? <p className="status-note" role="status"><LoaderCircle className="loading-icon" size={18} aria-hidden="true" />{t("loadingStats")}</p> : null}
           {state && "error" in state ? (
             <div>
-              <p role="alert">{t(state.error)} {t("noReplacement")}</p>
+              <p className="status-note status-note--error" role="alert">{t(state.error)} {t("noReplacement")}</p>
               <button type="button" className="button-secondary print-hidden" onClick={retry}>{t("retry")}</button>
             </div>
           ) : null}
@@ -100,6 +101,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod }: {
           </section>
         </div>
         <Link href="/select-area" className="button-secondary print-hidden">{t("anotherArea")}</Link>
+        <p className="print-only print-footer">{t("printObservedFooter")}</p>
       </section>
     </div>
   );
