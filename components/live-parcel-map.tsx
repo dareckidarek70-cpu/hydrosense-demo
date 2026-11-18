@@ -149,7 +149,8 @@ function SatelliteOverlay({ selectedLayer, from, to, onStatus, cache }: {
             }
             return;
           }
-          if (!response.headers.get("Content-Type")?.startsWith("image/png")) {
+          const contentType = response.headers.get("Content-Type")?.split(";")[0];
+          if (contentType !== "image/png" && contentType !== "image/webp") {
             if (!signal.aborted) {
               requested = undefined;
               onStatus("mapInvalidImage");
@@ -238,7 +239,7 @@ function SatelliteOverlay({ selectedLayer, from, to, onStatus, cache }: {
         maxLng: east.toFixed(6), maxLat: north.toFixed(6),
         width: String(Math.max(64, Math.round(x * scale))),
         height: String(Math.max(64, Math.round(y * scale))),
-        layer: selectedLayer, from, to,
+        layer: selectedLayer, from, to, format: "webp",
       }).toString() : "";
 
       if (key === requested) return;
