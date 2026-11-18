@@ -358,11 +358,12 @@ export function LiveParcelMap({
         zoom={10}
         scrollWheelZoom={false}
         style={{ height: "560px", width: "100%" }}
-      >
-        <TileLayer
-          attribution="&copy; OpenStreetMap contributors &copy; CARTO"
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        />
+      
+<TileLayer
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+/>
+
 
         {selectedOverlayLayer ? (
           <SatelliteOverlay selectedLayer={selectedOverlayLayer} />
