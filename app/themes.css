@@ -184,7 +184,7 @@
   .theme-switch button { min-width: 38px; }
 }
 
-@media screen and (max-width: 380px) {
+@media screen and (max-width: 414px) {
   .site-nav .hydrosense-lockup,
   .site-nav > .nav-preferences { grid-column: 1 / -1; justify-self: center; }
   .site-nav > .nav-preferences { grid-row: 2; }
