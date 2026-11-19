@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { runInNewContext } from "node:vm";
+import { defaultTheme, themeBootScript, themeStorageKey } from "../lib/theme.ts";
 
-const css = readFileSync(new URL("../app/preview-palettes.css", import.meta.url), "utf8");
+const css = readFileSync(new URL("../app/themes.css", import.meta.url), "utf8");
 const tokens = (block) => Object.fromEntries([...block.matchAll(/--([\w-]+): (#\w{6});/g)].map(([, name, value]) => [name, value]));
 const status = tokens(css);
 
@@ -19,15 +21,17 @@ function contrast(a, b) {
   return (light + 0.05) / (dark + 0.05);
 }
 
-for (const palette of ["nature", "satellite", "neutral", "graphite"]) {
+for (const palette of ["nature", "graphite"]) {
   test(`${palette}: text and essential control contrast meet WCAG AA thresholds`, (t) => {
-    const entry = css.match(new RegExp(`body\\[data-theme-preview="enabled"\\]\\[data-preview-palette="${palette}"\\] \\{([^}]+)}`));
+    const entry = palette === "nature"
+      ? css.match(/:root \{([^}]+)}/)
+      : css.match(/:root\[data-theme="graphite"\] \{([^}]+)}/);
     assert.ok(entry);
     const color = tokens(entry[1]);
-    if (palette === "graphite") {
-      const { bg, surface, text, primary, "primary-wash": wash } = color;
-      assert.deepEqual([bg, surface, text, primary, wash], ["#faf9f6", "#ffffff", "#30363a", "#52656a", "#f0ede7"]);
-    }
+    const { bg, surface, text, primary, "primary-wash": wash } = color;
+    assert.deepEqual([bg, surface, text, primary, wash], palette === "nature"
+      ? ["#f5f8f6", "#ffffff", "#17372c", "#16745a", "#e7f2eb"]
+      : ["#faf9f6", "#ffffff", "#30363a", "#52656a", "#f0ede7"]);
     const pairs = [
       ["heading / page", "text", "bg", 3],
       ["index value / card", "text", "inset", 4.5],
@@ -47,10 +51,10 @@ for (const palette of ["nature", "satellite", "neutral", "graphite"]) {
       ["active edge / wash", "primary", "primary-wash", 3],
       ["focus / page", "primary", "bg", 3],
       ["focus / inset", "primary", "inset", 3],
-      ["error text", "preview-danger", "preview-danger-bg", 4.5],
-      ["error edge / white", "preview-danger-edge", "surface", 3],
-      ["demo notice", "preview-note", "preview-note-bg", 4.5],
-      ["demo note edge / white", "preview-note-edge", "surface", 3],
+      ["error text", "theme-danger", "theme-danger-bg", 4.5],
+      ["error edge / white", "theme-danger-edge", "surface", 3],
+      ["demo notice", "theme-note", "theme-note-bg", 4.5],
+      ["demo note edge / white", "theme-note-edge", "surface", 3],
     ];
     for (const [label, a, b, minimum] of pairs) {
       const ratio = contrast(color[a] ?? status[a], color[b] ?? status[b]);
@@ -59,3 +63,25 @@ for (const palette of ["nature", "satellite", "neutral", "graphite"]) {
     }
   });
 }
+
+test("the pre-paint script applies only a saved Warm Graphite preference", () => {
+  for (const value of [null, "nature", "graphite", "neutral", "<invalid>"]) {
+    const dataset = { theme: defaultTheme };
+    let requestedKey;
+    runInNewContext(themeBootScript, {
+      document: { documentElement: { dataset } },
+      localStorage: { getItem: (key) => { requestedKey = key; return value; } },
+    });
+    assert.equal(requestedKey, themeStorageKey);
+    assert.equal(dataset.theme, value === "graphite" ? "graphite" : "nature");
+  }
+});
+
+test("blocked storage leaves the server-rendered Clean Nature default intact", () => {
+  const dataset = { theme: defaultTheme };
+  runInNewContext(themeBootScript, {
+    document: { documentElement: { dataset } },
+    get localStorage() { throw new Error("Storage unavailable"); },
+  });
+  assert.equal(dataset.theme, "nature");
+});
