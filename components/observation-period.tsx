@@ -4,10 +4,15 @@ import { useLocale } from "@/components/locale";
 
 import { useState } from "react";
 import { dateObservationWindow, inclusiveEnd, observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
+import type { MessageKey } from "@/lib/i18n";
 
-export function ObservationPeriod({ period, onApply }: {
+export function ObservationPeriod({
+  period, onApply, label = "period", currentLabel = "periodCurrent",
+}: {
   period: ObservationWindow;
-  onApply: (period: ObservationWindow) => void;
+  onApply: (period: ObservationWindow, followsReport: boolean) => void;
+  label?: MessageKey;
+  currentLabel?: MessageKey;
 }) {
   const { t } = useLocale();
   const [preset, setPreset] = useState("current");
@@ -26,12 +31,12 @@ export function ObservationPeriod({ period, onApply }: {
         return;
       }
       setError(false);
-      onApply(next);
+      onApply(next, preset === "current");
     }}>
       <label>
-        <span>{t("period")}</span>
+        <span>{t(label)}</span>
         <select value={preset} onChange={(event) => setPreset(event.target.value)}>
-          <option value="current">{t("periodCurrent")}</option>
+          <option value="current">{t(currentLabel)}</option>
           <option value="30">{t("period30")}</option>
           <option value="90">{t("period90")}</option>
           <option value="365">{t("period365")}</option>

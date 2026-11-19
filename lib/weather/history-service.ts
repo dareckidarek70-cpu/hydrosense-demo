@@ -68,6 +68,9 @@ function weatherResult(query: WeatherHistoryRequest, series: SeriesPair | null) 
   };
 }
 
+export type WeatherHistory = ReturnType<typeof weatherResult>;
+export type WeatherDay = WeatherHistory["days"][number];
+
 export function createWeatherHistoryHandler({
   fetcher = (...args) => fetch(...args), now = () => new Date(), timeoutMs = 8000,
   enabled = () => process.env.VERCEL_ENV !== "production",

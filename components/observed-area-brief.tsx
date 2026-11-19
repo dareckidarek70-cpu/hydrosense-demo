@@ -15,6 +15,7 @@ import { PrintReportLogo } from "./print-report-logo";
 import { PrintBriefButton } from "./print-brief-button";
 import { RadiusComparison } from "./radius-comparison";
 import { ParcelAiChat } from "./parcel-ai-chat";
+import { WeatherHistoryPanel } from "./weather-history-panel";
 
 const requiredEvidence = [
   ["investment", "nextInvestment"], ["irrigation", "nextIrrigation"],
@@ -72,6 +73,8 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod }: {
           {data ? <ObservationDetails data={data} day={day} map={map} full /> : state ? map : null}
           {water ? <p>{t("waterDominates")}</p> : null}
         </section>
+
+        <WeatherHistoryPanel coordinates={area.coordinates} reportPeriod={period} />
 
         {data ? (
           <>

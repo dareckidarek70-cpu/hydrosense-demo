@@ -8,6 +8,7 @@ import { defaultTheme, themeBootScript } from "@/lib/theme";
 import "./globals.css";
 import "./print.css";
 import "./themes.css";
+import "./weather.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getLocalization();
