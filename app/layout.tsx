@@ -9,6 +9,7 @@ import "./globals.css";
 import "./print.css";
 import "./themes.css";
 import "./weather.css";
+import "./soil.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getLocalization();

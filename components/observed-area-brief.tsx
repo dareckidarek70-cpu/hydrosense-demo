@@ -16,16 +16,19 @@ import { PrintBriefButton } from "./print-brief-button";
 import { RadiusComparison } from "./radius-comparison";
 import { ParcelAiChat } from "./parcel-ai-chat";
 import { WeatherHistoryPanel } from "./weather-history-panel";
+import type { SoilPreviewReading } from "@/lib/soil-preview";
+import { SoilPreviewPanel } from "./soil-preview-panel";
 
 const requiredEvidence = [
   ["investment", "nextInvestment"], ["irrigation", "nextIrrigation"],
   ["cropFit", "nextCrop"], ["sustainability", "nextSustainability"],
 ] as const;
 
-export function ObservedAreaBrief({ area, generatedAt, initialPeriod }: {
+export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPreview }: {
   area: PointArea;
   generatedAt: string;
   initialPeriod: ObservationWindow;
+  soilPreview?: SoilPreviewReading;
 }) {
   const { t, dateTime, num, coordinates } = useLocale();
   const [period, setPeriod] = useState(initialPeriod);
@@ -75,6 +78,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod }: {
         </section>
 
         <WeatherHistoryPanel coordinates={area.coordinates} reportPeriod={period} observationDay={day?.from.slice(0, 10) ?? null} />
+        {soilPreview ? <SoilPreviewPanel reading={soilPreview} /> : null}
 
         {data ? (
           <>

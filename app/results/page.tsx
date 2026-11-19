@@ -9,6 +9,7 @@ import { ObservedAreaBrief } from "@/components/observed-area-brief";
 import { getLocalization } from "@/lib/i18n/server";
 import { demoPresentation } from "@/lib/i18n/demo";
 import { dateObservationWindow, observationWindow, pointFromQuery } from "@/lib/copernicus/request";
+import { soilPreviewAt } from "@/lib/soil-preview";
 
 type ResultsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -22,7 +23,8 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
     const area = pointFromQuery(params.lat, params.lng, params.radius);
     const period = params.from === undefined && params.to === undefined
       ? observationWindow() : dateObservationWindow(params.from, params.to);
-    return area && period ? <ObservedAreaBrief key={JSON.stringify([area, period])} area={area} generatedAt={generatedAt} initialPeriod={period} /> : (
+    return area && period ? <ObservedAreaBrief key={JSON.stringify([area, period])} area={area} generatedAt={generatedAt}
+      initialPeriod={period} soilPreview={process.env.VERCEL_ENV === "production" ? undefined : soilPreviewAt(area.coordinates)} /> : (
       <section className="container page-section">
         <h1 className="section-title">{t("invalidArea")}</h1>
         <Link className="button-secondary" href="/select-area">{t("chooseArea")}</Link>

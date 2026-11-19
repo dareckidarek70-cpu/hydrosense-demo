@@ -1,0 +1,76 @@
+{
+  "dataset": "ISRIC SoilGrids",
+  "license": "CC-BY-4.0",
+  "captureDate": "2026-11-19",
+  "grid": {
+    "west": -19949750.0,
+    "north": 8361000.0,
+    "meters": 250,
+    "projection": "igh"
+  },
+  "depthCm": [
+    0,
+    5
+  ],
+  "cells": {
+    "10448:91109": {
+      "rawMedian": {
+        "phh2o": 54,
+        "sand": 603,
+        "silt": 298,
+        "clay": 50,
+        "soc": 216,
+        "bdod": 127
+      },
+      "rawPhInterval": [
+        39,
+        76
+      ]
+    },
+    "13252:87464": null,
+    "13191:87425": {
+      "rawMedian": {
+        "phh2o": 78,
+        "sand": 254,
+        "silt": 468,
+        "clay": 197,
+        "soc": 333,
+        "bdod": 134
+      },
+      "rawPhInterval": [
+        56,
+        83
+      ]
+    }
+  },
+  "inputSha256": {
+    "phh2o_0-5cm_Q0.5.vrt": "f916ab12288eb895443f95830ce8dbdf72baccd3829819f5aae3cbf0a6f5c804",
+    "biala-pH-webdav.tif": "d3dc84ca45c9fc8cd4bfa8ea9ef59eb2eeb18f016e9f4d0b47a86a2c4024d600",
+    "biala-phh2o_0-5cm_Q0.5.tif": "28eb6d04f66e43a4ab6bf02b43d4f0474d36baba3463b633b273c93ca07f96d1",
+    "biala-sand_0-5cm_Q0.5.tif": "e6c5e4264e1d7e3314158d7a1b66ade3f70f556f27aa7a6e511a572b253eb53a",
+    "biala-silt_0-5cm_Q0.5.tif": "d84bd777c935c2911f135d763556c75441ed647dccd18e80469eb0e4e09759b3",
+    "biala-clay_0-5cm_Q0.5.tif": "c29aff0f0b679cf65d8484323f71577efd6a0f89602e0d001af9d8fbf9cb8760",
+    "biala-soc_0-5cm_Q0.5.tif": "28f72b80c2cc7db64f57bbb6d20ec291d40a57a860144546ff3be0e5d0d3c0bd",
+    "biala-bdod_0-5cm_Q0.5.tif": "f49aed196caa2e0e6aab9fb157ccb6f240976ff17099c81be3f3f0d320e87844",
+    "biala-phh2o_0-5cm_Q0.05.tif": "c1b5474c7b3080266fcb63c85c497b855af04bbaa0576d59a887f7ec86a4fee2",
+    "biala-phh2o_0-5cm_Q0.95.tif": "81a3a5e35876125ae6edaaab7038248e6fd4c2299935efba9d899a58881badc2",
+    "venice-pH-webdav.tif": "36e96200b109550881faa308f9c0be5df1126de8cd3114d53a942e6ac969f6a0",
+    "venice-phh2o_0-5cm_Q0.5.tif": "70cb40ca724d765cd5a007b6ab56f754b99a635c6f8b755c8c054a28596306e9",
+    "venice-sand_0-5cm_Q0.5.tif": "70cb40ca724d765cd5a007b6ab56f754b99a635c6f8b755c8c054a28596306e9",
+    "venice-silt_0-5cm_Q0.5.tif": "70cb40ca724d765cd5a007b6ab56f754b99a635c6f8b755c8c054a28596306e9",
+    "venice-clay_0-5cm_Q0.5.tif": "70cb40ca724d765cd5a007b6ab56f754b99a635c6f8b755c8c054a28596306e9",
+    "venice-soc_0-5cm_Q0.5.tif": "70cb40ca724d765cd5a007b6ab56f754b99a635c6f8b755c8c054a28596306e9",
+    "venice-bdod_0-5cm_Q0.5.tif": "70cb40ca724d765cd5a007b6ab56f754b99a635c6f8b755c8c054a28596306e9",
+    "venice-phh2o_0-5cm_Q0.05.tif": "70cb40ca724d765cd5a007b6ab56f754b99a635c6f8b755c8c054a28596306e9",
+    "venice-phh2o_0-5cm_Q0.95.tif": "70cb40ca724d765cd5a007b6ab56f754b99a635c6f8b755c8c054a28596306e9",
+    "veneto-land-pH-webdav.tif": "36e96200b109550881faa308f9c0be5df1126de8cd3114d53a942e6ac969f6a0",
+    "veneto-land-phh2o_0-5cm_Q0.5.tif": "6e3c4d12b17c8ca25d287376b9965a83820ac2db505aa681e2a3e28b0c73542d",
+    "veneto-land-sand_0-5cm_Q0.5.tif": "c5a7520aea4b699ebaaf9818a9bece4bf2c595bc14981962f34f436c72a71adb",
+    "veneto-land-silt_0-5cm_Q0.5.tif": "5a9f8d330b163f45ffe7daca6365f78ebaefc844bf858c3adf285823bce3f31e",
+    "veneto-land-clay_0-5cm_Q0.5.tif": "f502d9a89da2ec23400719b3fe5fd1fce0bbd546c7b584c8b90b349acb589630",
+    "veneto-land-soc_0-5cm_Q0.5.tif": "6d95b7820b6b6c8d3e2b04ea2d044e06ca0dfb36b9ee3cef24283c0569c51ec5",
+    "veneto-land-bdod_0-5cm_Q0.5.tif": "13900d83b172246842c3dbf65516b13a8a271f5835c2b4a10f12899e7d864c5f",
+    "veneto-land-phh2o_0-5cm_Q0.05.tif": "107d1ad79fdb6dabdceddcdc94b436066f91187a44529f27d700ff1fb1db3e01",
+    "veneto-land-phh2o_0-5cm_Q0.95.tif": "4962565ed7dc0c89e9efd696587a212cac1184ce4470d79c0c396a576fd27129"
+  }
+}

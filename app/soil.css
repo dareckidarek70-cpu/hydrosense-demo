@@ -1,0 +1,31 @@
+@media screen {
+  .soil-panel { display: grid; gap: 14px; border-top: 3px solid var(--primary); }
+  .soil-panel #soil-title { margin-bottom: 4px; scroll-margin-top: 110px; }
+  .soil-heading { display: flex; align-items: start; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+  .soil-heading .eyebrow { margin-bottom: 5px; }
+  .soil-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+  .soil-badges .pill { align-items: center; gap: 4px; color: var(--primary-hover); background: var(--primary-wash); }
+  .soil-readings, .soil-texture { display: grid; gap: 8px; min-width: 0; }
+  .soil-overview { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 8px; }
+  .soil-texture-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .soil-metric { min-width: 0; padding: 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--inset); }
+  .soil-metric dt { color: var(--body); font-size: .86rem; font-weight: 700; }
+  .soil-metric dd { margin-top: 5px; }
+  .soil-metric dd strong { font: 750 clamp(1.1rem, 2.35vw, 1.5rem)/1.15 var(--font-mono); }
+  .soil-metric dd span { color: var(--muted); font-size: .78rem; }
+  .soil-ph { border-inline-start: 3px solid var(--primary); background: var(--primary-wash); }
+  .soil-interval { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px; }
+  .soil-interval b { color: var(--text); font-size: .91rem; }
+  .soil-texture h3 { font-size: 1rem; margin-top: 4px; }
+  .soil-texture p, .soil-footer p { color: var(--muted); font-size: .79rem; }
+  .soil-empty { display: grid; gap: 3px; padding: 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--inset); }
+  .soil-empty p { color: var(--body); font-size: .87rem; }
+  .soil-footer { display: grid; gap: 3px; border-top: 1px solid var(--border); padding-top: 9px; }
+  .soil-footer a { color: var(--primary-hover); text-decoration: underline; text-underline-offset: .15em; }
+}
+
+@media screen and (max-width: 620px) {
+  .soil-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .soil-ph { grid-column: 1 / -1; }
+  .soil-metric { padding: 8px; }
+}
