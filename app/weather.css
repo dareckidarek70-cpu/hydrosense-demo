@@ -13,6 +13,21 @@
   .weather-heading .eyebrow { margin-bottom: 5px; }
   .weather-heading h2 { margin-bottom: 4px; }
   .weather-heading .pill { background: var(--primary-wash); color: var(--primary-hover); }
+  .weather-context {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    background: var(--inset);
+    border: 1px solid var(--border);
+    border-inline-start: 3px solid var(--primary);
+    border-radius: 8px;
+  }
+  .weather-context-heading h3 { font-size: 1rem; margin-bottom: 3px; }
+  .weather-context-heading p, .weather-context-method { color: var(--muted); font-size: .82rem; }
+  .weather-context-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .weather-context-metrics .weather-metric { background: var(--surface); }
+  .weather-context-metrics .weather-metric strong { font-size: clamp(1rem, 2vw, 1.33rem); }
+  .weather-context-reading { color: var(--body); font-size: .9rem; }
   .weather-period {
     display: flex;
     justify-content: space-between;
@@ -137,6 +152,7 @@
 
 @media screen and (max-width: 620px) {
   .weather-panel { gap: 11px; }
+  .weather-context-metrics { grid-template-columns: minmax(0, 1fr); }
   .weather-chart { padding: 8px; }
   .weather-svg { height: 126px; }
   .weather-inspector { grid-template-columns: minmax(0, 1fr); align-items: start; }

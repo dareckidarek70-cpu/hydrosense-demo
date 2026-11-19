@@ -4,13 +4,12 @@ import { ArrowDownUp, ChevronLeft, ChevronRight, CloudRain, LoaderCircle, Thermo
 import { useEffect, useState } from "react";
 import { inclusiveEnd, type ObservationWindow } from "@/lib/copernicus/request";
 import type { WeatherDay, WeatherHistory } from "@/lib/weather/history-service";
-import { createWeatherPanelClient, type WeatherPanelResult } from "@/lib/weather/panel-client";
 import { lowRainThreshold, summarizeWeather, weatherRequestKey } from "@/lib/weather/panel-data";
 import { useLocale } from "./locale";
 import { ObservationPeriod } from "./observation-period";
 import { WeatherCharts } from "./weather-charts";
-
-const loadWeather = createWeatherPanelClient();
+import { WeatherObservationContext } from "./weather-observation-context";
+import { useWeatherResult } from "./use-weather-result";
 
 function WeatherMetrics({ days }: { days: WeatherDay[] }) {
   const { t, num } = useLocale();
@@ -22,7 +21,7 @@ function WeatherMetrics({ days }: { days: WeatherDay[] }) {
   return (
     <dl className="weather-metrics">
       <div className="weather-metric">
-        <dt><CloudRain size={17} aria-hidden="true" />{t("weatherRainTotal")}</dt>
+        <dt><CloudRain size={17} aria-hidden="true" />{t(summary.rainDays < total ? "weatherRainAvailableTotal" : "weatherRainTotal")}</dt>
         <dd><strong>{metric(summary.precipitation, "mm", 2)}</strong><small>{coverage(summary.rainDays)}</small></dd>
       </div>
       <div className="weather-metric">
@@ -129,26 +128,15 @@ function WeatherRetry({ retryAt, onRetry }: { retryAt?: number; onRetry: () => v
   return <button type="button" className="button-secondary" disabled={!!retryAt && !ready} onClick={onRetry}>{t("weatherRetry")}</button>;
 }
 
-export function WeatherHistoryPanel({ coordinates, reportPeriod }: {
-  coordinates: readonly [number, number]; reportPeriod: ObservationWindow;
+export function WeatherHistoryPanel({ coordinates, reportPeriod, observationDay }: {
+  coordinates: readonly [number, number]; reportPeriod: ObservationWindow; observationDay: string | null;
 }) {
   const { t, date } = useLocale();
   const [override, setOverride] = useState<ObservationWindow | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [outcome, setOutcome] = useState<{ key: string; attempt: number; value: WeatherPanelResult }>();
   const period = override ?? reportPeriod;
   const key = weatherRequestKey(coordinates, period);
-  const result = outcome?.key === key && outcome.attempt === attempt ? outcome.value : undefined;
-
-  useEffect(() => {
-    if (!key) return;
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      const value = await loadWeather(key, controller.signal);
-      if (value && !controller.signal.aborted) setOutcome({ key, attempt, value });
-    }, 200);
-    return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [key, attempt]);
+  const result = useWeatherResult(key, attempt);
 
   const state = !key ? "invalid" : !result ? "loading" : "error" in result ? "error" : result.data.availability.status;
   return (
@@ -161,6 +149,8 @@ export function WeatherHistoryPanel({ coordinates, reportPeriod }: {
         </div>
         <span className="pill">{t(override ? "weatherIndependent" : "weatherSync")}</span>
       </div>
+      <WeatherObservationContext observationDay={observationDay} coordinates={coordinates} reportStart={reportPeriod.from.slice(0, 10)}
+        primary={result} primaryPending={!!key && !result} attempt={attempt} />
       <div className="weather-period">
         <ObservationPeriod period={reportPeriod} label="weatherPeriod" currentLabel="weatherSync"
           onApply={(next, followsReport) => setOverride(followsReport ? null : next)} />

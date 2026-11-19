@@ -74,7 +74,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod }: {
           {water ? <p>{t("waterDominates")}</p> : null}
         </section>
 
-        <WeatherHistoryPanel coordinates={area.coordinates} reportPeriod={period} />
+        <WeatherHistoryPanel coordinates={area.coordinates} reportPeriod={period} observationDay={day?.from.slice(0, 10) ?? null} />
 
         {data ? (
           <>

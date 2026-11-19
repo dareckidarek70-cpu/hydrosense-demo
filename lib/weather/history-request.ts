@@ -2,7 +2,7 @@ import { z } from "zod";
 import { DAY, MAX_HISTORY_DAYS, inclusiveEnd, observationWindow } from "../copernicus/request.ts";
 
 export const archiveDelayDays = 5;
-const firstReportDay = "2017-01-01";
+export const firstReportDay = "2017-01-01";
 const decimal = z.string().regex(/^[+-]?(?:\d{1,3}(?:\.\d{1,15})?|\.\d{1,15})$/).transform(Number);
 const querySchema = z.strictObject({
   lat: decimal.pipe(z.number().min(-84).max(84)),
