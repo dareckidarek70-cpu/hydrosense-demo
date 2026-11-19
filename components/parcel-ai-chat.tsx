@@ -6,7 +6,7 @@ import type { ChatReference, ChatSource } from "@/lib/parcel-chat-contract";
 import { CHAT_CLIENT_TIMEOUT_MS, CHAT_QUESTION_LIMIT } from "@/lib/parcel-chat-limits";
 
 const quickQuestions = ["q1", "q2", "q3", "q4", "q5"] as const;
-type Reply = { content: string; source?: ChatSource };
+type Reply = { content: string; source?: ChatSource; references?: { label: string; url: string }[] };
 type PanelProps = { reference: ChatReference; subject: string };
 
 export function ParcelAiChat(props: PanelProps) {
@@ -44,10 +44,10 @@ function ContextualChat({ reference, subject }: PanelProps) {
         body: JSON.stringify({ ...reference, question, locale }),
         signal: controller.signal,
       });
-      const data: { answer?: string; source?: ChatSource; error?: string } = await response.json();
+      const data: { answer?: string; source?: ChatSource; error?: string; references?: Reply["references"] } = await response.json();
       if (active.current !== controller) return;
       if (response.ok && typeof data.answer === "string" && (data.source === "rules" || data.source === "model")) {
-        setReply({ content: data.answer, source: data.source });
+        setReply({ content: data.answer, source: data.source, references: data.references });
       } else {
         setReply({ content: data.error ?? t("guidanceError") });
       }
@@ -87,6 +87,9 @@ function ContextualChat({ reference, subject }: PanelProps) {
         <h3>{t("response")}</h3>
         {reply?.source ? <p className="ai-label">{t(reply.source === "rules" ? "chatRules" : "chatModel")}</p> : null}
         <p>{loading ? t("thinking") : reply?.content ?? t("guidanceInitial")}</p>
+        {reply?.references?.map(({ label, url }) => (
+          <p key={url}><a href={url} target="_blank" rel="noreferrer">{label}</a></p>
+        ))}
       </div>
       <form className="ai-input" onSubmit={submit}>
         <textarea

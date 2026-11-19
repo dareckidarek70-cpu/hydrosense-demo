@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { parcelChatSchema } from "../lib/parcel-chat-contract.ts";
 import { contextualAnswer, questionTopic, selectAnswer } from "../lib/parcel-chat-answers.ts";
 import { demoChatContext, resolveObservationEvidence, withinDeadline } from "../lib/parcel-chat-context.ts";
+import { cropQuestion } from "../lib/parcel-chat-intent.ts";
 
 const ids = ["parcel-a", "parcel-b", "parcel-c", "parcel-d"];
 const question = "Co raport mówi o nawadnianiu?";
@@ -69,8 +70,8 @@ test("context reuses only server readings and on a cache miss requests exactly o
   assert.ok(verified.kind === "verified" && verified.day.ndvi === 0.19);
   const answer = contextualAnswer({ mode: "observation", reference: changedRef, evidence: verified }, "investment", "pl");
   assert.match(answer, /promień 1000 m/);
-  assert.match(answer, /NDVI 0,19/);
-  assert.match(answer, /nie pozwalają ustalić opłacalności/);
+  assert.match(answer, /^Te obserwacje nie pozwalają ustalić opłacalności/);
+  assert.doesNotMatch(answer, /NDVI 0,19/);
   assert.doesNotMatch(answer, /scenariuszu demo/);
 });
 
@@ -106,4 +107,84 @@ test("model can only choose vetted text; invalid output, quota errors and timeou
     assert.doesNotMatch(reply.answer, /fabricated/);
   }
   await assert.rejects(withinDeadline(new Promise(() => {}), 10), { name: "TimeoutError" });
+});
+
+const observedField = { mode: "observation", reference, evidence: { kind: "verified", day, resolutionMeters: 20 } };
+
+test("open questions resolve Polish inflection, English aliases, crop intent and conservative typos", () => {
+  for (const [text, crop, intent] of [
+    ["jaka szansa na obsianie żytem", "rye", "fit"],
+    ["jaka szansa na obsianie zyteem", "rye", "fit"],
+    ["czy urośnie tu kukurydza", "maize", "fit"],
+    ["czy urosnie tu kukurdyza", "maize", "fit"],
+    ["czy opłaca się sadzić ziemniaki", "potato", "profit"],
+    ["czy oplaca sie sadzic zieminaki", "potato", "profit"],
+    ["Kiedy siać pszenicę ozimą?", "wheat", "timing"],
+    ["Czy soja wymaga nawadniania?", "soybean", "water"],
+    ["Czy rzepak dojrzeje tutaj?", "rapeseed", "fit"],
+    ["Jaka gleba dla słonecznika?", "sunflower", "requirements"],
+    ["How much water does corn need?", "maize", "water"],
+    ["What yield can I expect from barley?", "barley", "yield"],
+    ["Czy NDVI pokazuje, że rośnie tu żyto?", "rye", "identify"],
+    ["Jakie ryzyko suszy dla pszenicy?", "wheat", "risk"],
+  ]) assert.deepEqual(cropQuestion(text), { kind: "crop", crops: [crop], intent }, text);
+  assert.deepEqual(cropQuestion("Czy lepiej siać żyto czy pszenicę?"), { kind: "crop", crops: ["rye", "wheat"], intent: "compare" });
+  for (const text of ["Czy urośnie tu szafran?", "Can I grow dragon fruit here?", "Czy lepiej siać żyto zamiast amarantusa?"])
+    assert.deepEqual(cropQuestion(text), { kind: "unknown-crop" }, text);
+  for (const text of ["Jakie uprawy wybrać?", "Co tu siać?", "Co wpływa na życie w glebie?", "Czy obszar posiada dostęp do wody?"])
+    assert.deepEqual(cropQuestion(text), { kind: "general" }, text);
+});
+
+test("a verified report answers about the named crop first and separates evidence from its general requirements", async () => {
+  const model = () => assert.fail("Crop questions must be answered locally");
+  const rye = await selectAnswer("jaka szansa na obsianie żytem", "pl", observedField, model);
+  assert.equal(rye.source, "rules");
+  assert.match(rye.answer, /^(Nie da się jeszcze ocenić).*pod żyto/);
+  assert.match(rye.answer, /Ogólne wymagania: Żyto.*lekkie.*kwaśne/);
+  assert.match(rye.answer, /Dane dla obszaru: Sentinel-2 z 16\.08\.2026 UTC: NDVI 0,57/);
+  assert.match(rye.answer, /Co sprawdzić: Zbadaj pH i skład gleby/);
+  assert.doesNotMatch(rye.answer, /52,04230|NDMI|NDWI|%|demo/);
+  assert.match(rye.references[0].url, /^https:\/\/www\.gov\.pl\/attachment\//);
+  const potatoes = await selectAnswer("czy opłaca się sadzić ziemniaki", "pl", observedField, model);
+  assert.match(potatoes.answer, /^Nie da się.*opłaca się uprawiać ziemniaki/);
+  assert.match(potatoes.answer, /cenę zbytu.*sadzeniaków/);
+  assert.match(potatoes.answer, /potas.*historię uprawy ziemniaka/);
+  const wheat = await selectAnswer("When should I sow wheat here?", "en", observedField, model);
+  assert.match(wheat.answer, /^There is not enough information to set a specific date for wheat/);
+  assert.match(wheat.answer, /Winter wheat is sown in autumn and spring wheat in spring/);
+  const water = await selectAnswer("Ile wody potrzebuje kukurydza?", "pl", observedField, model);
+  assert.match(water.answer, /NDMI 0,10/);
+  assert.match(water.answer, /kwitnienia/);
+  assert.doesNotMatch(water.answer, /NDVI|NDWI/);
+});
+
+test("each demo states whether the specific crop was in its unchanged scenario, not a probability", async () => {
+  const results = await Promise.all(ids.map((id) => selectAnswer("czy urośnie tu kukurydza", "pl", demoChatContext(id, "pl"))));
+  for (const [i, result] of results.entries()) {
+    assert.equal(result.source, "rules");
+    assert.match(result.answer, new RegExp(`Działka ${"ABCD"[i]}`));
+    assert.match(result.answer, /Symulacja konkursowa/);
+    assert.match(result.answer, i === 2 ? /nie jest uwzględniona.*nie znaczy/ : /jest uwzględniona/);
+    assert.doesNotMatch(result.answer, /%|NDVI|NDWI|NDMI/);
+  }
+  assert.equal(new Set(results.map(({ answer }) => answer)).size, 4);
+});
+
+test("unknown crops and insufficient evidence never become yield, soil pH or suitability estimates", async () => {
+  const local = () => assert.fail("Do not call the model for unsupported crops");
+  const unknown = await selectAnswer("Czy urośnie tu szafran?", "pl", observedField, local);
+  assert.match(unknown.answer, /nie mam jej w bazie/);
+  assert.equal(unknown.references, undefined);
+  const none = await selectAnswer("Ile ton żyta zbiorę?", "pl", { ...observedField, evidence: { kind: "unavailable", reason: "missing" } });
+  assert.match(none.answer, /^Nie da się wiarygodnie oszacować plonu/);
+  assert.match(none.answer, /Copernicus nie zwrócił obserwacji/);
+  assert.match(none.answer, /wyniki z poprzednich lat lub próba polowa/);
+  assert.doesNotMatch(none.answer, /NDVI|NDWI|NDMI|%/);
+  const soil = await selectAnswer("Jakie jest pH i klasa gleby?", "pl", observedField);
+  assert.match(soil.answer, /^Ten raport nie pozwala ustalić pH/);
+  const water = await selectAnswer("Czy urośnie tu kukurydza?", "pl", {
+    ...observedField, evidence: { kind: "verified", resolutionMeters: 20, day: { ...day, waterFraction: 1 } },
+  });
+  assert.match(water.answer, /klasa wody stanowiła 100% użytecznych pikseli/);
+  assert.doesNotMatch(water.answer, /NDVI 0,57/);
 });

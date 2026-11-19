@@ -48,8 +48,9 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   const useModel = process.env.HYDROSENSE_ENABLE_AI === "true" && apiKey && !request.signal.aborted
-    && (context.mode === "demo" || context.evidence.kind === "verified") && allowRequest("ai", 3);
+    && (context.mode === "demo" || context.evidence.kind === "verified");
   const response = await selectAnswer(question, locale, context, useModel ? async () => {
+    if (!allowRequest("ai", 3)) return null;
     const { default: OpenAI } = await import("openai");
     const client = new OpenAI({ apiKey, timeout: CHAT_MODEL_TIMEOUT_MS, maxRetries: 0 });
     const result = await client.chat.completions.create({
