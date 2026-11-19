@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { HydroSenseWordmark } from "@/components/hydrosense-wordmark";
 import { LanguageSwitcher, LocaleProvider } from "@/components/locale";
+import { PreviewPalette } from "@/components/preview-palette";
 import { SiteNavigation } from "@/components/site-navigation";
 import { getLocalization } from "@/lib/i18n/server";
 import "./globals.css";
 import "./print.css";
+import "./preview-palettes.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getLocalization();
@@ -17,9 +19,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const { locale, t } = await getLocalization();
+  const isPalettePreview = process.env.VERCEL_ENV === "preview";
   return (
     <html lang={locale} data-scroll-behavior="smooth">
-      <body>
+      <body data-theme-preview={isPalettePreview ? "enabled" : undefined}>
         <LocaleProvider locale={locale}>
           <div className="app-shell">
             <a className="skip-link" href="#main-content">{t("skipContent")}</a>
@@ -29,6 +32,7 @@ export default async function RootLayout({
                 <SiteNavigation />
                 <LanguageSwitcher />
               </div>
+              {isPalettePreview ? <PreviewPalette /> : null}
             </header>
             <main id="main-content" tabIndex={-1}>{children}</main>
             <footer className="site-footer">

@@ -1,0 +1,57 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+
+const css = readFileSync(new URL("../app/preview-palettes.css", import.meta.url), "utf8");
+const tokens = (block) => Object.fromEntries([...block.matchAll(/--([\w-]+): (#\w{6});/g)].map(([, name, value]) => [name, value]));
+const status = tokens(css);
+
+function luminance(hex) {
+  const channels = hex.slice(1).match(/../g).map((channel) => {
+    const srgb = parseInt(channel, 16) / 255;
+    return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function contrast(a, b) {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+for (const palette of ["nature", "satellite", "neutral"]) {
+  test(`${palette}: text and essential control contrast meet WCAG AA thresholds`, (t) => {
+    const entry = css.match(new RegExp(`body\\[data-theme-preview="enabled"\\]\\[data-preview-palette="${palette}"\\] \\{([^}]+)}`));
+    assert.ok(entry);
+    const color = tokens(entry[1]);
+    const pairs = [
+      ["heading / page", "text", "bg", 3],
+      ["index value / card", "text", "inset", 4.5],
+      ["text / page", "body", "bg", 4.5],
+      ["text / card", "body", "surface", 4.5],
+      ["text / AI response", "body", "inset", 4.5],
+      ["muted / page", "muted", "bg", 4.5],
+      ["muted / card", "muted", "surface", 4.5],
+      ["placeholder / white", "muted", "surface", 4.5],
+      ["muted / inset", "muted", "inset", 4.5],
+      ["CTA", "surface", "primary", 4.5],
+      ["CTA hover", "surface", "primary-hover", 4.5],
+      ["selected label", "primary-hover", "primary-wash", 4.5],
+      ["field edge / white", "control-border", "surface", 3],
+      ["field edge / inset", "control-border", "inset", 3],
+      ["control edge / page", "control-border", "bg", 3],
+      ["active edge / wash", "primary", "primary-wash", 3],
+      ["focus / page", "primary", "bg", 3],
+      ["focus / inset", "primary", "inset", 3],
+      ["error text", "preview-danger", "preview-danger-bg", 4.5],
+      ["error edge / white", "preview-danger-edge", "surface", 3],
+      ["demo notice", "preview-note", "preview-note-bg", 4.5],
+      ["demo note edge / white", "preview-note-edge", "surface", 3],
+    ];
+    for (const [label, a, b, minimum] of pairs) {
+      const ratio = contrast(color[a] ?? status[a], color[b] ?? status[b]);
+      assert.ok(ratio >= minimum, `${label}: ${ratio.toFixed(2)} < ${minimum}`);
+      t.diagnostic(`${label}: ${ratio.toFixed(2)}:1`);
+    }
+  });
+}
