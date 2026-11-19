@@ -19,11 +19,15 @@ function contrast(a, b) {
   return (light + 0.05) / (dark + 0.05);
 }
 
-for (const palette of ["nature", "satellite", "neutral"]) {
+for (const palette of ["nature", "satellite", "neutral", "graphite"]) {
   test(`${palette}: text and essential control contrast meet WCAG AA thresholds`, (t) => {
     const entry = css.match(new RegExp(`body\\[data-theme-preview="enabled"\\]\\[data-preview-palette="${palette}"\\] \\{([^}]+)}`));
     assert.ok(entry);
     const color = tokens(entry[1]);
+    if (palette === "graphite") {
+      const { bg, surface, text, primary, "primary-wash": wash } = color;
+      assert.deepEqual([bg, surface, text, primary, wash], ["#faf9f6", "#ffffff", "#30363a", "#52656a", "#f0ede7"]);
+    }
     const pairs = [
       ["heading / page", "text", "bg", 3],
       ["index value / card", "text", "inset", 4.5],

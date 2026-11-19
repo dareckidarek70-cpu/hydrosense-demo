@@ -42,6 +42,20 @@
     --primary-wash: #e9eef3;
   }
 
+  body[data-theme-preview="enabled"][data-preview-palette="graphite"] {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --inset: #f7f6f3;
+    --text: #30363a;
+    --body: #41494c;
+    --muted: #535d61;
+    --border: #ddd9d2;
+    --control-border: #737a7a;
+    --primary: #52656a;
+    --primary-hover: #3d5156;
+    --primary-wash: #f0ede7;
+  }
+
   .palette-preview {
     border-top: 1px solid var(--border);
     background: var(--inset);
@@ -85,7 +99,7 @@
     color: var(--text);
   }
 
-  :where(body[data-theme-preview="enabled"]:is([data-preview-palette="nature"], [data-preview-palette="satellite"], [data-preview-palette="neutral"])) {
+  :where(body[data-theme-preview="enabled"][data-preview-palette]) {
     --muted-icon: var(--muted);
     --shadow: 0 1px 2px rgb(20 39 50 / .045), 0 7px 24px rgb(20 39 50 / .035);
     --preview-danger: #8b2b24;

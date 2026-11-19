@@ -6,6 +6,7 @@ const palettes = [
   ["nature", "A · Clean Nature"],
   ["satellite", "B · Satellite Blue"],
   ["neutral", "C · GeoTech Neutral"],
+  ["graphite", "D · Warm Graphite"],
 ] as const;
 
 export function PreviewPalette() {
