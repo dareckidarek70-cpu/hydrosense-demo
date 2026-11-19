@@ -1,86 +1,103 @@
 "use client";
 
-import { useLocale } from "@/components/locale";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useLocale } from "./locale";
+import type { ChatReference, ChatSource } from "@/lib/parcel-chat-contract";
+import { CHAT_CLIENT_TIMEOUT_MS, CHAT_QUESTION_LIMIT } from "@/lib/parcel-chat-limits";
 
-import { useState } from "react";
+const quickQuestions = ["q1", "q2", "q3", "q4", "q5"] as const;
+type Reply = { content: string; source?: ChatSource };
+type PanelProps = { reference: ChatReference; subject: string };
 
-const normalQuestions = ["q1", "q2", "q3", "q4", "q5"] as const;
+export function ParcelAiChat(props: PanelProps) {
+  const { locale } = useLocale();
+  return <ContextualChat key={JSON.stringify([locale, props.reference])} {...props} />;
+}
 
-export function ParcelAiChat() {
+function ContextualChat({ reference, subject }: PanelProps) {
   const { t, locale } = useLocale();
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<{ content: string; locale: string }>();
+  const [draft, setDraft] = useState("");
+  const [asked, setAsked] = useState("");
+  const [reply, setReply] = useState<Reply>();
   const [loading, setLoading] = useState(false);
+  const active = useRef<AbortController | null>(null);
 
-  async function askAI(q: string) {
-    if (loading || !q.trim()) return;
+  useEffect(() => () => {
+    const current = active.current;
+    active.current = null;
+    current?.abort();
+  }, []);
 
+  async function ask(value: string) {
+    const question = value.trim();
+    if (active.current || !question || question.length > CHAT_QUESTION_LIMIT) return;
+    const controller = new AbortController();
+    active.current = controller;
+    const deadline = setTimeout(() => controller.abort(), CHAT_CLIENT_TIMEOUT_MS);
     setLoading(true);
-    setQuestion(q);
-
+    setAsked(question);
+    setReply(undefined);
     try {
-      const res = await fetch("/api/ai/parcel-chat", {
+      const response = await fetch("/api/ai/parcel-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ ...reference, question, locale }),
+        signal: controller.signal,
       });
-
-      const data = await res.json();
-      setAnswer({ locale, content: res.ok ? data.answer : data.error ?? t("guidanceError") });
+      const data: { answer?: string; source?: ChatSource; error?: string } = await response.json();
+      if (active.current !== controller) return;
+      if (response.ok && typeof data.answer === "string" && (data.source === "rules" || data.source === "model")) {
+        setReply({ content: data.answer, source: data.source });
+      } else {
+        setReply({ content: data.error ?? t("guidanceError") });
+      }
     } catch {
-      setAnswer({ locale, content: t("guidanceError") });
+      if (active.current === controller) setReply({ content: t("guidanceError") });
     } finally {
-      setLoading(false);
+      clearTimeout(deadline);
+      if (active.current === controller) {
+        active.current = null;
+        setLoading(false);
+      }
     }
   }
 
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void ask(draft);
+  }
+
   return (
-    <div className="ai-panel animate-ai">
-      {/* HEADER */}
-      <div className="ai-header">
+    <section className="ai-panel print-hidden" aria-labelledby="parcel-chat-title">
+      <header className="ai-header">
         <div>
           <p className="ai-label">{t("diligence")}</p>
-          <h2>{t("guidance")}</h2>
+          <h2 id="parcel-chat-title">{t("guidance")}</h2>
+          <p>{subject}</p>
         </div>
-
-        <div className="ai-badges"><span>{t("generalGuidance")}</span></div>
-      </div>
-
-      {/* QUICK QUESTIONS */}
+      </header>
+      {reference.mode === "demo" ? <p className="report-quiet-note">{t("chatDemoWarning")}</p> : null}
       <div className="ai-questions">
-        {normalQuestions.map((q) => (
-          <button key={q} type="button" disabled={loading} onClick={() => askAI(t(q))}>
-            {t(q)}
-          </button>
+        {quickQuestions.map((key) => (
+          <button key={key} type="button" disabled={loading} onClick={() => void ask(t(key))}>{t(key)}</button>
         ))}
       </div>
-
-      {/* CURRENT QUESTION */}
-      {question && (
-        <div className="ai-current-question">
-          <span>{t("question")}</span>
-          <div>{question}</div>
-        </div>
-      )}
-
-      {/* ANSWER */}
-      <div className="ai-answer">
+      {asked ? <div className="ai-current-question"><strong>{t("question")}</strong><p>{asked}</p></div> : null}
+      <div className="ai-answer" aria-live="polite" aria-busy={loading}>
         <h3>{t("response")}</h3>
-        <p>{loading ? t("thinking") : answer?.locale === locale ? answer.content : t("guidanceInitial")}</p>
+        {reply?.source ? <p className="ai-label">{t(reply.source === "rules" ? "chatRules" : "chatModel")}</p> : null}
+        <p>{loading ? t("thinking") : reply?.content ?? t("guidanceInitial")}</p>
       </div>
-
-      {/* INPUT */}
-      <div className="ai-input">
+      <form className="ai-input" onSubmit={submit}>
         <textarea
           placeholder={t("askField")}
           aria-label={t("followUp")}
-          maxLength={600}
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          maxLength={CHAT_QUESTION_LIMIT}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
         />
-
-        <button type="button" disabled={loading} onClick={() => askAI(question)}>{t("ask")}</button>
-      </div>
-    </div>
+        <button type="submit" disabled={loading || !draft.trim()}>{t("ask")}</button>
+      </form>
+    </section>
   );
 }

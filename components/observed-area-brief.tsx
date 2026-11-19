@@ -14,6 +14,7 @@ import { ObservationPeriod } from "./observation-period";
 import { PrintReportLogo } from "./print-report-logo";
 import { PrintBriefButton } from "./print-brief-button";
 import { RadiusComparison } from "./radius-comparison";
+import { ParcelAiChat } from "./parcel-ai-chat";
 
 const requiredEvidence = [
   ["investment", "nextInvestment"], ["irrigation", "nextIrrigation"],
@@ -100,6 +101,10 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod }: {
             </dl>
           </section>
         </div>
+        {state ? <ParcelAiChat reference={{
+          mode: "observation",
+          observation: { geometry: area, period, day: day?.from.slice(0, 10) ?? null },
+        }} subject={`${t("selectedArea")} · ${coordinates(area.coordinates)} · ${num(area.radiusMeters)} m`} /> : null}
         <Link href="/select-area" className="button-secondary print-hidden">{t("anotherArea")}</Link>
         <p className="print-only print-footer">{t("printObservedFooter")}</p>
       </section>

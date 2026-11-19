@@ -1,0 +1,5 @@
+export const CHAT_QUESTION_LIMIT = 600;
+export const CHAT_BODY_LIMIT = 4096;
+export const CHAT_CONTEXT_TIMEOUT_MS = 12_000;
+export const CHAT_MODEL_TIMEOUT_MS = 10_000;
+export const CHAT_CLIENT_TIMEOUT_MS = 26_000;

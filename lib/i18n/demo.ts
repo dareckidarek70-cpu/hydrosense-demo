@@ -1,5 +1,5 @@
 import type { Locale } from "./index";
-import { getDemoAnalysis } from "../mock-analysis";
+import { getDemoAnalysis } from "../mock-analysis.ts";
 import type { ParcelId } from "../types";
 
 type DemoCopy = {

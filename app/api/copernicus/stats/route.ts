@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { DAY, geometrySchema, isValidHistoryWindow, observationWindow } from "@/lib/copernicus/request";
-import { fetchAreaStats, getAnalysisArea } from "@/lib/copernicus/stats";
-import { cachedRequest, readJson } from "@/lib/request-budget";
+import { geometrySchema, isValidHistoryWindow, observationWindow } from "@/lib/copernicus/request";
+import { getAnalysisArea } from "@/lib/copernicus/stats";
+import { loadReportStats } from "@/lib/copernicus/stats-cache";
+import { readJson } from "@/lib/request-budget";
 import { apiFailure, providerFailure } from "@/lib/copernicus/api-error";
 
 const inputSchema = z.object({
@@ -22,11 +23,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const canonicalWindow = { from: new Date(window.from).toISOString(), to: new Date(window.to).toISOString() };
-    const longRange = Date.parse(window.to) - Date.parse(window.from) > 90 * DAY;
-    const stats = await cachedRequest(longRange ? "stats-history" : "stats", JSON.stringify([geometry, canonicalWindow]),
-      longRange ? 3 : 10, () => fetchAreaStats(area, canonicalWindow));
-    return Response.json(stats);
+    return Response.json(await loadReportStats(geometry, area, window));
   } catch (error) {
     return providerFailure("statistics", error);
   }

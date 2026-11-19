@@ -16,10 +16,15 @@ export function allowRequest(bucket: string, limit: number, now = Date.now()) {
   return true;
 }
 
+export function readCachedRequest<T>(bucket: string, key: string) {
+  const cached = cache.get(bucket + ":" + key);
+  if (cached && cached.expires > Date.now()) return cached.value as T;
+}
+
 export async function cachedRequest<T>(bucket: string, key: string, limit: number, load: () => Promise<T>) {
   const id = bucket + ":" + key;
-  const cached = cache.get(id);
-  if (cached && cached.expires > Date.now()) return cached.value as T;
+  const cached = readCachedRequest<T>(bucket, key);
+  if (cached !== undefined) return cached;
   const active = pending.get(id);
   if (active) return active as Promise<T>;
   if (pending.size >= 8 || !allowRequest(bucket, limit)) throw new RequestLimitError();

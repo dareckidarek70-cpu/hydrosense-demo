@@ -6,12 +6,14 @@ export type ObservationWindow = { from: string; to: string };
 const latitude = z.number().min(-84).max(84);
 const longitude = z.number().min(-180).max(180);
 
+export const pointBufferSchema = z.object({
+  type: z.literal("PointBuffer"),
+  coordinates: z.tuple([latitude, longitude]),
+  radiusMeters: z.union([z.literal(500), z.literal(1000)]),
+});
+
 export const geometrySchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("PointBuffer"),
-    coordinates: z.tuple([latitude, longitude]),
-    radiusMeters: z.union([z.literal(500), z.literal(1000)]),
-  }),
+  pointBufferSchema,
   z.object({
     type: z.literal("Polygon"),
     coordinates: z.array(z.tuple([longitude, latitude])).min(3).max(100),

@@ -22,7 +22,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
     const area = pointFromQuery(params.lat, params.lng, params.radius);
     const period = params.from === undefined && params.to === undefined
       ? observationWindow() : dateObservationWindow(params.from, params.to);
-    return area && period ? <ObservedAreaBrief area={area} generatedAt={generatedAt} initialPeriod={period} /> : (
+    return area && period ? <ObservedAreaBrief key={JSON.stringify([area, period])} area={area} generatedAt={generatedAt} initialPeriod={period} /> : (
       <section className="container page-section">
         <h1 className="section-title">{t("invalidArea")}</h1>
         <Link className="button-secondary" href="/select-area">{t("chooseArea")}</Link>
@@ -80,9 +80,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
           <ReportSectionCard title={t("riskSustainability")} body={copy.risk} />
           <ReportSectionCard title={t("nextActions")} body={t("verifyDemo")} bullets={copy.next} />
         </div>
-        <div className="print-hidden">
-          <ParcelAiChat />
-        </div>
+        <ParcelAiChat reference={{ mode: "demo", parcelId: meta.id }} subject={copy.label} />
         <p className="print-only print-footer">{t("printDemoFooter")}</p>
       </section>
     </div>
