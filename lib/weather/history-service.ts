@@ -2,7 +2,7 @@ import { DAY } from "../copernicus/request.ts";
 import {
   archiveDelayDays, dayString, parseWeatherHistoryQuery, rangeLength, type WeatherHistoryRequest,
 } from "./history-request.ts";
-import { fetchArchiveSeries, modelDetails, weatherSource, WeatherHistoryError, type ArchiveSeries } from "./open-meteo.ts";
+import { fetchArchiveSeries, modelDetails, weatherSource, WeatherHistoryError, type ArchiveSeries, type WeatherSeries } from "./open-meteo.ts";
 
 const ttl = 15 * 60_000;
 const cacheCapacity = 24;
@@ -10,7 +10,12 @@ const concurrentLimit = 2;
 const minuteLimit = 4;
 const dailyWeightLimit = 1600;
 
-type SeriesPair = { temperature: ArchiveSeries; precipitation: ArchiveSeries };
+type SeriesPair = {
+  temperature: ArchiveSeries | null;
+  precipitation: ArchiveSeries | null;
+  failedSeries?: WeatherSeries;
+  limited?: boolean;
+};
 type HistoryOptions = {
   fetcher?: typeof fetch;
   now?: () => Date;
@@ -22,8 +27,8 @@ function weatherResult(query: WeatherHistoryRequest, series: SeriesPair | null) 
   const start = Date.parse(query.requested.from);
   const days = Array.from({ length: query.requested.days }, (_, i) => {
     const date = dayString(start + i * DAY);
-    const air = series?.temperature.values.get(date);
-    const precipitationMm = series?.precipitation.values.get(date)?.precipitation_sum ?? null;
+    const air = series?.temperature?.values.get(date);
+    const precipitationMm = series?.precipitation?.values.get(date)?.precipitation_sum ?? null;
     const temperatureMinC = air?.temperature_2m_min ?? null;
     const temperatureMaxC = air?.temperature_2m_max ?? null;
     const mean = air?.temperature_2m_mean ?? null;
@@ -47,13 +52,14 @@ function weatherResult(query: WeatherHistoryRequest, series: SeriesPair | null) 
     requested: query.requested,
     queried: query.queried,
     archive: { typicalDelayDays: archiveDelayDays, queryCutoff: query.archiveCutoff },
+    failedSeries: series?.failedSeries,
     series: {
       temperature: {
-        ...modelDetails("temperature"), gridPoint: series?.temperature.gridPoint ?? null,
+        ...modelDetails("temperature"), gridPoint: series?.temperature?.gridPoint ?? null,
         aggregation: "Provider daily aggregates of hourly air temperature at 2 m. Mean is shown only if both extremes exist and it lies between them; it is not calculated from the extremes.",
       },
       precipitation: {
-        ...modelDetails("precipitation"), gridPoint: series?.precipitation.gridPoint ?? null,
+        ...modelDetails("precipitation"), gridPoint: series?.precipitation?.gridPoint ?? null,
         aggregation: "Provider daily total precipitation, including snowfall as water equivalent.",
       },
     },
@@ -108,9 +114,17 @@ export function createWeatherHistoryHandler({
     daily.used += weight;
 
     const signal = AbortSignal.timeout(timeoutMs);
+    const clock = () => now().getTime();
+    const loadModel = (model: WeatherSeries) =>
+      fetchArchiveSeries(query.point, range, model, fetcher, signal, clock).catch((error: unknown) => {
+        if (error instanceof WeatherHistoryError && error.code === "weather_provider_limited") {
+          providerBlockedUntil = Math.max(providerBlockedUntil, clock() + (error.retryAfter ?? 60) * 1000);
+        }
+        throw error;
+      });
     const promise = Promise.allSettled([
-      fetchArchiveSeries(query.point, range, "temperature", fetcher, signal),
-      fetchArchiveSeries(query.point, range, "precipitation", fetcher, signal),
+      loadModel("temperature"),
+      loadModel("precipitation"),
     ]).then(([temperature, precipitation]): SeriesPair => {
       if (temperature.status === "fulfilled" && precipitation.status === "fulfilled") {
         return { temperature: temperature.value, precipitation: precipitation.value };
@@ -119,8 +133,16 @@ export function createWeatherHistoryHandler({
         item.status === "rejected" ? [item.reason as unknown] : []);
       const limited = failures.find((error): error is WeatherHistoryError =>
         error instanceof WeatherHistoryError && error.code === "weather_provider_limited");
-      if (limited) throw limited;
-      throw failures[0];
+      if (temperature.status === "fulfilled" && Array.from(temperature.value.values.values()).some(
+        (day) => day.temperature_2m_min != null || day.temperature_2m_max != null)) {
+        return { temperature: temperature.value, precipitation: null, failedSeries: "precipitation", limited: !!limited };
+      }
+      if (precipitation.status === "fulfilled" && Array.from(precipitation.value.values.values()).some(
+        (day) => day.precipitation_sum != null)) {
+        return { temperature: null, precipitation: precipitation.value, failedSeries: "temperature", limited: !!limited };
+      }
+      if (limited) throw new WeatherHistoryError(limited.code, limited.status, secondsLeft(providerBlockedUntil, clock()));
+      throw failures.find((failure) => failure instanceof WeatherHistoryError && failure.status === 504) ?? failures[0];
     });
     pending.set(key, promise);
     try {
@@ -129,13 +151,9 @@ export function createWeatherHistoryHandler({
         const first = cache.keys().next().value;
         if (first !== undefined) cache.delete(first);
       }
-      cache.set(key, { value, expires: now().getTime() + ttl });
+      const expires = clock() + (value.failedSeries ? 60_000 : ttl);
+      cache.set(key, { value, expires: value.limited ? Math.max(expires, providerBlockedUntil) : expires });
       return value;
-    } catch (error) {
-      if (error instanceof WeatherHistoryError && error.code === "weather_provider_limited") {
-        providerBlockedUntil = Math.max(providerBlockedUntil, now().getTime() + (error.retryAfter ?? 60) * 1000);
-      }
-      throw error;
     } finally {
       pending.delete(key);
     }
@@ -148,7 +166,11 @@ export function createWeatherHistoryHandler({
     const query = parseWeatherHistoryQuery(new URL(request.url), current);
     if (!query) return Response.json({ error: "weather_invalid_query" }, { status: 400, headers });
     try {
-      return Response.json(weatherResult(query, await getSeries(query, current.getTime())), { headers });
+      const series = await getSeries(query, current.getTime());
+      const at = now().getTime();
+      const responseHeaders = series?.limited && providerBlockedUntil > at
+        ? { ...headers, "Retry-After": String(secondsLeft(providerBlockedUntil, at)) } : headers;
+      return Response.json(weatherResult(query, series), { headers: responseHeaders });
     } catch (error) {
       const failure = error instanceof WeatherHistoryError
         ? error : new WeatherHistoryError("weather_provider_unavailable", 502);

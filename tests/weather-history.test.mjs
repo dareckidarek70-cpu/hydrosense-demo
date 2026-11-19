@@ -21,7 +21,7 @@ function payload(model, time = dates) {
         : { precipitation_sum: "mm" }),
     },
     daily: {
-      time,
+      time: [...time],
       ...(temperature ? {
         temperature_2m_min: time.map(() => 12),
         temperature_2m_max: time.map(() => 24),
@@ -244,6 +244,65 @@ test("requests share an in-flight series and fresh weather requests stop at the 
   assert.equal(limited.headers.get("Retry-After"), "60");
   assert.equal((await get(request())).status, 200);
   assert.equal(calls.length, 8);
+});
+
+test("retain validated rain-only and temperature-only results when the other model fails", async () => {
+  for (const [failed, status, failedSeries] of [["era5_land", 502, "temperature"], ["era5", 504, "precipitation"]]) {
+    let at = now().getTime(), calls = 0;
+    const get = createWeatherHistoryHandler({ now: () => new Date(at), fetcher: async (url) => {
+      const model = url.searchParams.get("models");
+      calls++;
+      return model === failed && at === now().getTime() ? new Response(null, { status }) : Response.json(payload(model));
+    } });
+    const response = await get(request());
+    assert.equal(response.status, 200);
+    const data = await response.json();
+    assert.equal(data.failedSeries, failedSeries);
+    assert.equal(data.availability.status, "partial");
+    assert.equal(data.availability.daysWithData, 3);
+    assert.equal(data.availability.completeDays, 0);
+    assert.equal(data.series[failedSeries].gridPoint, null);
+    assert.equal(data.days[0].precipitationMm, failedSeries === "precipitation" ? null : 0);
+    assert.equal(data.days[0].temperatureMeanC, failedSeries === "temperature" ? null : 17.1);
+    assert.deepEqual(await (await get(request())).json(), data);
+    assert.equal(calls, 2);
+    at += 60_001;
+    assert.equal((await (await get(request())).json()).availability.status, "complete");
+    assert.equal(calls, 4);
+  }
+});
+
+test("upstream 503 Retry-After applies even when a partner series succeeded", async () => {
+  const start = now().getTime();
+  let at = start, calls = 0;
+  const get = createWeatherHistoryHandler({ now: () => new Date(at), fetcher: async (url) => {
+    calls++;
+    const model = url.searchParams.get("models");
+    return model === "era5_land" && at < start + 5400_000
+      ? new Response(null, { status: 503, headers: { "Retry-After": new Date(start + 5400_000).toUTCString() } })
+      : Response.json(payload(model));
+  } });
+  const partial = await get(request());
+  assert.equal(partial.status, 200);
+  assert.equal(partial.headers.get("Retry-After"), "5400");
+  assert.equal((await partial.json()).days[0].precipitationMm, 0);
+  at += 3700_000;
+  assert.equal((await get(request())).headers.get("Retry-After"), "1700");
+  const other = await get(request(undefined, "51"));
+  assert.equal(other.status, 503);
+  assert.equal(other.headers.get("Retry-After"), "1700");
+  assert.equal(calls, 2);
+  at = start + 5400_000;
+  assert.equal((await (await get(request())).json()).availability.status, "complete");
+  assert.equal(calls, 4);
+});
+
+test("a successful but empty model cannot turn a failed pair into data", async () => {
+  for (const [status, expected] of [[503, 502], [504, 504]]) {
+    const get = createWeatherHistoryHandler({ now, fetcher: async (url) => url.searchParams.get("models") === "era5"
+      ? Response.json(payload("era5", [])) : new Response(null, { status }) });
+    assert.equal((await get(request())).status, expected);
+  }
 });
 
 test("a production-disabled preview endpoint does not contact Open-Meteo", async () => {

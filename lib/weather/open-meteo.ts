@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MAX_HISTORY_DAYS } from "../copernicus/request.ts";
 import type { DateRange, WeatherPoint } from "./history-request.ts";
+import { retryAfterSeconds } from "./retry-after.ts";
 
 const archive = "https://archive-api.open-meteo.com/v1/archive";
 export const maxProviderBytes = 64 * 1024;
@@ -93,12 +94,6 @@ export function parseArchiveSeries(raw: unknown, series: WeatherSeries, range: D
   return { gridPoint: { latitude, longitude }, values };
 }
 
-function retrySeconds(value: string | null) {
-  if (!value) return 60;
-  const seconds = /^\d+$/.test(value) ? Number(value) : Math.ceil((Date.parse(value) - Date.now()) / 1000);
-  return Number.isFinite(seconds) ? Math.min(3600, Math.max(1, seconds)) : 60;
-}
-
 async function readArchiveResponse(response: Response): Promise<unknown> {
   const body = response.body;
   if (!body) throw invalidResponse();
@@ -123,7 +118,7 @@ async function readArchiveResponse(response: Response): Promise<unknown> {
 }
 
 export async function fetchArchiveSeries(
-  point: WeatherPoint, range: DateRange, series: WeatherSeries, fetcher: typeof fetch, signal: AbortSignal,
+  point: WeatherPoint, range: DateRange, series: WeatherSeries, fetcher: typeof fetch, signal: AbortSignal, now = Date.now,
 ): Promise<ArchiveSeries> {
   const source = providers[series];
   const url = new URL(archive);
@@ -150,9 +145,11 @@ export async function fetchArchiveSeries(
   }
   if (!response.ok) {
     void response.body?.cancel().catch(() => {});
-    if (response.status === 429) {
-      throw new WeatherHistoryError("weather_provider_limited", 503, retrySeconds(response.headers.get("Retry-After")));
+    const retryAfter = response.headers.get("Retry-After");
+    if (response.status === 429 || (response.status === 503 && retryAfter)) {
+      throw new WeatherHistoryError("weather_provider_limited", 503, retryAfterSeconds(retryAfter, now()));
     }
+    if (response.status === 504) throw new WeatherHistoryError("weather_provider_timeout", 504);
     throw new WeatherHistoryError("weather_provider_unavailable", 502);
   }
   try {

@@ -105,6 +105,9 @@ function LoadedWeather({ data }: { data: WeatherHistory }) {
           </p> : null}
         </div>
       ) : <p className="status-note" role="status">{t(data.queried ? "weatherNoData" : "weatherOnlyRecent")}</p>}
+      {data.failedSeries ? <p className="status-note" role="status">
+        {t(data.failedSeries === "temperature" ? "weatherTemperatureFailed" : "weatherPrecipitationFailed")}
+      </p> : null}
       <p className="weather-delay">{t("weatherDelay", { days: data.archive.typicalDelayDays, cutoff: date(data.archive.queryCutoff) })}</p>
       {availability.daysWithData > 0 ? (
         <>
@@ -122,7 +125,13 @@ function WeatherRetry({ retryAt, onRetry }: { retryAt?: number; onRetry: () => v
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!retryAt) return;
-    const tick = setTimeout(() => setReady(true), Math.max(0, retryAt - Date.now()));
+    let tick: ReturnType<typeof setTimeout>;
+    const check = () => {
+      const remaining = retryAt - Date.now();
+      if (remaining <= 0) setReady(true);
+      else tick = setTimeout(check, Math.min(remaining, 2_147_483_647));
+    };
+    tick = setTimeout(check, 0);
     return () => clearTimeout(tick);
   }, [retryAt]);
   return <button type="button" className="button-secondary" disabled={!!retryAt && !ready} onClick={onRetry}>{t("weatherRetry")}</button>;

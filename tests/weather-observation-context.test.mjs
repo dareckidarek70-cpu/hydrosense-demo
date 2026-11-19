@@ -58,6 +58,20 @@ test("switching the observation changes metrics while a single fixed prefix cove
   assert.equal(planPrecedingWeather(precedingWeatherWindows("2026-08-31").thirty, month, month.from), null);
 });
 
+test("overlapping ranges recover only a failed model, not ordinary archive gaps", () => {
+  const windows = precedingWeatherWindows("2024-03-02");
+  const rainOnly = [day("2024-02-29", 0, null), day("2024-03-01", null, null)];
+  const other = [day("2024-02-29", 10, 12), day("2024-03-01", 6, 14)];
+  const normal = summarizePrecedingWeather(windows, rainOnly, other);
+  assert.equal(normal.rainSeven.available, 1);
+  assert.equal(normal.temperatureSeven.value, null);
+  const recovered = summarizePrecedingWeather(windows, rainOnly, other, "temperature");
+  assert.equal(recovered.rainSeven.value, 0);
+  assert.equal(recovered.rainSeven.available, 1);
+  assert.equal(recovered.temperatureSeven.value, 13);
+  assert.equal(recovered.temperatureSeven.missing, 5);
+});
+
 test("an independent weather range only supplements uncovered dates and never requests pre-archive dates", () => {
   const target = precedingWeatherWindows("2026-08-16").thirty;
   assert.deepEqual(planPrecedingWeather(target, { from: "2026-07-17", to: "2026-08-10" }, month.from),

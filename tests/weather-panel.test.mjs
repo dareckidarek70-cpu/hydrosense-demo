@@ -150,6 +150,48 @@ test("Retry-After suppresses new requests across range and point changes without
   assert.equal(calls, 2);
 });
 
+test("HTTP-date Retry-After on partial success preserves the series and blocks another range", async () => {
+  let at = Date.parse("2025-04-01T00:00:00Z"), calls = 0;
+  const retryAt = at + 5_400_000;
+  const load = createWeatherPanelClient({ now: () => at, fetcher: async (path) => {
+    const data = await responseFor(path).json();
+    if (++calls !== 1) return Response.json(data);
+    data.failedSeries = "temperature";
+    data.availability.status = "partial";
+    [data.days[0].temperatureMinC, data.days[0].temperatureMaxC, data.days[0].temperatureMeanC] = [null, null, null];
+    return Response.json(data, { headers: { "Retry-After": new Date(retryAt).toUTCString() } });
+  } });
+  const signal = new AbortController().signal;
+  const other = weatherRequestKey([45, 12], period);
+  assert.equal((await load(key, signal)).data.days[0].precipitationMm, 0.3);
+  at += 3600_000;
+  assert.deepEqual(await load(other, signal), { error: "weatherProviderRate", retryAt });
+  assert.equal((await load(key, signal)).data.failedSeries, "temperature");
+  assert.equal(calls, 1);
+  at = retryAt;
+  assert.equal((await load(other, signal)).data.failedSeries, undefined);
+  assert.equal(calls, 2);
+});
+
+test("local 429 observes a short cooldown and loss of connection has no automatic retries", async () => {
+  let at = 1000, calls = 0;
+  const load = createWeatherPanelClient({ now: () => at, fetcher: async (path) => {
+    if (++calls === 1) return Response.json({ error: "weather_overloaded" }, { status: 429, headers: { "Retry-After": "3" } });
+    if (calls === 2) throw new TypeError("Network unreachable");
+    return responseFor(path);
+  } });
+  const signal = new AbortController().signal;
+  assert.deepEqual(await load(key, signal), { error: "weatherRate", retryAt: 4000 });
+  at = 3999;
+  assert.equal((await load(key, signal)).error, "weatherRate");
+  assert.equal(calls, 1);
+  at = 4000;
+  assert.deepEqual(await load(key, signal), { error: "weatherNetwork" });
+  assert.equal(calls, 2);
+  assert.ok((await load(key, signal)).data);
+  assert.equal(calls, 3);
+});
+
 test("weather plot signals and legend color retain contrast in both approved themes", () => {
   const css = readFileSync(new URL("../app/weather.css", import.meta.url), "utf8");
   const themes = readFileSync(new URL("../app/themes.css", import.meta.url), "utf8");

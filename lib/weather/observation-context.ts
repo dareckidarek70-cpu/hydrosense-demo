@@ -1,6 +1,7 @@
 import { DAY } from "../copernicus/request.ts";
 import { dayString, firstReportDay, rangeLength, type DateRange } from "./history-request.ts";
 import type { WeatherDay } from "./history-service.ts";
+import type { WeatherSeries } from "./open-meteo.ts";
 
 const shiftDay = (day: string, offset: number) => dayString(Date.parse(day) + DAY * offset);
 
@@ -42,9 +43,17 @@ export function summarizePrecedingWeather(
   windows: NonNullable<ReturnType<typeof precedingWeatherWindows>>,
   primary: readonly WeatherDay[] = [],
   supplemental: readonly WeatherDay[] = [],
+  failedSeries?: WeatherSeries,
 ) {
   const days = new Map(supplemental.map((day) => [day.date, day]));
-  for (const day of primary) days.set(day.date, day);
+  for (const day of primary) {
+    const fallback = days.get(day.date);
+    days.set(day.date, {
+      ...day,
+      precipitationMm: failedSeries === "precipitation" ? fallback?.precipitationMm ?? null : day.precipitationMm,
+      temperatureMeanC: failedSeries === "temperature" ? fallback?.temperatureMeanC ?? null : day.temperatureMeanC,
+    });
+  }
 
   const measure = (range: DateRange, field: "precipitationMm" | "temperatureMeanC") => {
     let sum = 0;

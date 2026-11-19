@@ -156,6 +156,8 @@ export const messages = {
   weatherNoData: { en: "The weather archive has no usable values for this point and period.", pl: "Archiwum pogody nie zawiera dostępnych wartości dla tego punktu i okresu." },
   weatherOnlyRecent: { en: "This period is newer than the archive’s query cutoff. Choose an earlier period.", pl: "Ten zakres jest nowszy niż granica odczytu archiwum. Wybierz wcześniejszy okres." },
   weatherPartial: { en: "Partial data · {complete}/{total} complete days", pl: "Dane częściowe · pełne doby: {complete}/{total}" },
+  weatherTemperatureFailed: { en: "ERA5-Land temperatures could not be loaded. Available ERA5 precipitation is shown.", pl: "Nie udało się pobrać temperatur ERA5-Land. Pokazano dostępne opady ERA5." },
+  weatherPrecipitationFailed: { en: "ERA5 precipitation could not be loaded. Available ERA5-Land temperatures are shown.", pl: "Nie udało się pobrać opadów ERA5. Pokazano dostępne temperatury ERA5-Land." },
   weatherAvailable: { en: "Dates with data: {from} to {to} UTC", pl: "Daty z danymi: {from} – {to} UTC" },
   weatherDelay: { en: "Typical archive delay: {days} days. Latest date eligible for lookup: {cutoff} UTC.", pl: "Typowe opóźnienie archiwum: {days} dni. Najpóźniejsza data zapytania: {cutoff} UTC." },
   weatherRainTotal: { en: "Total precipitation", pl: "Suma opadów" },

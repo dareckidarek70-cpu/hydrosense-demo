@@ -1,5 +1,6 @@
 import { DAY } from "../copernicus/request.ts";
 import type { WeatherHistory } from "./history-service.ts";
+import { retryAfterSeconds } from "./retry-after.ts";
 
 const endpointErrors = {
   weather_invalid_query: "weatherInvalid",
@@ -32,6 +33,7 @@ function matchingHistory(data: Partial<WeatherHistory> | null, key: string): dat
     && data.point?.latitude === Number(params.get("lat")) && data.point?.longitude === Number(params.get("lng"))
     && Number.isInteger(data.requested.days) && data.requested.days === (Date.parse(to ?? "") - start) / DAY + 1
     && data.requested.days >= 1 && data.requested.days <= 366
+    && (data.failedSeries === undefined || data.failedSeries === "temperature" || data.failedSeries === "precipitation")
     && !!data.availability && !!data.archive && Array.isArray(data.days) && data.days.length === data.requested.days
     && data.days.every((day, i) => !!day && day.date === new Date(start + DAY * i).toISOString().slice(0, 10)
       && [day.precipitationMm, day.temperatureMinC, day.temperatureMaxC, day.temperatureMeanC]
@@ -43,6 +45,12 @@ export function createWeatherPanelClient({
 }: { fetcher?: typeof fetch; now?: () => number; timeoutMs?: number } = {}) {
   const cache = new Map<string, { data: WeatherHistory; expires: number }>();
   let cooldown: Failure | undefined;
+  const rememberLimit = (error: PanelError, header: string | null) => {
+    const at = now();
+    const limit = { error, retryAt: at + retryAfterSeconds(header, at) * 1000 };
+    if ((cooldown?.retryAt ?? 0) < limit.retryAt) cooldown = limit;
+    return cooldown ?? limit;
+  };
 
   return async function load(key: string, signal: AbortSignal): Promise<WeatherPanelResult | null> {
     if (signal.aborted) return null;
@@ -62,18 +70,17 @@ export function createWeatherPanelClient({
       if (timedOut) return { error: "weatherTimeout" };
       if (!res.ok) {
         const error = errorFrom(res.status, json);
-        if (error === "weatherRate" || error === "weatherProviderRate") {
-          const header = res.headers.get("Retry-After");
-          const seconds = header && /^\d+$/.test(header) ? Math.min(86_400, Math.max(1, Number(header))) : 60;
-          cooldown = { error, retryAt: now() + seconds * 1000 };
-          return cooldown;
+        if (error === "weatherRate" || error === "weatherProviderRate" || (res.status === 503 && res.headers.has("Retry-After"))) {
+          return rememberLimit(error === "weatherRate" ? error : "weatherProviderRate", res.headers.get("Retry-After"));
         }
         return { error };
       }
       if (!matchingHistory(json, key)) return { error: "weatherProvider" };
       const first = cache.keys().next().value;
       if (cache.size >= 6 && first !== undefined) cache.delete(first);
-      cache.set(key, { data: json, expires: now() + 5 * 60_000 });
+      const retryAt = json.failedSeries && res.headers.has("Retry-After")
+        ? rememberLimit("weatherProviderRate", res.headers.get("Retry-After")).retryAt ?? 0 : 0;
+      cache.set(key, { data: json, expires: Math.max(retryAt, now() + (json.failedSeries ? 60_000 : 5 * 60_000)) });
       return { data: json };
     } catch {
       return signal.aborted ? null : { error: timedOut ? "weatherTimeout" : "weatherNetwork" };
