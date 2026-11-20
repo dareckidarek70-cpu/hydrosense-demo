@@ -54,6 +54,7 @@
   .observation-document .metric-stack { gap: 1.3mm; }
   .observation-overview { grid-template-columns: minmax(0, 1.13fr) minmax(0, 1fr); gap: 3mm; break-inside: avoid; }
   .observation-map-frame { border-radius: 1.6mm; }
+  .report-map-panel[data-map-side="reference"] { display: none; }
   .observation-map figcaption { margin-top: .65mm; font-size: 7.5pt; }
   .observation-overview .observation-source { background: #f7f9fd; gap: 1.1mm; padding: 1.4mm; border-radius: 1.6mm; }
   .source-block:first-child .supporting-label { display: none; }

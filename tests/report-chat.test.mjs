@@ -39,6 +39,16 @@ test("uses the selected report reading, not latest or any static example; labels
   assert.deepEqual(targets(delta), [sentinelTarget, "report-ndvi-history"]);
 });
 
+test("explicit map/history reference replaces the automatic NDVI baseline without changing the report date", async () => {
+  const comparisonDay = "2026-08-29";
+  const result = await answerCurrentReport("How has NDVI changed?", reference, snapshot(reference, { comparisonDay }), "en");
+  assert.match(result.answer, /0\.82 \(29\/08\/2026\) → 0\.56 \(26\/08\/2026 UTC\); Δ -0\.26/);
+  assert.notEqual(reportChatKey(reference, null, 0, false, comparisonDay), reportChatKey(reference, null, 0, false));
+  const invalid = await answerCurrentReport("How has NDVI changed?", reference, snapshot(reference, { comparisonDay: "2026-08-20" }), "en");
+  assert.match(invalid.answer, /No comparable NDVI readings for the selected pair/);
+  assert.ok(!targets(invalid).includes("report-ndvi-history"));
+});
+
 test("full PL and EN syntheses use actual windows and clearly separate interpretation", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", () => { throw new Error("chat may not fetch report data or call a model"); });
   for (const [question, locale, heading, rains] of [

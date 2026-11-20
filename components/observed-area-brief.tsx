@@ -6,11 +6,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { isUsableDay } from "@/lib/copernicus/observations";
+import { reportComparisonDay } from "@/lib/copernicus/report-map";
 import type { IndexKey } from "@/lib/copernicus/interpretation";
 import { radiusAreaHectares, type ObservationWindow } from "@/lib/copernicus/request";
 import { ObservationDetails, useAreaObservation, type PointArea } from "./area-observation";
 import { ObservationHistory } from "./observation-history";
-import { ObservationMap, observationMapUrl } from "./observation-map";
+import { ObservationMap } from "./observation-map";
+import { ReportSatelliteMap } from "./report-satellite-map";
 import { ObservationPeriod } from "./observation-period";
 import { PrintReportLogo } from "./print-report-logo";
 import { PrintBriefButton } from "./print-brief-button";
@@ -35,18 +37,27 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
   const { t, dateTime, num, coordinates } = useLocale();
   const [period, setPeriod] = useState(initialPeriod);
   const [selectedDay, setSelectedDay] = useState("");
+  const [referenceDate, setReferenceDate] = useState("");
+  const [printing, setPrinting] = useState(false);
   const [historyIndex, setHistoryIndex] = useState<IndexKey>("ndvi");
   const { state, retry } = useAreaObservation(area, period);
   const data = state && "data" in state ? state.data : undefined;
   const day = data?.days.find((entry) => entry.from.slice(0, 10) === selectedDay && isUsableDay(entry))
     ?? data?.observation ?? null;
   const observationDay = day?.from.slice(0, 10) ?? null;
+  const eligible = data?.days.filter(entry => isUsableDay(entry) && entry.from.slice(0, 10) !== observationDay) ?? [];
+  const baseline = reportComparisonDay(eligible, day, referenceDate);
+  const comparisonDay = baseline?.from.slice(0, 10);
   const weather = useReportWeather({ coordinates: area.coordinates, reportPeriod: period, observationDay });
   const chatReference: ReportChatReference = { geometry: area, period, day: observationDay };
   const chatWeather = weather.context;
   const chatPending = !!chatWeather?.isLoading;
-  const raster = observationMapUrl(area, day);
-  const map = <ObservationMap key={raster ?? "outline"} area={area} url={raster} date={day?.from.slice(0, 10)} />;
+  const map = day ? <ReportSatelliteMap area={area} day={day} reference={baseline} options={eligible}
+    onReferenceChange={setReferenceDate} onIndexChange={setHistoryIndex} printing={printing} /> : <ObservationMap area={area} url={null} />;
+  const selectReportDay = (date: string) => {
+    if (date === referenceDate) setReferenceDate("");
+    setSelectedDay(date);
+  };
   const water = (day?.waterFraction ?? 0) >= 0.8;
 
   return (
@@ -59,7 +70,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
               <p className="eyebrow">{t("observedBrief")}</p>
               <h1 className="section-title">{t("selectedArea")}</h1>
             </div>
-            {state ? <div className="report-hero-actions print-hidden"><PrintBriefButton /></div> : null}
+            {state ? <div className="report-hero-actions print-hidden"><PrintBriefButton onPrepare={setPrinting} /></div> : null}
           </div>
           <p className="lead">
             {t("radiusSummary", { coordinates: coordinates(area.coordinates), radius: area.radiusMeters === 1000 ? "1 km" : "500 m", area: num(radiusAreaHectares(area.radiusMeters), 1) })}
@@ -69,6 +80,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
 
         <ObservationPeriod period={period} onApply={(next) => {
           setSelectedDay("");
+          setReferenceDate("");
           setPeriod(next);
         }} />
 
@@ -87,8 +99,8 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
 
         {data ? (
           <section className="observation-section">
-            <ObservationHistory key={data.window.from + data.window.to} data={data} current={day}
-              index={historyIndex} onIndexChange={setHistoryIndex} onSelect={setSelectedDay} />
+            <ObservationHistory key={data.window.from + data.window.to} data={data} current={day} baseline={baseline}
+              index={historyIndex} onIndexChange={setHistoryIndex} onSelect={selectReportDay} onReferenceChange={setReferenceDate} />
           </section>
         ) : null}
         <WeatherHistoryPanel weather={weather} reportPeriod={period} />
@@ -117,8 +129,8 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
         {state ? <ParcelAiChat reference={{ mode: "observation", observation: chatReference }}
           onNdviEvidence={() => setHistoryIndex("ndvi")}
           report={{
-            identity: reportChatKey(chatReference, weather.key, weather.attempt, chatPending), pending: chatPending,
-            snapshot: { reference: chatReference, satellite: data, soil: soilPreview, weather: chatWeather && {
+            identity: reportChatKey(chatReference, weather.key, weather.attempt, chatPending, comparisonDay), pending: chatPending,
+            snapshot: { reference: chatReference, comparisonDay, satellite: data, soil: soilPreview, weather: chatWeather && {
               day: chatWeather.observationDay, primary: chatWeather.history, supplemental: chatWeather.supplement,
             } },
           }} subject={`${t("selectedArea")} · ${coordinates(area.coordinates)} · ${num(area.radiusMeters)} m`} /> : null}

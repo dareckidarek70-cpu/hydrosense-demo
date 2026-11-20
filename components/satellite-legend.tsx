@@ -21,11 +21,11 @@ export function IndexScale({ index, describe = false }: { index: IndexKey; descr
   );
 }
 
-export function SatelliteLegend({ layer }: { layer: LayerType }) {
+export function SatelliteLegend({ layer, expanded = true }: { layer: LayerType; expanded?: boolean }) {
   const { t, locale } = useLocale();
   const index = indexKeys.find((key) => indices[key].layer === layer);
   return (
-    <details className="satellite-legend" open>
+    <details className="satellite-legend" open={expanded}>
       <summary>{index ? `${indices[index].label} · ${localIndex(index, locale).title}` : t("trueColorLegend")}</summary>
       {index ? (
         <>

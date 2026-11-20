@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { isUsableDay, type AreaStats, type Observation } from "@/lib/copernicus/observations";
 import { compareDays, describeHistory, indexKeys, indices, observedValue, type HistoryIndex, type IndexKey } from "@/lib/copernicus/interpretation";
 import { observationDate } from "@/lib/copernicus/history-view";
@@ -61,25 +60,21 @@ function PrintHistoryChart({ data, index }: { data: AreaStats; index: HistoryInd
   );
 }
 
-export function ObservationHistory({ data, current, onSelect, index, onIndexChange }: {
+export function ObservationHistory({ data, current, onSelect, index, onIndexChange, baseline, onReferenceChange }: {
   data: AreaStats;
   current: Observation | null;
   onSelect: (day: string) => void;
   index: IndexKey;
   onIndexChange: (index: IndexKey) => void;
+  baseline: Observation | null;
+  onReferenceChange: (date: string) => void;
 }) {
   const { t, num, date, percent } = useLocale();
-  const [reference, setReference] = useState("");
   const usable = data.days.filter(isUsableDay);
   const currentDay = current ? observationDate(current) : "";
   const comparable = usable.filter(day => observationDate(day) !== currentDay);
-  const baseline = comparable.find(day => observationDate(day) === reference) ?? null;
   const dayCount = (Date.parse(data.window.to) - Date.parse(data.window.from)) / DAY;
   const unobserved = Math.max(0, dayCount - data.observedDays);
-  const select = (day: string) => {
-    if (day === reference) setReference("");
-    onSelect(day);
-  };
 
   return (
     <div className="observation-history">
@@ -87,7 +82,7 @@ export function ObservationHistory({ data, current, onSelect, index, onIndexChan
       <p>{t("dateRange", { from: date(data.window.from), to: date(inclusiveEnd(data.window)) })} · {t("historyCounts", { usable: usable.length, rejected: data.observedDays - usable.length, missing: unobserved })}</p>
       {data.observedDays > 0 ? (
         <>
-          <SentinelHistoryChart data={data} current={current} index={index} onIndexChange={onIndexChange} onSelect={select} />
+          <SentinelHistoryChart data={data} current={current} index={index} onIndexChange={onIndexChange} onSelect={onSelect} />
           <div className="print-only">
             <div className="history-charts">
               {printIndices.map(key => <PrintHistoryChart key={key} data={data} index={key} />)}
@@ -100,7 +95,7 @@ export function ObservationHistory({ data, current, onSelect, index, onIndexChan
         <div className="observation-period print-hidden">
           <label>
             <span>{t("reportDay")}</span>
-            <select value={currentDay} onChange={(event) => select(event.target.value)}>
+            <select value={currentDay} onChange={(event) => onSelect(event.target.value)}>
               {usable.map((day) => (
                 <option key={day.from} value={observationDate(day)}>
                   {t("cloudOption", { date: date(day.from), cloud: percent(day.cloudFraction) })}
@@ -111,7 +106,7 @@ export function ObservationHistory({ data, current, onSelect, index, onIndexChan
           {comparable.length ? (
             <label>
               <span>{t("compareDate")}</span>
-              <select value={baseline ? reference : ""} onChange={(event) => setReference(event.target.value)}>
+              <select value={baseline ? observationDate(baseline) : ""} onChange={(event) => onReferenceChange(event.target.value)}>
                 <option value="">{t("chooseDate")}</option>
                 {comparable.map((day) => <option key={day.from} value={observationDate(day)}>{date(day.from)}</option>)}
               </select>

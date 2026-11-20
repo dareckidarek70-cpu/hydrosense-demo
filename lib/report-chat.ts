@@ -3,10 +3,12 @@ import type { ChatReference } from "./parcel-chat-contract.ts";
 import { synthesizeReport } from "./report-synthesis-rules.ts";
 import type { SoilPreviewReading } from "./soil-preview.ts";
 import type { WeatherHistory } from "./weather/history-service.ts";
+import { reportComparisonDay } from "./copernicus/report-map.ts";
 
 export type ReportChatReference = Extract<ChatReference, { mode: "observation" }>["observation"];
 export type ReportChatSnapshot = {
   reference: ReportChatReference;
+  comparisonDay?: string;
   satellite?: AreaStats;
   soil?: SoilPreviewReading;
   weather: { day: string; primary?: WeatherHistory; supplemental?: WeatherHistory } | null;
@@ -18,8 +20,8 @@ function scope(reference: ReportChatReference) {
 }
 
 // The same exact identifiers drive both visible reply state and the report snapshot.
-export function reportChatKey(reference: ReportChatReference, weatherKey: string | null, weatherAttempt: number, pending: boolean) {
-  return JSON.stringify([...scope(reference), weatherKey, weatherAttempt, pending]);
+export function reportChatKey(reference: ReportChatReference, weatherKey: string | null, weatherAttempt: number, pending: boolean, comparisonDay?: string) {
+  return JSON.stringify([...scope(reference), weatherKey, weatherAttempt, pending, comparisonDay]);
 }
 
 function previousComparable(day: Observation, days: Observation[]) {
@@ -31,10 +33,11 @@ function previousComparable(day: Observation, days: Observation[]) {
 
 export function synthesizeCurrentReport(reference: ReportChatReference, snapshot: ReportChatSnapshot, locale: "pl" | "en") {
   const { coordinates, radiusMeters } = reference.geometry;
-  const { satellite, soil, weather } = JSON.stringify(scope(reference)) === JSON.stringify(scope(snapshot.reference))
+  const { satellite, soil, weather, comparisonDay } = JSON.stringify(scope(reference)) === JSON.stringify(scope(snapshot.reference))
     ? snapshot : { weather: null };
   const current = satellite?.days.find(day => day.from.slice(0, 10) === reference.day && isUsableDay(day));
-  const previous = current && satellite ? previousComparable(current, satellite.days) : undefined;
+  const previous = current && satellite ? comparisonDay ? reportComparisonDay(satellite.days, current, comparisonDay)
+    : previousComparable(current, satellite.days) : undefined;
   const synthesis = synthesizeReport({
     report: { coordinates, radiusMeters, period: reference.period },
     selectedDay: reference.day,
@@ -46,6 +49,7 @@ export function synthesizeCurrentReport(reference: ReportChatReference, snapshot
   const latest = !reference.day && synthesis.evidence.sentinel.status === "no-usable-selection" ? satellite?.latestObserved : null;
   return {
     ...synthesis,
+    manualComparison: !!comparisonDay,
     current: synthesis.evidence.sentinel.selected ? current : undefined,
     latestCandidate: latest && !isUsableDay(latest) ? latest : null,
   };

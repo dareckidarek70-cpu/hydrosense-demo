@@ -23,7 +23,7 @@ const topicFor = (question: string) => {
 };
 
 export async function answerCurrentReport(question: string, reference: ReportChatReference, snapshot: ReportChatSnapshot, locale: Locale) {
-  const { evidence: { sentinel, weather, soil }, findings, current, latestCandidate } = synthesizeCurrentReport(reference, snapshot, locale);
+  const { evidence: { sentinel, weather, soil }, findings, current, latestCandidate, manualComparison } = synthesizeCurrentReport(reference, snapshot, locale);
   const { t, date, num } = localization(locale);
   const find = (rule: SynthesisFinding["rule"]) => findings.find(item => item.rule === rule)?.message;
   const join = (...lines: (string | undefined)[]) => lines.filter(Boolean).join(" ");
@@ -54,7 +54,10 @@ export async function answerCurrentReport(question: string, reference: ReportCha
       return selectedDate ? `${selectedDate}: NDVI ${t("unavailable")}.` : find("sentinelMissing");
     }
     if (!comparison || comparison.differences.ndvi === null || comparison.reference.indices.ndvi === null) {
-      return join(`${selectedDate}: NDVI ${num(selected.indices.ndvi, 2)}.`, translated(
+      return join(`${selectedDate}: NDVI ${num(selected.indices.ndvi, 2)}.`, manualComparison ? translated(
+        "Brak porównywalnego NDVI dla wybranej pary w tym raporcie.",
+        "No comparable NDVI readings for the selected pair in this report.",
+      ) : translated(
         "Brak wcześniejszej użytecznej obserwacji z NDVI w tym okresie raportu.",
         "No earlier usable NDVI observation in this report period.",
       ));

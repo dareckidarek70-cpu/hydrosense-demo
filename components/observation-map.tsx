@@ -2,29 +2,9 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import type { Observation } from "@/lib/copernicus/observations";
+import { reportBufferPixels as BUFFER_PIXELS, reportMapHeight as HEIGHT, reportMapWidth as WIDTH } from "@/lib/copernicus/report-map";
 import type { PointArea } from "./area-observation";
 import { useLocale } from "./locale";
-
-const WIDTH = 480;
-const HEIGHT = 216;
-const BUFFER_PIXELS = 75;
-const METERS_PER_DEGREE = Math.PI * 6_371_008.8 / 180;
-
-export function observationMapUrl(area: PointArea, day: Observation | null) {
-  if (!day) return null;
-  const [lat, lng] = area.coordinates;
-  const step = area.radiusMeters / BUFFER_PIXELS;
-  const latitudeSpan = (HEIGHT / 2) * step / METERS_PER_DEGREE;
-  const longitudeSpan = (WIDTH / 2) * step / METERS_PER_DEGREE / Math.cos(lat * Math.PI / 180);
-  if (Math.abs(lat) + latitudeSpan > 84 || Math.abs(lng) + longitudeSpan > 180) return null;
-  const query = new URLSearchParams({
-    minLng: (lng - longitudeSpan).toFixed(7), minLat: (lat - latitudeSpan).toFixed(7),
-    maxLng: (lng + longitudeSpan).toFixed(7), maxLat: (lat + latitudeSpan).toFixed(7),
-    width: "720", height: "324", layer: "TRUE_COLOR", from: day.from, to: day.to,
-  });
-  return `/api/copernicus/layer?${query}`;
-}
 
 export function ObservationMap({ area, url, date }: { area: PointArea; url: string | null; date?: string }) {
   const { t, date: formatDate } = useLocale();
@@ -39,28 +19,10 @@ export function ObservationMap({ area, url, date }: { area: PointArea; url: stri
       <div className="observation-map-frame">
         {url ? (
           <Image src={url} alt={t("mapAlt")} fill unoptimized
-            loading="eager" data-report-raster data-raster-ready={status === "ready"}
+            loading="eager" data-report-raster data-print-raster data-raster-ready={status === "ready"}
             onLoad={() => setStatus("ready")} onError={() => setStatus("error")} />
         ) : null}
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={t("mapA11y")}>
-          {status !== "ready" ? (
-            <g stroke="#becfe4" strokeWidth="0.7">
-              {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${i * 35} 0v216`} />)}
-              {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M0 ${i * 36}h480`} />)}
-            </g>
-          ) : null}
-          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="#67e8f9" fillOpacity=".11" stroke="#0f172a" strokeWidth="5" />
-          <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="none" stroke="#cffafe" strokeWidth="2.5" />
-          <circle cx="240" cy="108" r="3.4" fill="#fff" stroke="#0f172a" strokeWidth="1.2" />
-          <g fill="#0f172a" stroke="#0f172a">
-            <rect x="443" y="11" width="24" height="39" rx="4" fill="#fff" stroke="none" />
-            <path d="M455 16l-6 12 6-3 6 3z" />
-            <text x="455" y="42" textAnchor="middle" stroke="none">N</text>
-            <rect x="12" y="174" width="106" height="31" rx="4" fill="#fff" stroke="none" />
-            <path d="M24 184h75m-75-3v6m75-6v6" fill="none" strokeWidth="1.7" />
-            <text x="61.5" y="198" textAnchor="middle" stroke="none">{area.radiusMeters} m</text>
-          </g>
-        </svg>
+        <ObservationMapMarks area={area} outline={status !== "ready"} />
       </div>
       <figcaption>
         {status === "loading" ? (
@@ -71,5 +33,30 @@ export function ObservationMap({ area, url, date }: { area: PointArea; url: stri
         ) : status === "ready" && date ? t("mapCaption", { date: formatDate(date) }) : t("mapOutline")}
       </figcaption>
     </figure>
+  );
+}
+
+export function ObservationMapMarks({ area, outline }: { area: PointArea; outline: boolean }) {
+  const { t } = useLocale();
+  return (
+    <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={t("mapA11y")}>
+      {outline ? (
+        <g stroke="#becfe4" strokeWidth="0.7">
+          {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${i * 35} 0v216`} />)}
+          {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M0 ${i * 36}h480`} />)}
+        </g>
+      ) : null}
+      <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="none" stroke="#0f172a" strokeWidth="4" />
+      <circle cx="240" cy="108" r={BUFFER_PIXELS} fill="none" stroke="#cffafe" strokeWidth="2" />
+      <circle cx="240" cy="108" r="3.4" fill="#fff" stroke="#0f172a" strokeWidth="1.2" />
+      <g fill="#0f172a" stroke="#0f172a">
+        <rect x="443" y="11" width="24" height="39" rx="4" fill="#fff" stroke="none" />
+        <path d="M455 16l-6 12 6-3 6 3z" />
+        <text x="455" y="42" textAnchor="middle" stroke="none">N</text>
+        <rect x="12" y="174" width="106" height="31" rx="4" fill="#fff" stroke="none" />
+        <path d="M24 184h75m-75-3v6m75-6v6" fill="none" strokeWidth="1.7" />
+        <text x="61.5" y="198" textAnchor="middle" stroke="none">{area.radiusMeters} m</text>
+      </g>
+    </svg>
   );
 }
