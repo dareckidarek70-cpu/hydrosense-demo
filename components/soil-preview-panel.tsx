@@ -8,7 +8,9 @@ const texture = [["sand", "soilSand"], ["silt", "soilSilt"], ["clay", "soilClay"
 
 export function SoilPreviewPanel({ reading }: { reading: SoilPreviewReading }) {
   const { t, num } = useLocale();
-  const available = reading.status === "available" ? reading : null;
+  const available = reading.status === "available" || reading.status === "partial" ? reading : null;
+  const metric = (value: number | null, unit: string, digits = 1) => value === null
+    ? <span>{t("unavailable")}</span> : <><strong>{num(value, digits)}</strong> <span>{unit}</span></>;
   return (
     <section className="observation-section soil-panel print-hidden" aria-labelledby="soil-title" data-soil-status={reading.status}>
       <header className="soil-heading">
@@ -27,22 +29,23 @@ export function SoilPreviewPanel({ reading }: { reading: SoilPreviewReading }) {
       </header>
       {available ? (
         <div className="soil-readings" aria-describedby="soil-source-note">
+          {reading.status === "partial" ? <p className="soil-empty" role="status">{t("soilPartial")}</p> : null}
           <dl className="soil-overview">
             <div className="soil-metric soil-ph">
               <dt>{t("soilPh")}</dt>
-              <dd><strong>{num(available.medians.phh2o, 1)}</strong> <span>{t("soilUnitless")}</span></dd>
-              <dd className="soil-interval">
+              <dd>{metric(available.medians.phh2o, t("soilUnitless"))}</dd>
+              {available.phPredictionInterval ? <dd className="soil-interval">
                 <b>{num(available.phPredictionInterval[0], 1)} – {num(available.phPredictionInterval[1], 1)}</b>
                 <span>{t("soilPredictionInterval")}</span>
-              </dd>
+              </dd> : null}
             </div>
             <div className="soil-metric">
               <dt>{t("soilCarbon")}</dt>
-              <dd><strong>{num(available.medians.soc, 1)}</strong> <span>g/kg</span></dd>
+              <dd>{metric(available.medians.soc, "g/kg")}</dd>
             </div>
             <div className="soil-metric">
               <dt>{t("soilDensity")}</dt>
-              <dd><strong>{num(available.medians.bdod, 2)}</strong> <span>kg/dm³</span></dd>
+              <dd>{metric(available.medians.bdod, "kg/dm³", 2)}</dd>
             </div>
           </dl>
           <div className="soil-texture">
@@ -50,7 +53,7 @@ export function SoilPreviewPanel({ reading }: { reading: SoilPreviewReading }) {
             <dl className="soil-texture-grid">
               {texture.map(([key, label]) => <div className="soil-metric" key={key}>
                 <dt>{t(label)}</dt>
-                <dd><strong>{num(available.medians[key], 1)}</strong> <span>{t("soilMassPercent")}</span></dd>
+                <dd>{metric(available.medians[key], t("soilMassPercent"))}</dd>
               </div>)}
             </dl>
             <p>{t("soilTextureNote")}</p>

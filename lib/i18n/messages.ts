@@ -157,6 +157,7 @@ export const messages = {
   soilMassPercent: { en: "% by mass", pl: "% masy" },
   soilTextureNote: { en: "These are separate model medians. They need not sum to 100% and have not been rescaled.", pl: "To osobne mediany modelu. Nie muszą sumować się do 100% i nie zostały przeskalowane." },
   soilUnavailable: { en: "Soil data are unavailable for this area.", pl: "Dane glebowe niedostępne dla tego obszaru." },
+  soilPartial: { en: "Partial coverage in this cell: some properties or the pH prediction interval are unavailable.", pl: "Dane częściowe: dla tej komórki brakuje niektórych właściwości lub przedziału predykcji pH." },
   soilMasked: { en: "The prepared extract marks this cell as NoData. No substitute values are shown.", pl: "Przygotowany wycinek oznacza tę komórkę jako brak danych. Nie pokazujemy wartości zastępczych." },
   soilOutside: { en: "This point is outside the prepared preview extracts.", pl: "Punkt leży poza wycinkami przygotowanymi do podglądu." },
   soilLimits: { en: "Regional context only; one cell does not represent the entire field.", pl: "To kontekst regionalny; jedna komórka nie reprezentuje całego pola." },

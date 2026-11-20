@@ -1,14 +1,15 @@
-import extract from "./soil-preview-cells.json" with { type: "json" };
+import extract from "./soil-preview-regions.json" with { type: "json" };
 
 export type SoilProperty = "phh2o" | "sand" | "silt" | "clay" | "soc" | "bdod";
+type RawCell = Record<SoilProperty | "phLow" | "phHigh", number | null>;
 export type SoilPreviewReading =
   | { status: "outside" | "no-data" }
   | {
-      status: "available";
+      status: "available" | "partial";
       depthCm: readonly [number, number];
       resolutionMeters: number;
-      medians: Record<SoilProperty, number>;
-      phPredictionInterval: readonly [number, number];
+      medians: Record<SoilProperty, number | null>;
+      phPredictionInterval: readonly [number, number] | null;
     };
 
 const wgs84Radius = 6_378_137;
@@ -39,26 +40,46 @@ export function projectSoilPreviewPoint([lat, lon]: readonly [number, number]): 
   ];
 }
 
-export function soilCellKey([x, y]: readonly [number, number]) {
+function soilCellIndex([x, y]: readonly [number, number]) {
   const { west, north, meters } = extract.grid;
-  return `${Math.floor((north - y) / meters)}:${Math.floor((x - west) / meters)}`;
+  return [Math.floor((north - y) / meters), Math.floor((x - west) / meters)] as const;
+}
+
+export function soilCellKey(xy: readonly [number, number]) {
+  return soilCellIndex(xy).join(":");
+}
+
+export function soilReadingFromRaw({ phLow, phHigh, ...raw }: RawCell): SoilPreviewReading {
+  const properties = Object.keys(extract.fields) as SoilProperty[];
+  const count = properties.filter(key => raw[key] !== null).length;
+  if (!count) return { status: "no-data" };
+  const scale = (value: number, key: SoilProperty) => value / extract.fields[key].divisor;
+  const medians = Object.fromEntries(properties.map(key => {
+    const value = raw[key];
+    return [key, value === null ? null : scale(value, key)];
+  })) as Record<SoilProperty, number | null>;
+  const interval = raw.phh2o !== null && phLow !== null && phHigh !== null && phLow <= raw.phh2o && raw.phh2o <= phHigh
+    ? [scale(phLow, "phh2o"), scale(phHigh, "phh2o")] as const : null;
+  return {
+    status: count === properties.length && interval ? "available" : "partial",
+    depthCm: [extract.depthCm[0], extract.depthCm[1]],
+    resolutionMeters: extract.grid.meters,
+    medians,
+    phPredictionInterval: interval,
+  };
 }
 
 export function soilPreviewAt(coordinates: readonly [number, number]): SoilPreviewReading {
   const xy = projectSoilPreviewPoint(coordinates);
   if (!xy) return { status: "outside" };
-  const key = soilCellKey(xy);
-  if (!Object.hasOwn(extract.cells, key)) return { status: "outside" };
-  const cell = extract.cells[key as keyof typeof extract.cells];
-  if (!cell) return { status: "no-data" };
-
-  const { phh2o, sand, silt, clay, soc, bdod } = cell.rawMedian;
-  const [q05, q95] = cell.rawPhInterval;
-  return {
-    status: "available",
-    depthCm: [extract.depthCm[0], extract.depthCm[1]],
-    resolutionMeters: extract.grid.meters,
-    medians: { phh2o: phh2o / 10, sand: sand / 10, silt: silt / 10, clay: clay / 10, soc: soc / 10, bdod: bdod / 100 },
-    phPredictionInterval: [q05 / 10, q95 / 10],
-  };
+  const [row, col] = soilCellIndex(xy);
+  const region = extract.regions.find(rect => row >= rect.row && col >= rect.col
+    && row < rect.row + rect.rows && col < rect.col + rect.cols);
+  if (!region) return { status: "outside" };
+  const index = (row - region.row) * region.cols + col - region.col;
+  const { phh2o, sand, silt, clay, soc, bdod, phLow, phHigh } = region.bands;
+  return soilReadingFromRaw({
+    phh2o: phh2o[index], sand: sand[index], silt: silt[index], clay: clay[index],
+    soc: soc[index], bdod: bdod[index], phLow: phLow[index], phHigh: phHigh[index],
+  });
 }
