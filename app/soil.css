@@ -1,6 +1,6 @@
 @media screen {
   .soil-panel { display: grid; gap: 14px; border-top: 3px solid var(--primary); }
-  .soil-panel #soil-title { margin-bottom: 4px; scroll-margin-top: 110px; }
+  .soil-panel #soil-title { margin-bottom: 4px; }
   .soil-heading { display: flex; align-items: start; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
   .soil-heading .eyebrow { margin-bottom: 5px; }
   .soil-badges { display: flex; flex-wrap: wrap; gap: 5px; }

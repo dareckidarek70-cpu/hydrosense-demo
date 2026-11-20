@@ -10,6 +10,7 @@ import { getLocalization } from "@/lib/i18n/server";
 import { demoPresentation } from "@/lib/i18n/demo";
 import { dateObservationWindow, observationWindow, pointFromQuery } from "@/lib/copernicus/request";
 import { soilPreviewAt } from "@/lib/soil-preview";
+import { reportTop } from "@/lib/report-navigation";
 
 type ResultsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -26,7 +27,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
     return area && period ? <ObservedAreaBrief key={JSON.stringify([area, period])} area={area} generatedAt={generatedAt}
       initialPeriod={period} soilPreview={process.env.VERCEL_ENV === "production" ? undefined : soilPreviewAt(area.coordinates)} /> : (
       <section className="container page-section">
-        <h1 className="section-title">{t("invalidArea")}</h1>
+        <h1 id={reportTop} className="section-title" data-report-jump tabIndex={-1}>{t("invalidArea")}</h1>
         <Link className="button-secondary" href="/select-area">{t("chooseArea")}</Link>
       </section>
     );
@@ -42,7 +43,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
             <div className="report-brand-summary">
               <div className="print-only"><PrintReportLogo /></div>
               <p className="eyebrow">{t("sampleBrief")}</p>
-              <h1 className="section-title">{copy.label}</h1>
+              <h1 id={reportTop} className="section-title" data-report-jump tabIndex={-1}>{copy.label}</h1>
             </div>
             <div className="report-hero-actions print-hidden"><PrintBriefButton /></div>
           </div>

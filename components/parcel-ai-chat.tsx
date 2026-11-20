@@ -84,7 +84,7 @@ function ContextualChat({ reference, subject, report, onNdviEvidence }: PanelPro
       <header className="ai-header">
         <div>
           <p className="ai-label">{t("diligence")}</p>
-          <h2 id="parcel-chat-title">{t("guidance")}</h2>
+          <h2 id="parcel-chat-title" data-report-jump tabIndex={-1}>{t("guidance")}</h2>
           <p>{subject}</p>
         </div>
       </header>

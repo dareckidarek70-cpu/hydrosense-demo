@@ -3,12 +3,14 @@
 import { useLocale } from "@/components/locale";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { isUsableDay } from "@/lib/copernicus/observations";
 import { reportComparisonDay } from "@/lib/copernicus/report-map";
 import type { IndexKey } from "@/lib/copernicus/interpretation";
-import { radiusAreaHectares, type ObservationWindow } from "@/lib/copernicus/request";
+import { dateObservationWindow, radiusAreaHectares, type ObservationWindow } from "@/lib/copernicus/request";
+import { reportTop, withReportPeriod } from "@/lib/report-navigation";
 import { ObservationDetails, useAreaObservation, type PointArea } from "./area-observation";
 import { ObservationHistory } from "./observation-history";
 import { ObservationMap } from "./observation-map";
@@ -37,11 +39,19 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
   soilPreview?: SoilPreviewReading;
 }) {
   const { t, dateTime, num, coordinates } = useLocale();
-  const [period, setPeriod] = useState(initialPeriod);
+  const query = useSearchParams();
+  const period = dateObservationWindow(query.get("from"), query.get("to")) ?? initialPeriod;
+  const periodKey = `${period.from}/${period.to}`;
+  const [selectionPeriod, setSelectionPeriod] = useState(periodKey);
   const [selectedDay, setSelectedDay] = useState("");
   const [referenceDate, setReferenceDate] = useState("");
   const [printing, setPrinting] = useState(false);
   const [historyIndex, setHistoryIndex] = useState<IndexKey>("ndvi");
+  if (selectionPeriod !== periodKey) {
+    setSelectionPeriod(periodKey);
+    setSelectedDay("");
+    setReferenceDate("");
+  }
   const [rasterCache] = useState(() => new MapRasterCache());
   useEffect(() => () => rasterCache.clear(), [rasterCache]);
   const { state, retry } = useAreaObservation(area, period);
@@ -63,6 +73,13 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
     setSelectedDay(date);
   };
   const water = (day?.waterFraction ?? 0) >= 0.8;
+  const sections = [
+    ...(data ? [["sentinel-history-title", "jumpHistory"]] as const : []),
+    ["season-title", "seasonTitle"],
+    ["weather-title", "jumpWeather"],
+    ...(soilPreview ? [["soil-title", "jumpSoil"]] as const : []),
+    ...(state ? [["parcel-chat-title", "jumpAi"]] as const : []),
+  ] as const;
 
   return (
     <div className="container">
@@ -72,7 +89,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
             <div className="report-brand-summary">
               <div className="print-only"><PrintReportLogo /></div>
               <p className="eyebrow">{t("observedBrief")}</p>
-              <h1 className="section-title">{t("selectedArea")}</h1>
+              <h1 id={reportTop} className="section-title" data-report-jump tabIndex={-1}>{t("selectedArea")}</h1>
             </div>
             {state ? <div className="report-hero-actions print-hidden"><PrintBriefButton onPrepare={setPrinting} /></div> : null}
           </div>
@@ -82,10 +99,14 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
           <p className="report-generated">{t("generated")} {dateTime(generatedAt)} UTC</p>
         </div>
 
-        <ObservationPeriod period={period} onApply={(next) => {
-          setSelectedDay("");
-          setReferenceDate("");
-          setPeriod(next);
+        <nav className="report-jump-nav print-hidden" aria-label={t("jumpSections")}>
+          {sections.map(([id, label]) => <a key={id} href={`#${id}`}>{t(label)}</a>)}
+        </nav>
+
+        <ObservationPeriod period={period} syncDraft onApply={(next) => {
+          if (next.from === period.from && next.to === period.to) return;
+          const search = withReportPeriod(new URLSearchParams(query), next);
+          window.history.pushState(null, "", `/results?${search}`);
         }} />
 
         <section className="observation-section">

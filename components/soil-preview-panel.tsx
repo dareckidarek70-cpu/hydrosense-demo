@@ -20,7 +20,7 @@ export function SoilPreviewPanel({ reading }: { reading: SoilPreviewReading }) {
       <header className="soil-heading">
         <div>
           <p className="eyebrow">{t("soilEyebrow")}</p>
-          <h2 id="soil-title">{t("soilTitle")}</h2>
+          <h2 id="soil-title" data-report-jump tabIndex={-1}>{t("soilTitle")}</h2>
           <p className="body-copy" id="soil-source-note">{t("soilModel")}</p>
         </div>
         <div className="soil-badges">

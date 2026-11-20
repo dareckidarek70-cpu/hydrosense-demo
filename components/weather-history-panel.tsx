@@ -162,7 +162,7 @@ export function WeatherHistoryPanel({ weather, reportPeriod }: {
       <div className="weather-heading">
         <div>
           <p className="eyebrow">{t("weatherArchive")}</p>
-          <h2 id="weather-title">{t("weatherTitle")}</h2>
+          <h2 id="weather-title" data-report-jump tabIndex={-1}>{t("weatherTitle")}</h2>
           <p className="body-copy">{t("weatherIntro")}</p>
         </div>
         <span className="pill">{t(override ? "weatherIndependent" : "weatherSync")}</span>

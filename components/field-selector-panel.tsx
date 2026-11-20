@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Crosshair, LoaderCircle, MapPin } from "lucide-react";
 import { demoParcels } from "@/lib/mock-analysis";
 import { demoPresentation } from "@/lib/i18n/demo";
@@ -60,6 +60,13 @@ export function FieldSelectorPanel() {
   const [pickedPoint, setPickedPoint] = useState<[number, number] | null>(null);
   const [analysisRadius, setAnalysisRadius] = useState<500 | 1000>(500);
   const [period, setPeriod] = useState(() => observationWindow());
+  const reportAction = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    const action = reportAction.current;
+    if (!pickedPoint || !action || !window.matchMedia("(max-width: 860px)").matches) return;
+    action.focus({ preventScroll: true });
+    action.closest("aside")?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [pickedPoint]);
   const area: PointArea | null = pickedPoint ? {
     type: "PointBuffer", coordinates: pickedPoint, radiusMeters: analysisRadius,
   } : null;
@@ -82,10 +89,22 @@ export function FieldSelectorPanel() {
   const briefHref = area
     ? `/results?mode=custom&lat=${area.coordinates[0]}&lng=${area.coordinates[1]}&radius=${analysisRadius}&from=${period.from.slice(0, 10)}&to=${inclusiveEnd(period)}`
     : `/results?parcel=${parcel.meta.id}`;
-
+  const action = <Link ref={reportAction} href={briefHref} data-report-jump={area ? "" : undefined} className="button summary-action">{t(area ? "openObserved" : "openDemo")} <ArrowRight size={17} aria-hidden="true" /></Link>;
+  const demoPicker = (
+    <section className="demo-picker" aria-labelledby="demo-picker-title">
+      <h2 id="demo-picker-title" className="supporting-label">{t("demoParcels")}</h2>
+      <div className="button-row" role="group" aria-labelledby="demo-picker-title">
+        {parcels.map((option) => (
+          <button key={option.id} type="button" className="button-secondary"
+            aria-pressed={!area && option.id === selectedParcelId} onClick={() => selectDemo(option.id)}>
+            {t("parcel", { id: option.id.slice(-1).toUpperCase() })}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
   return (
     <div className="selection-layout">
-      <div className="map-column">
         <section className="workspace-map" aria-labelledby="workspace-map-title">
           <div className="workspace-map-head">
             <h2 id="workspace-map-title"><Crosshair size={19} aria-hidden="true" /> {t("mapWorkspace")}</h2>
@@ -103,25 +122,9 @@ export function FieldSelectorPanel() {
             referenceWindow={area ? referenceWindow : undefined}
           />
         </section>
-        <section className="demo-picker" aria-labelledby="demo-picker-title">
-          <h2 id="demo-picker-title" className="supporting-label">{t("demoParcels")}</h2>
-          <div className="button-row" role="group" aria-labelledby="demo-picker-title">
-            {parcels.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className="button-secondary"
-                aria-pressed={!area && option.id === selectedParcelId}
-                onClick={() => selectDemo(option.id)}
-              >
-                {t("parcel", { id: option.id.slice(-1).toUpperCase() })}
-              </button>
-            ))}
-          </div>
-        </section>
-      </div>
+      {!area ? demoPicker : null}
 
-      <aside className="summary-card" aria-labelledby="selection-title">
+      <aside className="summary-card" aria-labelledby="selection-title" data-report-jump={area ? "" : undefined}>
         <div className="summary-row">
           <span className="tool-icon"><MapPin size={19} aria-hidden="true" /></span>
           <div>
@@ -132,6 +135,7 @@ export function FieldSelectorPanel() {
         {area ? (
           <>
             <p className="coordinate-reading">{coordinates(area.coordinates)}</p>
+            {action}
             <div>
               <p className="supporting-label">{t("radiusArea", { area: num(radiusAreaHectares(analysisRadius), 1) })}</p>
               <div className="button-row" role="group" aria-label={t("radius")}>
@@ -170,10 +174,11 @@ export function FieldSelectorPanel() {
                 <div className="summary-score-pill" key={key}><span>{t(key)}</span><strong>{percent(parcel.scores[key] / 100)}</strong></div>
               ))}
             </div>
+            {action}
           </>
         )}
-        <Link href={briefHref} className="button summary-action">{t(area ? "openObserved" : "openDemo")} <ArrowRight size={17} aria-hidden="true" /></Link>
       </aside>
+      {area ? demoPicker : null}
     </div>
   );
 }

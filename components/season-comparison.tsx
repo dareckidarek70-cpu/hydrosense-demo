@@ -21,7 +21,7 @@ export function SeasonComparison({ area, cache }: { area: PointArea; cache: MapR
   const [open, setOpen] = useState(false);
   return <section className="observation-section season-comparison print-hidden" aria-labelledby="season-title">
     <div className="season-heading">
-      <div><h2 id="season-title">{t("seasonTitle")}</h2><p>{t("seasonIntro")}</p></div>
+      <div><h2 id="season-title" data-report-jump tabIndex={-1}>{t("seasonTitle")}</h2><p>{t("seasonIntro")}</p></div>
       <button type="button" className="button-secondary" aria-expanded={open} aria-controls="season-workspace"
         onClick={() => setOpen(value => !value)}>{t(open ? "seasonClose" : "seasonOpen")}</button>
     </div>

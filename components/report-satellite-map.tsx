@@ -128,11 +128,9 @@ export function ReportSatelliteMap({ area, day, reference, options, onReferenceC
                 {t("cloudOption", { date: date(option.from), cloud: percent(option.cloudFraction) })}
               </option>)}
             </select></label>
-            <button type="button" className="button-secondary report-map-action" disabled={!reference}
-              aria-label={t(pairing ? "reportMapClose" : "reportMapCompare")} onClick={() => {
+            <button type="button" className="button-secondary" disabled={!reference} onClick={() => {
               setSide("current"); setCompare(!pairing);
-            }}><span>{t(pairing ? "reportMapClose" : "reportMapCompare")}</span>
-              <span aria-hidden="true">{t(pairing ? "reportMapCloseShort" : "reportMapCompareShort")}</span></button>
+            }}>{t(pairing ? "reportMapClose" : "reportMapCompare")}</button>
           </div> : <p className="report-map-note">{t("reportMapNoPair")}</p>}
         </div>
         <AlignedSatelliteScenes area={area} day={day} reference={pairing} layer={layer} cache={cache} side={side} onSideChange={setSide} />

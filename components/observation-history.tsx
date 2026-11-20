@@ -78,7 +78,7 @@ export function ObservationHistory({ data, current, onSelect, index, onIndexChan
 
   return (
     <div className="observation-history">
-      <h2>{t("history")}</h2>
+      <h2 id="sentinel-history-title" data-report-jump tabIndex={-1}>{t("history")}</h2>
       <p>{t("dateRange", { from: date(data.window.from), to: date(inclusiveEnd(data.window)) })} · {t("historyCounts", { usable: usable.length, rejected: data.observedDays - usable.length, missing: unobserved })}</p>
       {data.observedDays > 0 ? (
         <>
@@ -116,7 +116,7 @@ export function ObservationHistory({ data, current, onSelect, index, onIndexChan
       ) : null}
       {baseline && current ? (
         <div className="observation-date-comparison">
-          <h3>{t("differenceDates")}</h3>
+          <h3>{t("valueComparison")}</h3>
           <p>{t("descriptiveChange", { from: date(baseline.from), to: date(current.from) })}</p>
           <p>{t("clear")}: {percent(baseline.clearCoverage)} → {percent(current.clearCoverage)} · {t("cloud")}: {percent(baseline.cloudFraction)} → {percent(current.cloudFraction)}</p>
           <p className="print-hidden">{t("historyCompareLimits")}</p>
