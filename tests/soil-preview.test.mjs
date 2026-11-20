@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { createHash } from "node:crypto";
 import extract from "../lib/soil-preview-regions.json" with { type: "json" };
 import { projectSoilPreviewPoint, soilCellKey, soilPreviewAt, soilReadingFromRaw } from "../lib/soil-preview.ts";
+import { createSoilPackLoader, parseSoilPack } from "../lib/soil-preview-pack.ts";
 
 test("the native cells match independently projected IX A samples", () => {
   for (const [point, expected, key] of [
@@ -93,4 +95,42 @@ test("new independently sampled regional locations return their own readings and
   assert.deepEqual(biala.medians, { phh2o: 5.4, sand: 61.3, silt: 25.7, clay: 4.7, soc: 24.5, bdod: 1.21 });
   assert.deepEqual(veneto.medians, { phh2o: 7.7, sand: 18.1, silt: 44.8, clay: 27.2, soc: 35.6, bdod: 1.34 });
   assert.deepEqual(soilPreviewAt([52.061959460, 23.077411797]), { status: "no-data" });
+});
+
+test("a missing, altered or malformed pack is unavailable, never a misleading soil value", () => {
+  let reads = 0, warnings = 0;
+  const broken = createSoilPackLoader(() => { reads++; throw new Error("ENOENT"); }, () => warnings++);
+  assert.deepEqual(soilPreviewAt([52.0423, 23.0804], broken), { status: "unavailable" });
+  assert.deepEqual(soilPreviewAt([45.55, 12.15], broken), { status: "unavailable" });
+  assert.equal(reads, 1);
+  assert.equal(warnings, 1);
+  const malformed = Buffer.from("{not-json");
+  const hash = value => createHash("sha256").update(value).digest("hex");
+  assert.equal(createSoilPackLoader(() => malformed, undefined, hash(malformed))(), null);
+  const altered = structuredClone(extract);
+  altered.regions[0].bands.soc[0] = 120;
+  const bytes = Buffer.from(JSON.stringify(altered));
+  assert.throws(() => parseSoilPack(bytes), /soil_pack_checksum/);
+});
+
+test("valid checksums cannot authorize bad metadata, truncated bands or impossible quantiles", () => {
+  for (const [mutate, error] of [
+    [pack => { pack.schema = 3; }, /soil_pack_schema/],
+    [pack => { pack.fields.soc.divisor = 100; }, /soil_pack_schema/],
+    [pack => { pack.grid.projection = "EPSG:3857"; }, /soil_pack_schema/],
+    [pack => { pack.regions[0].bands.silt.pop(); }, /soil_pack_band_length/],
+    [pack => { pack.regions[1].bands.phLow[0] = 98; pack.regions[1].bands.phh2o[0] = 61; }, /soil_pack_quantiles/],
+    [pack => { pack.regions[1].bands.sand[0] = -32768; }, /soil_pack_schema/],
+  ]) {
+    const amended = structuredClone(extract);
+    mutate(amended);
+    const bytes = Buffer.from(JSON.stringify(amended));
+    assert.throws(() => parseSoilPack(bytes, createHash("sha256").update(bytes).digest("hex")), error);
+  }
+});
+
+test("invalid coordinates do not read the optional artifact", () => {
+  for (const point of [[Infinity, 23], [-90, -180], [52, NaN], [52, 180], [0, 0], [91, 361]]) {
+    assert.deepEqual(soilPreviewAt(point, () => { throw new Error("unexpected read"); }), { status: "outside" });
+  }
 });

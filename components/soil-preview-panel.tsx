@@ -9,6 +9,8 @@ const texture = [["sand", "soilSand"], ["silt", "soilSilt"], ["clay", "soilClay"
 export function SoilPreviewPanel({ reading }: { reading: SoilPreviewReading }) {
   const { t, num } = useLocale();
   const available = reading.status === "available" || reading.status === "partial" ? reading : null;
+  const notice = reading.status === "no-data" ? "soilNoDataTitle"
+    : reading.status === "outside" ? "soilOutsideTitle" : "soilUnavailable";
   const metric = (value: number | null, unit: string, digits = 1) => value === null
     ? <span>{t("unavailable")}</span> : <><strong>{num(value, digits)}</strong> <span>{unit}</span></>;
   return (
@@ -61,8 +63,8 @@ export function SoilPreviewPanel({ reading }: { reading: SoilPreviewReading }) {
         </div>
       ) : (
         <div className="soil-empty" role="status">
-          <strong>{t("soilUnavailable")}</strong>
-          <p>{t(reading.status === "no-data" ? "soilMasked" : "soilOutside")}</p>
+          <strong>{t(notice)}</strong>
+          <p>{t(reading.status === "no-data" ? "soilMasked" : reading.status === "outside" ? "soilOutside" : "soilBroken")}</p>
         </div>
       )}
       <footer className="soil-footer">
