@@ -234,6 +234,45 @@ main { flex: 1; }
 .report-map-legend .satellite-legend { margin: 0; }
 .report-map-mask { display: flex; align-items: center; gap: 5px; color: var(--muted); }
 .report-map-mask span { width: 15px; height: 15px; flex: none; border: 1px solid var(--control-border); border-radius: 2px; }
+.season-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 20px; }
+.season-heading h2 { margin-bottom: 3px; }
+.season-heading p, .season-form > p, .season-results > p, .season-period > p, .season-summary > p, .season-maps > p { color: var(--body); font-size: .84rem; }
+.season-form, .season-results { display: grid; gap: 10px; margin-top: 14px; }
+.season-form > .button { justify-self: start; }
+.season-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.season-form fieldset { min-width: 0; margin: 0; display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.season-form fieldset, .season-period, .season-summary, .season-maps { border: 1px solid var(--border); background: var(--inset); border-radius: 8px; padding: 10px; min-width: 0; }
+.season-form legend { padding-inline: 4px; font-weight: 720; font-size: .85rem; }
+.season-dates { display: grid; gap: 3px; min-width: 0; font-size: .78rem; color: var(--muted); font-weight: 650; }
+.season-dates :is(input, select) { width: 100%; min-width: 0; min-height: 44px; padding: 6px; border-radius: 6px; border: 1px solid var(--control-border); background: var(--surface); color: var(--text); font-size: .84rem; }
+.season-results > .sentinel-series { justify-self: start; }
+.season-period, .season-summary, .season-maps { display: grid; gap: 7px; align-content: start; }
+.season-period h3, .season-summary h3, .season-maps h3 { font-size: 1rem; }
+.season-period .status-note, .season-summary .status-note { padding: 7px; }
+.season-track { --season-mark: #286d87; }
+.season-track[data-season-track="A"] { --season-mark: #16745a; }
+.season-track-plot { position: relative; height: 95px; margin-inline: 26px 9px; }
+.season-grid-line { position: absolute; inset-inline: 0; border-top: 1px solid var(--control-border); }
+.season-grid-line > span { position: absolute; inset-inline-end: calc(100% + 5px); transform: translateY(-50%); color: var(--muted); font: .66rem var(--font-mono); }
+.season-point { position: absolute; width: 6px; height: 6px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--season-mark); }
+.season-track[data-season-track="B"] .season-point[data-status="reading"] { border-radius: 0; transform: translate(-50%, -50%) rotate(45deg); }
+.season-point[data-status="unavailable"] { background: var(--surface); border: 1px solid var(--muted); border-radius: 0; }
+.season-point[data-status="rejected"] { width: auto; height: auto; background: none; color: var(--muted); font: 700 .75rem/1 var(--font-mono); }
+.season-point[data-season-selected="true"] { outline: 1px solid var(--text); outline-offset: 2px; }
+.season-track-extent { display: flex; justify-content: space-between; margin-inline: 26px 9px; font: .66rem var(--font-mono); color: var(--muted); }
+.season-chosen, .season-readings li { display: grid; gap: 2px; padding: 6px; border-radius: 5px; background: var(--surface); font-size: .78rem; }
+.season-chosen small, .season-readings small, .season-summary td small { color: var(--muted); }
+.season-readings summary { cursor: pointer; color: var(--text); font-size: .8rem; font-weight: 700; }
+.season-readings ul { list-style: none; display: grid; gap: 4px; max-height: 17rem; overflow: auto; padding: 0; margin-top: 5px; }
+.season-summary table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .79rem; text-align: start; }
+.season-summary :is(th, td) { vertical-align: top; text-align: start; padding: 5px; border-bottom: 1px solid var(--border); }
+.season-summary th:first-child { width: 18%; }
+.season-summary td > * { display: block; }
+.season-map-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.season-maps > .button-secondary { justify-self: start; }
+@media screen and (max-width: 660px) {
+  .season-grid { grid-template-columns: minmax(0, 1fr); }
+}
 @media screen and (min-width: 761px) {
   .observation-overview:has(.report-satellite-map[data-map-comparing="true"]) { grid-template-columns: minmax(0, 1fr); }
   .report-map-scenes[data-map-paired="true"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -26,10 +26,14 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
 
   useEffect(() => {
     if (!key) return;
+    const requested = JSON.parse(key) as ObservationWindow;
+    const matchesWindow = (data: AreaStats) => Date.parse(data.window?.from) === Date.parse(requested.from)
+      && Date.parse(data.window?.to) === Date.parse(requested.to);
     const storage = session();
     const recentEntry = recent.get(key);
-    const cached = recentEntry && recentEntry.expires > Date.now() ? recentEntry.data
+    const stored = recentEntry && recentEntry.expires > Date.now() ? recentEntry.data
       : storage ? getCachedObservation(storage, key) : undefined;
+    const cached = stored && matchesWindow(stored) ? stored : undefined;
     const controller = new AbortController();
     let deadline: ReturnType<typeof setTimeout> | undefined;
     let timedOut = false;
@@ -56,7 +60,7 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
           return;
         }
         const body = await response.json() as AreaStats;
-        if (!Array.isArray(body.days)) {
+        if (!Array.isArray(body.days) || !matchesWindow(body)) {
           if (!controller.signal.aborted) setResult({ key, attempt, state: { error: "providerError" } });
           return;
         }

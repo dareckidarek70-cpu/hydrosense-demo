@@ -3,7 +3,7 @@
 import { useLocale } from "@/components/locale";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { isUsableDay } from "@/lib/copernicus/observations";
 import { reportComparisonDay } from "@/lib/copernicus/report-map";
@@ -22,6 +22,8 @@ import { useReportWeather, WeatherHistoryPanel } from "./weather-history-panel";
 import type { SoilPreviewReading } from "@/lib/soil-preview";
 import { reportChatKey, type ReportChatReference } from "@/lib/report-chat";
 import { SoilPreviewPanel } from "./soil-preview-panel";
+import { SeasonComparison } from "./season-comparison";
+import { MapRasterCache } from "@/lib/map-raster-cache";
 
 const requiredEvidence = [
   ["investment", "nextInvestment"], ["irrigation", "nextIrrigation"],
@@ -40,6 +42,8 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
   const [referenceDate, setReferenceDate] = useState("");
   const [printing, setPrinting] = useState(false);
   const [historyIndex, setHistoryIndex] = useState<IndexKey>("ndvi");
+  const [rasterCache] = useState(() => new MapRasterCache());
+  useEffect(() => () => rasterCache.clear(), [rasterCache]);
   const { state, retry } = useAreaObservation(area, period);
   const data = state && "data" in state ? state.data : undefined;
   const day = data?.days.find((entry) => entry.from.slice(0, 10) === selectedDay && isUsableDay(entry))
@@ -53,7 +57,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
   const chatWeather = weather.context;
   const chatPending = !!chatWeather?.isLoading;
   const map = day ? <ReportSatelliteMap area={area} day={day} reference={baseline} options={eligible}
-    onReferenceChange={setReferenceDate} onIndexChange={setHistoryIndex} printing={printing} /> : <ObservationMap area={area} url={null} />;
+    onReferenceChange={setReferenceDate} onIndexChange={setHistoryIndex} printing={printing} cache={rasterCache} /> : <ObservationMap area={area} url={null} />;
   const selectReportDay = (date: string) => {
     if (date === referenceDate) setReferenceDate("");
     setSelectedDay(date);
@@ -103,6 +107,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
               index={historyIndex} onIndexChange={setHistoryIndex} onSelect={selectReportDay} onReferenceChange={setReferenceDate} />
           </section>
         ) : null}
+        <SeasonComparison area={area} cache={rasterCache} />
         <WeatherHistoryPanel weather={weather} reportPeriod={period} />
         {soilPreview ? <SoilPreviewPanel reading={soilPreview} /> : null}
         {data ? <RadiusComparison area={area} period={period} data={data} /> : null}

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const DAY = 86_400_000;
 export const MAX_HISTORY_DAYS = 366;
+export const FIRST_HISTORY_DAY = "2017-01-01";
 export type ObservationWindow = { from: string; to: string };
 const latitude = z.number().min(-84).max(84);
 const longitude = z.number().min(-180).max(180);
@@ -31,7 +32,7 @@ export function isValidWindow(from: string, to: string, maxDays = 31) {
   const start = Date.parse(from);
   const end = Date.parse(to);
   return Number.isFinite(start) && Number.isFinite(end)
-    && start >= Date.UTC(2017, 0, 1) && end <= Date.now()
+    && start >= Date.parse(FIRST_HISTORY_DAY) && end <= Date.now()
     && end - start >= 1000 && end - start <= maxDays * DAY;
 }
 
