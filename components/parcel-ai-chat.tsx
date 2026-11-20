@@ -4,17 +4,20 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocale } from "./locale";
 import type { ChatReference, ChatSource } from "@/lib/parcel-chat-contract";
 import { CHAT_CLIENT_TIMEOUT_MS, CHAT_QUESTION_LIMIT } from "@/lib/parcel-chat-limits";
+import { answerCurrentReport } from "@/lib/report-chat-answer";
+import type { ReportChatSnapshot } from "@/lib/report-chat";
 
 const quickQuestions = ["q1", "q2", "q3", "q4", "q5"] as const;
-type Reply = { content: string; source?: ChatSource; references?: { label: string; url: string }[] };
-type PanelProps = { reference: ChatReference; subject: string };
+const reportQuestions = ["chatAskObservation", "chatAskNdvi", "chatAskRain", "chatAskSoil", "chatAskSynthesis"] as const;
+type Reply = { content: string; source?: ChatSource; references?: { label: string; url: string }[]; reportSources?: readonly string[] };
+type PanelProps = { reference: ChatReference; subject: string; report?: { identity: string; pending: boolean; snapshot: ReportChatSnapshot } };
 
 export function ParcelAiChat(props: PanelProps) {
   const { locale } = useLocale();
-  return <ContextualChat key={JSON.stringify([locale, props.reference])} {...props} />;
+  return <ContextualChat key={JSON.stringify([locale, props.report?.identity ?? props.reference])} {...props} />;
 }
 
-function ContextualChat({ reference, subject }: PanelProps) {
+function ContextualChat({ reference, subject, report }: PanelProps) {
   const { t, locale } = useLocale();
   const [draft, setDraft] = useState("");
   const [asked, setAsked] = useState("");
@@ -30,7 +33,7 @@ function ContextualChat({ reference, subject }: PanelProps) {
 
   async function ask(value: string) {
     const question = value.trim();
-    if (active.current || !question || question.length > CHAT_QUESTION_LIMIT) return;
+    if (report?.pending || active.current || !question || question.length > CHAT_QUESTION_LIMIT) return;
     const controller = new AbortController();
     active.current = controller;
     const deadline = setTimeout(() => controller.abort(), CHAT_CLIENT_TIMEOUT_MS);
@@ -38,6 +41,13 @@ function ContextualChat({ reference, subject }: PanelProps) {
     setAsked(question);
     setReply(undefined);
     try {
+      if (reference.mode === "observation") {
+        if (!report) return;
+        const data = await answerCurrentReport(question, reference.observation, report.snapshot, locale);
+        if (active.current === controller) setReply({ content: data.answer, source: data.source,
+          references: data.references, reportSources: data.reportSources });
+        return;
+      }
       const response = await fetch("/api/ai/parcel-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -78,15 +88,16 @@ function ContextualChat({ reference, subject }: PanelProps) {
       </header>
       {reference.mode === "demo" ? <p className="report-quiet-note">{t("chatDemoWarning")}</p> : null}
       <div className="ai-questions">
-        {quickQuestions.map((key) => (
-          <button key={key} type="button" disabled={loading} onClick={() => void ask(t(key))}>{t(key)}</button>
+        {(report ? reportQuestions : quickQuestions).map((key) => (
+          <button key={key} type="button" disabled={loading || report?.pending} onClick={() => void ask(t(key))}>{t(key)}</button>
         ))}
       </div>
       {asked ? <div className="ai-current-question"><strong>{t("question")}</strong><p>{asked}</p></div> : null}
-      <div className="ai-answer" aria-live="polite" aria-busy={loading}>
+      <div className="ai-answer" aria-live="polite" aria-busy={loading || report?.pending}>
         <h3>{t("response")}</h3>
         {reply?.source ? <p className="ai-label">{t(reply.source === "rules" ? "chatRules" : "chatModel")}</p> : null}
-        <p>{loading ? t("thinking") : reply?.content ?? t("guidanceInitial")}</p>
+        <p>{loading ? t("thinking") : report?.pending ? t("chatReportPending") : reply?.content ?? t(report ? "chatReportInitial" : "guidanceInitial")}</p>
+        {reply?.reportSources?.length ? <p className="ai-label">{t("chatReportSources")} {reply.reportSources.join(" · ")}</p> : null}
         {reply?.references?.map(({ label, url }) => (
           <p key={url}><a href={url} target="_blank" rel="noreferrer">{label}</a></p>
         ))}
@@ -99,7 +110,7 @@ function ContextualChat({ reference, subject }: PanelProps) {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
         />
-        <button type="submit" disabled={loading || !draft.trim()}>{t("ask")}</button>
+        <button type="submit" disabled={loading || report?.pending || !draft.trim()}>{t("ask")}</button>
       </form>
     </section>
   );

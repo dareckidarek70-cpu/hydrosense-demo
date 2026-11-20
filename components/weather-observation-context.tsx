@@ -9,7 +9,7 @@ import {
 import { useLocale } from "./locale";
 import { useWeatherResult } from "./use-weather-result";
 
-export function WeatherObservationContext({ observationDay, coordinates, reportStart, primary, primaryPending, attempt }: {
+export function useWeatherObservationContext({ observationDay, coordinates, reportStart, primary, primaryPending, attempt }: {
   observationDay: string | null;
   coordinates: readonly [number, number];
   reportStart: string;
@@ -17,7 +17,6 @@ export function WeatherObservationContext({ observationDay, coordinates, reportS
   primaryPending: boolean;
   attempt: number;
 }) {
-  const { t, num, date } = useLocale();
   const windows = observationDay ? precedingWeatherWindows(observationDay) : null;
   const history = primary && "data" in primary ? primary.data : undefined;
   const failure = primary && "error" in primary ? primary.error : null;
@@ -30,6 +29,13 @@ export function WeatherObservationContext({ observationDay, coordinates, reportS
   const isLoading = primaryPending || (!!key && !supplemental);
   const error = failure ?? (supplemental && "error" in supplemental ? supplemental.error : null);
   const supplement = supplemental && "data" in supplemental ? supplemental.data : undefined;
+  return { observationDay, windows, isLoading, error, history, supplement };
+}
+
+export function WeatherObservationContext({ context }: { context: ReturnType<typeof useWeatherObservationContext> }) {
+  const { t, num, date } = useLocale();
+  if (!context) return null;
+  const { observationDay, windows, isLoading, error, history, supplement } = context;
   const summary = summarizePrecedingWeather(windows, history?.days, supplement?.days, history?.failedSeries);
   const metrics = [
     { title: "weatherContextRain7", data: summary.rainSeven, unit: "mm", digits: 2, Icon: CloudRain },

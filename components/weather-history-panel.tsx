@@ -8,7 +8,7 @@ import { lowRainThreshold, summarizeWeather, weatherRequestKey } from "@/lib/wea
 import { useLocale } from "./locale";
 import { ObservationPeriod } from "./observation-period";
 import { WeatherCharts } from "./weather-charts";
-import { WeatherObservationContext } from "./weather-observation-context";
+import { WeatherObservationContext, useWeatherObservationContext } from "./weather-observation-context";
 import { useWeatherResult } from "./use-weather-result";
 
 function WeatherMetrics({ days }: { days: WeatherDay[] }) {
@@ -137,15 +137,24 @@ function WeatherRetry({ retryAt, onRetry }: { retryAt?: number; onRetry: () => v
   return <button type="button" className="button-secondary" disabled={!!retryAt && !ready} onClick={onRetry}>{t("weatherRetry")}</button>;
 }
 
-export function WeatherHistoryPanel({ coordinates, reportPeriod, observationDay }: {
+export function useReportWeather({ coordinates, reportPeriod, observationDay }: {
   coordinates: readonly [number, number]; reportPeriod: ObservationWindow; observationDay: string | null;
 }) {
-  const { t, date } = useLocale();
   const [override, setOverride] = useState<ObservationWindow | null>(null);
   const [attempt, setAttempt] = useState(0);
   const period = override ?? reportPeriod;
   const key = weatherRequestKey(coordinates, period);
   const result = useWeatherResult(key, attempt);
+  const context = useWeatherObservationContext({ observationDay, coordinates, reportStart: reportPeriod.from.slice(0, 10),
+    primary: result, primaryPending: !!key && !result, attempt });
+  return { override, setOverride, attempt, setAttempt, period, key, result, context };
+}
+
+export function WeatherHistoryPanel({ weather, reportPeriod }: {
+  weather: ReturnType<typeof useReportWeather>; reportPeriod: ObservationWindow;
+}) {
+  const { t, date } = useLocale();
+  const { override, setOverride, setAttempt, period, key, result, context } = weather;
 
   const state = !key ? "invalid" : !result ? "loading" : "error" in result ? "error" : result.data.availability.status;
   return (
@@ -158,8 +167,7 @@ export function WeatherHistoryPanel({ coordinates, reportPeriod, observationDay 
         </div>
         <span className="pill">{t(override ? "weatherIndependent" : "weatherSync")}</span>
       </div>
-      <WeatherObservationContext observationDay={observationDay} coordinates={coordinates} reportStart={reportPeriod.from.slice(0, 10)}
-        primary={result} primaryPending={!!key && !result} attempt={attempt} />
+      <WeatherObservationContext context={context} />
       <div className="weather-period">
         <ObservationPeriod period={reportPeriod} label="weatherPeriod" currentLabel="weatherSync"
           onApply={(next, followsReport) => setOverride(followsReport ? null : next)} />

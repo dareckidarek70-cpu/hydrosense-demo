@@ -15,8 +15,9 @@ import { PrintReportLogo } from "./print-report-logo";
 import { PrintBriefButton } from "./print-brief-button";
 import { RadiusComparison } from "./radius-comparison";
 import { ParcelAiChat } from "./parcel-ai-chat";
-import { WeatherHistoryPanel } from "./weather-history-panel";
+import { useReportWeather, WeatherHistoryPanel } from "./weather-history-panel";
 import type { SoilPreviewReading } from "@/lib/soil-preview";
+import { reportChatKey, type ReportChatReference } from "@/lib/report-chat";
 import { SoilPreviewPanel } from "./soil-preview-panel";
 
 const requiredEvidence = [
@@ -37,6 +38,11 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
   const data = state && "data" in state ? state.data : undefined;
   const day = data?.days.find((entry) => entry.from.slice(0, 10) === selectedDay && isUsableDay(entry))
     ?? data?.observation ?? null;
+  const observationDay = day?.from.slice(0, 10) ?? null;
+  const weather = useReportWeather({ coordinates: area.coordinates, reportPeriod: period, observationDay });
+  const chatReference: ReportChatReference = { geometry: area, period, day: observationDay };
+  const chatWeather = weather.context;
+  const chatPending = !!chatWeather?.isLoading;
   const raster = observationMapUrl(area, day);
   const map = <ObservationMap key={raster ?? "outline"} area={area} url={raster} date={day?.from.slice(0, 10)} />;
   const water = (day?.waterFraction ?? 0) >= 0.8;
@@ -77,7 +83,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
           {water ? <p>{t("waterDominates")}</p> : null}
         </section>
 
-        <WeatherHistoryPanel coordinates={area.coordinates} reportPeriod={period} observationDay={day?.from.slice(0, 10) ?? null} />
+        <WeatherHistoryPanel weather={weather} reportPeriod={period} />
         {soilPreview ? <SoilPreviewPanel reading={soilPreview} /> : null}
 
         {data ? (
@@ -108,10 +114,13 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
             </dl>
           </section>
         </div>
-        {state ? <ParcelAiChat reference={{
-          mode: "observation",
-          observation: { geometry: area, period, day: day?.from.slice(0, 10) ?? null },
-        }} subject={`${t("selectedArea")} · ${coordinates(area.coordinates)} · ${num(area.radiusMeters)} m`} /> : null}
+        {state ? <ParcelAiChat reference={{ mode: "observation", observation: chatReference }}
+          report={{
+            identity: reportChatKey(chatReference, weather.key, weather.attempt, chatPending), pending: chatPending,
+            snapshot: { reference: chatReference, satellite: data, soil: soilPreview, weather: chatWeather && {
+              day: chatWeather.observationDay, primary: chatWeather.history, supplemental: chatWeather.supplement,
+            } },
+          }} subject={`${t("selectedArea")} · ${coordinates(area.coordinates)} · ${num(area.radiusMeters)} m`} /> : null}
         <Link href="/select-area" className="button-secondary print-hidden">{t("anotherArea")}</Link>
         <p className="print-only print-footer">{t("printObservedFooter")}</p>
       </section>
