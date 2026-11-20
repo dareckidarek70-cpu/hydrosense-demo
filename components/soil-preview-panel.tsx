@@ -2,6 +2,7 @@
 
 import { Layers3, MapPin } from "lucide-react";
 import type { SoilPreviewReading } from "@/lib/soil-preview";
+import { reportEvidenceId } from "@/lib/report-evidence-links";
 import { useLocale } from "./locale";
 
 const texture = [["sand", "soilSand"], ["silt", "soilSilt"], ["clay", "soilClay"]] as const;
@@ -14,7 +15,8 @@ export function SoilPreviewPanel({ reading }: { reading: SoilPreviewReading }) {
   const metric = (value: number | null, unit: string, digits = 1) => value === null
     ? <span>{t("unavailable")}</span> : <><strong>{num(value, digits)}</strong> <span>{unit}</span></>;
   return (
-    <section className="observation-section soil-panel print-hidden" aria-labelledby="soil-title" data-soil-status={reading.status}>
+    <section className="observation-section soil-panel print-hidden" aria-labelledby="soil-title" data-soil-status={reading.status}
+      id={available ? reportEvidenceId.soil : undefined} tabIndex={available ? -1 : undefined} data-evidence-target={available ? "soil" : undefined}>
       <header className="soil-heading">
         <div>
           <p className="eyebrow">{t("soilEyebrow")}</p>

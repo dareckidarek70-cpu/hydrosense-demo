@@ -8,6 +8,7 @@ import { IndexScale } from "./satellite-legend";
 import { responseFailure, type FailureCode } from "@/lib/copernicus/errors";
 import { useLocale } from "./locale";
 import { getCachedObservation, rememberObservation } from "@/lib/observation-cache";
+import { reportEvidenceId } from "@/lib/report-evidence-links";
 
 export type PointArea = Extract<AreaGeometry, { type: "PointBuffer" }>;
 
@@ -97,12 +98,15 @@ export function ObservationDetails({ data, day = data.observation, full = false,
 }) {
   const { locale, t, date, num, percent } = useLocale();
   const quality = day ?? data.latestObserved;
+  const target = full && day ? reportEvidenceId.sentinel(day.from.slice(0, 10)) : undefined;
 
   return (
     <div className="metric-stack">
       <div className={map ? "observation-overview" : undefined}>
         {map}
-        <div className="observation-source">
+        <div className="observation-source" id={target} tabIndex={target ? -1 : undefined}
+          data-evidence-target={target ? "sentinel" : undefined} role={target ? "group" : undefined}
+          aria-label={target && day ? `Sentinel-2 L2A · ${date(day.from)} UTC` : undefined}>
           <div className="source-block">
             <p className="supporting-label">{t("evidenceSource")}</p>
             <p className="source-title">Copernicus Sentinel-2 L2A</p>

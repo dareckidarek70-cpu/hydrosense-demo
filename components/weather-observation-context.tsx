@@ -2,6 +2,7 @@
 
 import { CloudRain, LoaderCircle, Thermometer } from "lucide-react";
 import type { WeatherPanelResult } from "@/lib/weather/panel-client";
+import { reportEvidenceId, weatherEvidenceLabels } from "@/lib/report-evidence-links";
 import { weatherRequestKey } from "@/lib/weather/panel-data";
 import {
   asWeatherWindow, planPrecedingWeather, precedingWeatherWindows, summarizePrecedingWeather,
@@ -38,9 +39,9 @@ export function WeatherObservationContext({ context }: { context: ReturnType<typ
   const { observationDay, windows, isLoading, error, history, supplement } = context;
   const summary = summarizePrecedingWeather(windows, history?.days, supplement?.days, history?.failedSeries);
   const metrics = [
-    { title: "weatherContextRain7", data: summary.rainSeven, unit: "mm", digits: 2, Icon: CloudRain },
-    { title: "weatherContextRain30", data: summary.rainThirty, unit: "mm", digits: 2, Icon: CloudRain },
-    { title: "weatherContextTemperature", data: summary.temperatureSeven, unit: "°C", digits: 1, Icon: Thermometer },
+    { key: "rainSeven", data: summary.rainSeven, unit: "mm", digits: 2, Icon: CloudRain },
+    { key: "rainThirty", data: summary.rainThirty, unit: "mm", digits: 2, Icon: CloudRain },
+    { key: "temperatureSeven", data: summary.temperatureSeven, unit: "°C", digits: 1, Icon: Thermometer },
   ] as const;
   const hasData = metrics.some(({ data }) => data.value !== null);
   const state = isLoading ? "loading" : !hasData ? "unavailable"
@@ -61,9 +62,10 @@ export function WeatherObservationContext({ context }: { context: ReturnType<typ
         <>
           {notice ? <p className="status-note" role="status">{t(notice)}</p> : null}
           <dl className="weather-context-metrics">
-            {metrics.map(({ title, data, unit, digits, Icon }) => (
-              <div className="weather-metric" key={title}>
-                <dt><Icon size={16} aria-hidden="true" />{t(title)}</dt>
+            {metrics.map(({ key, data, unit, digits, Icon }) => (
+              <div className="weather-metric" key={key} id={data.value !== null ? reportEvidenceId.weather(observationDay, key) : undefined}
+                tabIndex={data.value !== null ? -1 : undefined} data-evidence-target={data.value !== null ? "weather" : undefined}>
+                <dt><Icon size={16} aria-hidden="true" />{t(weatherEvidenceLabels[key])}</dt>
                 <dd>
                   <strong>{data.value === null ? t("unavailable") : `${num(data.value, digits)} ${unit}`}</strong>
                   <small>{t("dateRange", { from: date(data.range.from), to: date(data.range.to) })}</small>

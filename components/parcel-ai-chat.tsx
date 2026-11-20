@@ -5,11 +5,12 @@ import { useLocale } from "./locale";
 import type { ChatReference, ChatSource } from "@/lib/parcel-chat-contract";
 import { CHAT_CLIENT_TIMEOUT_MS, CHAT_QUESTION_LIMIT } from "@/lib/parcel-chat-limits";
 import { answerCurrentReport } from "@/lib/report-chat-answer";
+import type { ReportEvidenceLink } from "@/lib/report-evidence-links";
 import type { ReportChatSnapshot } from "@/lib/report-chat";
 
 const quickQuestions = ["q1", "q2", "q3", "q4", "q5"] as const;
 const reportQuestions = ["chatAskObservation", "chatAskNdvi", "chatAskRain", "chatAskSoil", "chatAskSynthesis"] as const;
-type Reply = { content: string; source?: ChatSource; references?: { label: string; url: string }[]; reportSources?: readonly string[] };
+type Reply = { content: string; source?: ChatSource; references?: { label: string; url: string }[]; evidenceLinks?: readonly ReportEvidenceLink[] };
 type PanelProps = { reference: ChatReference; subject: string; report?: { identity: string; pending: boolean; snapshot: ReportChatSnapshot } };
 
 export function ParcelAiChat(props: PanelProps) {
@@ -45,7 +46,7 @@ function ContextualChat({ reference, subject, report }: PanelProps) {
         if (!report) return;
         const data = await answerCurrentReport(question, reference.observation, report.snapshot, locale);
         if (active.current === controller) setReply({ content: data.answer, source: data.source,
-          references: data.references, reportSources: data.reportSources });
+          references: data.references, evidenceLinks: data.evidenceLinks });
         return;
       }
       const response = await fetch("/api/ai/parcel-chat", {
@@ -97,7 +98,14 @@ function ContextualChat({ reference, subject, report }: PanelProps) {
         <h3>{t("response")}</h3>
         {reply?.source ? <p className="ai-label">{t(reply.source === "rules" ? "chatRules" : "chatModel")}</p> : null}
         <p>{loading ? t("thinking") : report?.pending ? t("chatReportPending") : reply?.content ?? t(report ? "chatReportInitial" : "guidanceInitial")}</p>
-        {reply?.reportSources?.length ? <p className="ai-label">{t("chatReportSources")} {reply.reportSources.join(" · ")}</p> : null}
+        {reply?.evidenceLinks?.length ? (
+          <div className="ai-evidence">
+            <p className="ai-label" id="chat-evidence-label">{t("chatReportSources")}</p>
+            <ul aria-labelledby="chat-evidence-label">
+              {reply.evidenceLinks.map(({ target, label }) => <li key={target}><a href={`#${target}`}>{label}</a></li>)}
+            </ul>
+          </div>
+        ) : null}
         {reply?.references?.map(({ label, url }) => (
           <p key={url}><a href={url} target="_blank" rel="noreferrer">{label}</a></p>
         ))}

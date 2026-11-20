@@ -8,6 +8,10 @@ const biala = [52.0423, 23.0804];
 const geometry = { type: "PointBuffer", coordinates: biala, radiusMeters: 500 };
 const period = { from: "2026-08-01T00:00:00Z", to: "2026-09-01T00:00:00Z" };
 const reference = { geometry, period, day: "2026-08-26" };
+const targets = result => result.evidenceLinks.map(({ target }) => target);
+const sentinelTarget = "report-sentinel-2026-08-26";
+const weatherTarget = key => `report-weather-2026-08-26-${key}`;
+const soilTarget = "report-soil-cell";
 const day = (date, to, indices) => ({ from: `${date}T00:00:00Z`, to: `${to}T00:00:00Z`,
   cloudFraction: 0.1, clearCoverage: 0.9, clearPixels: 2025, waterFraction: 0.02, vegetationFraction: 0.82, ...indices });
 const selected = day("2026-08-26", "2026-08-27", { ndvi: 0.5621, ndwi: -0.423, ndmi: 0.127 });
@@ -28,10 +32,11 @@ test("uses the selected report reading, not latest or any static example; labels
   const satellite = await answerCurrentReport("Co pokazuje ostatnia obserwacja satelitarna?", reference, snapshot(), "pl");
   assert.match(satellite.answer, /26\.08\.2026 UTC.*NDVI 0,56 · NDWI -0,42 · NDMI 0,13/);
   assert.doesNotMatch(satellite.answer, /0,82|ERA5|SoilGrids/);
-  assert.deepEqual(satellite.reportSources, ["Sentinel-2 L2A"]);
+  assert.deepEqual(satellite.evidenceLinks, [{ target: sentinelTarget, label: "Sentinel-2 L2A · 26.08.2026 UTC" }]);
   const delta = await answerCurrentReport("How has NDVI changed?", reference, snapshot(), "en");
   assert.match(delta.answer, /0\.48 \(19\/08\/2026\) → 0\.56 \(26\/08\/2026 UTC\); Δ \+0\.08/);
   assert.match(delta.answer, /not a trend/);
+  assert.deepEqual(targets(delta), [sentinelTarget, "report-ndvi-history"]);
 });
 
 test("full PL and EN syntheses use actual windows and clearly separate interpretation", async (t) => {
@@ -45,7 +50,7 @@ test("full PL and EN syntheses use actual windows and clearly separate interpret
     assert.match(result.answer, rains);
     assert.match(result.answer, /0–5 cm, 250 m/);
     assert.equal(result.source, "rules");
-    assert.deepEqual(result.reportSources, ["Sentinel-2 L2A", "Open-Meteo / ERA5 / ERA5-Land", "ISRIC SoilGrids 250 m"]);
+    assert.deepEqual(targets(result), [sentinelTarget, "report-ndvi-history", weatherTarget("rainSeven"), weatherTarget("rainThirty"), weatherTarget("temperatureSeven"), soilTarget]);
   }
   assert.equal(fetch.mock.callCount(), 0);
 });
@@ -59,7 +64,7 @@ test("old snapshots and old component identity cannot follow point, radius, repo
     const scope = { ...reference, ...change };
     assert.notEqual(reportChatKey(scope, "weather-old", 0, false), previousKey);
     const stale = await answerCurrentReport("Summarize this report", scope, old, "en");
-    assert.deepEqual(stale.reportSources, []);
+    assert.deepEqual(targets(stale), []);
     assert.doesNotMatch(stale.answer, /NDVI 0\.56|7\.00 mm|5\.4/);
     const ready = synthesizeCurrentReport(scope, snapshot(scope), "en");
     assert.equal(ready.evidence.sentinel.selected.day, scope.day);
@@ -98,7 +103,7 @@ test("keeps useful satellite and weather results across all soil states and arbi
     const result = await answerCurrentReport("Summarize this report", scope, context, "en");
     assert.match(result.answer, match);
     assert.match(result.answer, /NDVI 0\.56.*7\.00 mm/s);
-    assert.equal(result.reportSources.includes("ISRIC SoilGrids 250 m"), expected === "available");
+    assert.equal(targets(result).includes(soilTarget), expected === "available");
   }
 });
 
@@ -112,7 +117,46 @@ test("keeps zero and missing separate with weather failure or no usable satellit
   const noDay = { ...reference, day: null };
   const unavailable = await answerCurrentReport("Podsumuj raport", noDay, snapshot(noDay, { satellite: undefined }), "pl");
   assert.match(unavailable.answer, /Brak użytecznej.*Bez użytecznej.*5,4/s);
-  assert.deepEqual(unavailable.reportSources, ["ISRIC SoilGrids 250 m"]);
+  assert.deepEqual(targets(unavailable), [soilTarget]);
+});
+
+test("links only requested and available weather metrics, including genuine zero", async () => {
+  const tempOnly = snapshot(reference, { weather: { day: reference.day,
+    primary: weatherHistory(biala, [weatherDay("2026-08-25", null, 18)]) } });
+  assert.deepEqual(targets(await answerCurrentReport("How much rain fell beforehand?", reference, tempOnly, "en")), []);
+  assert.deepEqual(targets(await answerCurrentReport("What was the temperature?", reference, tempOnly, "en")), [weatherTarget("temperatureSeven")]);
+  const rainOnly = snapshot(reference, { weather: { day: reference.day,
+    primary: weatherHistory(biala, [weatherDay("2026-08-25", 0, null)]) } });
+  assert.deepEqual(targets(await answerCurrentReport("Jakie były opady przed obserwacją?", reference, rainOnly, "pl")), [weatherTarget("rainSeven"), weatherTarget("rainThirty")]);
+});
+
+test("does not link missing NDVI/NDMI or invent a comparison from a rejected day", async () => {
+  const partial = { ...selected, ndvi: null, ndmi: null };
+  const rejected = { ...historic, clearCoverage: 0.1 };
+  const report = snapshot(reference, { satellite: { ...stats, days: [newer, partial, rejected] } });
+  const summary = await answerCurrentReport("Podsumuj raport", reference, report, "pl");
+  assert.match(summary.answer, /NDVI Brak danych · NDWI -0,42 · NDMI Brak danych/);
+  assert.ok(targets(summary).includes(sentinelTarget));
+  assert.ok(!targets(summary).includes("report-ndvi-history"));
+  assert.deepEqual(targets(await answerCurrentReport("Jak zmienił się NDVI?", reference, report, "pl")), []);
+  assert.deepEqual(targets(await answerCurrentReport("What does NDMI indicate?", reference, report, "en")), []);
+});
+
+test("safe answers audit moisture, drought, disease, fertiliser, liming, suitability and yield", async () => {
+  for (const [question, locale, match] of [
+    ["Czy NDMI mierzy wilgotność gleby?", "pl", /nie mierzy wilgotności gleby/],
+    ["Czy to susza glebowa?", "pl", /nie rozstrzyga, czy występuje susza glebowa/],
+    ["Czy rośliny są chore?", "pl", /nie potwierdzają problemu z roślinnością/],
+    ["Ile nawozu zastosować?", "pl", /nie określa potrzeby ani dawki nawozu/],
+    ["Should I lime the soil?", "en", /cannot establish whether fertiliser or lime is needed/],
+    ["Jakiego plonu mogę się spodziewać?", "pl", /nie da się wiarygodnie przewidzieć plonu/],
+    ["Can I grow maize here?", "en", /maize/i],
+    ["Czy to pole nadaje się pod uprawy?", "pl", /nie wystarczą do oceny przydatności/],
+  ]) {
+    const result = await answerCurrentReport(question, reference, snapshot(), locale);
+    assert.match(result.answer, match, question);
+    assert.doesNotMatch(result.answer, /\d\s*(?:t|kg)\s*\/\s*ha/i);
+  }
 });
 
 test("preserves named crop, conservative unknown crop, and field verification answers without fetching", async (t) => {

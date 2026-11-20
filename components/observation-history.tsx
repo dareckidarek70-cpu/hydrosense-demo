@@ -4,6 +4,7 @@ import { useState } from "react";
 import { isUsableDay, type AreaStats, type Observation } from "@/lib/copernicus/observations";
 import { compareDays, describeHistory, indexKeys, indices, observedValue, type HistoryIndex } from "@/lib/copernicus/interpretation";
 import { DAY, inclusiveEnd } from "@/lib/copernicus/request";
+import { reportEvidenceId } from "@/lib/report-evidence-links";
 import { useLocale } from "./locale";
 
 const historyIndices = ["ndvi", "ndmi"] as const;
@@ -20,9 +21,11 @@ function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex })
     : [...new Set([start, end])];
   const summary = describeHistory(data.days, index);
   const readings = data.days.map((day) => ({ day, value: observedValue(day, index) }));
+  const target = index === "ndvi" && readings.some(({ value }) => value !== null) ? reportEvidenceId.ndviHistory : undefined;
 
   return (
-    <figure className="history-chart">
+    <figure className="history-chart" id={target} tabIndex={target ? -1 : undefined}
+      data-evidence-target={target ? "history" : undefined} aria-label={target ? t("historyIndex", { index: "NDVI" }) : undefined}>
       <h3>{t("historyIndex", { index: indices[index].label })}</h3>
       <svg className="history-plot" viewBox="0 0 467 132" role="img"
         aria-label={t("chartA11y", { index: indices[index].label })}>

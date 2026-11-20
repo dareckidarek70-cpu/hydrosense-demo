@@ -300,6 +300,16 @@ main { flex: 1; }
 .ai-panel button { min-height: 44px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--inset); color: var(--text); padding: 6px 8px; font-size: .83rem; }
 .ai-panel button:hover { background: var(--primary-wash); }
 .ai-answer { white-space: pre-wrap; padding: 9px; border: 1px solid var(--border); border-radius: 8px; }
+.ai-evidence { margin-top: 8px; }
+.ai-evidence ul { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 0; padding: 0; list-style: none; }
+.ai-evidence li { min-width: 0; font-size: .8rem; }
+@media screen {
+  [data-evidence-target] { scroll-margin-block-start: 7rem; }
+  [data-evidence-target]:focus { outline: 2px solid var(--primary); outline-offset: 3px; }
+}
+@media screen and (max-width: 414px) {
+  [data-evidence-target] { scroll-margin-block-start: 10.5rem; }
+}
 .loading-block { min-height: 30px; border-radius: 8px; background: var(--primary-wash); }
 .loading-block--tall { min-height: 70px; }
 .shimmer { animation: pulse 1.6s ease-in-out infinite alternate; }

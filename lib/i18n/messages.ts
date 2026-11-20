@@ -311,7 +311,7 @@ export const messages = {
   guidanceInitial: { en: "Ask what records and field checks to gather before evaluating a parcel.", pl: "Zapytaj, jakie dokumenty i sprawdzenia terenowe są potrzebne przed oceną działki." },
   chatReportInitial: { en: "Ask about the selected observation, prior weather, or soil data for this point.", pl: "Zapytaj o wybraną obserwację, wcześniejszą pogodę lub dane glebowe dla tego punktu." },
   chatReportPending: { en: "Updating the context for this observation. Previous answers are no longer shown.", pl: "Aktualizujemy kontekst tej obserwacji. Poprzednie odpowiedzi nie są już wyświetlane." },
-  chatReportSources: { en: "Report sources:", pl: "Źródła raportu:" },
+  chatReportSources: { en: "Verify in this report", pl: "Sprawdź w tym raporcie" },
   chatAskObservation: { en: "What does the observation show?", pl: "Co pokazuje obserwacja?" },
   chatAskNdvi: { en: "How has NDVI changed?", pl: "Jak zmienił się NDVI?" },
   chatAskRain: { en: "How much rain fell beforehand?", pl: "Jakie były opady przed obserwacją?" },
