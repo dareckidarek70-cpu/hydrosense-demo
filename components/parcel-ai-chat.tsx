@@ -5,20 +5,21 @@ import { useLocale } from "./locale";
 import type { ChatReference, ChatSource } from "@/lib/parcel-chat-contract";
 import { CHAT_CLIENT_TIMEOUT_MS, CHAT_QUESTION_LIMIT } from "@/lib/parcel-chat-limits";
 import { answerCurrentReport } from "@/lib/report-chat-answer";
-import type { ReportEvidenceLink } from "@/lib/report-evidence-links";
+import { reportEvidenceId, type ReportEvidenceLink } from "@/lib/report-evidence-links";
 import type { ReportChatSnapshot } from "@/lib/report-chat";
 
 const quickQuestions = ["q1", "q2", "q3", "q4", "q5"] as const;
 const reportQuestions = ["chatAskObservation", "chatAskNdvi", "chatAskRain", "chatAskSoil", "chatAskSynthesis"] as const;
 type Reply = { content: string; source?: ChatSource; references?: { label: string; url: string }[]; evidenceLinks?: readonly ReportEvidenceLink[] };
-type PanelProps = { reference: ChatReference; subject: string; report?: { identity: string; pending: boolean; snapshot: ReportChatSnapshot } };
+type PanelProps = { reference: ChatReference; subject: string; onNdviEvidence?: () => void;
+  report?: { identity: string; pending: boolean; snapshot: ReportChatSnapshot } };
 
 export function ParcelAiChat(props: PanelProps) {
   const { locale } = useLocale();
   return <ContextualChat key={JSON.stringify([locale, props.report?.identity ?? props.reference])} {...props} />;
 }
 
-function ContextualChat({ reference, subject, report }: PanelProps) {
+function ContextualChat({ reference, subject, report, onNdviEvidence }: PanelProps) {
   const { t, locale } = useLocale();
   const [draft, setDraft] = useState("");
   const [asked, setAsked] = useState("");
@@ -102,7 +103,9 @@ function ContextualChat({ reference, subject, report }: PanelProps) {
           <div className="ai-evidence">
             <p className="ai-label" id="chat-evidence-label">{t("chatReportSources")}</p>
             <ul aria-labelledby="chat-evidence-label">
-              {reply.evidenceLinks.map(({ target, label }) => <li key={target}><a href={`#${target}`}>{label}</a></li>)}
+              {reply.evidenceLinks.map(({ target, label }) => <li key={target}>
+                <a href={`#${target}`} onClick={target === reportEvidenceId.ndviHistory ? onNdviEvidence : undefined}>{label}</a>
+              </li>)}
             </ul>
           </div>
         ) : null}

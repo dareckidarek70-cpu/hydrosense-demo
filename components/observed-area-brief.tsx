@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { isUsableDay } from "@/lib/copernicus/observations";
+import type { IndexKey } from "@/lib/copernicus/interpretation";
 import { radiusAreaHectares, type ObservationWindow } from "@/lib/copernicus/request";
 import { ObservationDetails, useAreaObservation, type PointArea } from "./area-observation";
 import { ObservationHistory } from "./observation-history";
@@ -34,6 +35,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
   const { t, dateTime, num, coordinates } = useLocale();
   const [period, setPeriod] = useState(initialPeriod);
   const [selectedDay, setSelectedDay] = useState("");
+  const [historyIndex, setHistoryIndex] = useState<IndexKey>("ndvi");
   const { state, retry } = useAreaObservation(area, period);
   const data = state && "data" in state ? state.data : undefined;
   const day = data?.days.find((entry) => entry.from.slice(0, 10) === selectedDay && isUsableDay(entry))
@@ -83,17 +85,15 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
           {water ? <p>{t("waterDominates")}</p> : null}
         </section>
 
+        {data ? (
+          <section className="observation-section">
+            <ObservationHistory key={data.window.from + data.window.to} data={data} current={day}
+              index={historyIndex} onIndexChange={setHistoryIndex} onSelect={setSelectedDay} />
+          </section>
+        ) : null}
         <WeatherHistoryPanel weather={weather} reportPeriod={period} />
         {soilPreview ? <SoilPreviewPanel reading={soilPreview} /> : null}
-
-        {data ? (
-          <>
-            <section className="observation-section">
-              <ObservationHistory key={data.window.from + data.window.to} data={data} current={day} onSelect={setSelectedDay} />
-            </section>
-            <RadiusComparison area={area} period={period} data={data} />
-          </>
-        ) : null}
+        {data ? <RadiusComparison area={area} period={period} data={data} /> : null}
 
         <div className="observation-followup">
           <section className="observation-section">
@@ -115,6 +115,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
           </section>
         </div>
         {state ? <ParcelAiChat reference={{ mode: "observation", observation: chatReference }}
+          onNdviEvidence={() => setHistoryIndex("ndvi")}
           report={{
             identity: reportChatKey(chatReference, weather.key, weather.attempt, chatPending), pending: chatPending,
             snapshot: { reference: chatReference, satellite: data, soil: soilPreview, weather: chatWeather && {

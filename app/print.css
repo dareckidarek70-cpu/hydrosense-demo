@@ -75,7 +75,7 @@
   .layer-swatch { width: 2.2mm; height: 2.2mm; }
   .surface-share { padding-top: .8mm; }
 
-  .observation-history > p { font-size: 8.5pt; margin-bottom: .8mm; }
+  .observation-history > p, .observation-history > .print-only > p { font-size: 8.5pt; margin-bottom: .8mm; }
   .history-charts { margin-bottom: .9mm; break-inside: avoid; }
   .history-chart h3 { font-size: 9.5pt; margin-bottom: .55mm; }
   .history-plot { max-height: 25mm; }

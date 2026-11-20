@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { isUsableDay, type AreaStats, type Observation } from "@/lib/copernicus/observations";
-import { compareDays, describeHistory, indexKeys, indices, observedValue, type HistoryIndex } from "@/lib/copernicus/interpretation";
+import { compareDays, describeHistory, indexKeys, indices, observedValue, type HistoryIndex, type IndexKey } from "@/lib/copernicus/interpretation";
+import { observationDate } from "@/lib/copernicus/history-view";
 import { DAY, inclusiveEnd } from "@/lib/copernicus/request";
-import { reportEvidenceId } from "@/lib/report-evidence-links";
 import { useLocale } from "./locale";
+import { SentinelHistoryChart } from "./sentinel-history-chart";
 
-const historyIndices = ["ndvi", "ndmi"] as const;
-const dateKey = (day: Observation) => day.from.slice(0, 10);
+const printIndices = ["ndvi", "ndmi"] as const;
 
-function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex }) {
+function PrintHistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex }) {
   const { t, num, date, percent } = useLocale();
   const start = Date.parse(data.window.from);
   const end = Date.parse(data.window.to) - DAY;
@@ -21,11 +21,9 @@ function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex })
     : [...new Set([start, end])];
   const summary = describeHistory(data.days, index);
   const readings = data.days.map((day) => ({ day, value: observedValue(day, index) }));
-  const target = index === "ndvi" && readings.some(({ value }) => value !== null) ? reportEvidenceId.ndviHistory : undefined;
 
   return (
-    <figure className="history-chart" id={target} tabIndex={target ? -1 : undefined}
-      data-evidence-target={target ? "history" : undefined} aria-label={target ? t("historyIndex", { index: "NDVI" }) : undefined}>
+    <figure className="history-chart">
       <h3>{t("historyIndex", { index: indices[index].label })}</h3>
       <svg className="history-plot" viewBox="0 0 467 132" role="img"
         aria-label={t("chartA11y", { index: indices[index].label })}>
@@ -63,17 +61,25 @@ function HistoryChart({ data, index }: { data: AreaStats; index: HistoryIndex })
   );
 }
 
-export function ObservationHistory({ data, current, onSelect }: {
+export function ObservationHistory({ data, current, onSelect, index, onIndexChange }: {
   data: AreaStats;
   current: Observation | null;
   onSelect: (day: string) => void;
+  index: IndexKey;
+  onIndexChange: (index: IndexKey) => void;
 }) {
   const { t, num, date, percent } = useLocale();
   const [reference, setReference] = useState("");
   const usable = data.days.filter(isUsableDay);
-  const baseline = usable.find((day) => dateKey(day) === reference) ?? null;
+  const currentDay = current ? observationDate(current) : "";
+  const comparable = usable.filter(day => observationDate(day) !== currentDay);
+  const baseline = comparable.find(day => observationDate(day) === reference) ?? null;
   const dayCount = (Date.parse(data.window.to) - Date.parse(data.window.from)) / DAY;
   const unobserved = Math.max(0, dayCount - data.observedDays);
+  const select = (day: string) => {
+    if (day === reference) setReference("");
+    onSelect(day);
+  };
 
   return (
     <div className="observation-history">
@@ -81,30 +87,33 @@ export function ObservationHistory({ data, current, onSelect }: {
       <p>{t("dateRange", { from: date(data.window.from), to: date(inclusiveEnd(data.window)) })} · {t("historyCounts", { usable: usable.length, rejected: data.observedDays - usable.length, missing: unobserved })}</p>
       {data.observedDays > 0 ? (
         <>
-          <div className="history-charts">
-            {historyIndices.map((index) => <HistoryChart key={index} data={data} index={index} />)}
+          <SentinelHistoryChart data={data} current={current} index={index} onIndexChange={onIndexChange} onSelect={select} />
+          <div className="print-only">
+            <div className="history-charts">
+              {printIndices.map(key => <PrintHistoryChart key={key} data={data} index={key} />)}
+            </div>
+            <p>{t("chartGuide")}</p>
           </div>
-          <p>{t("chartGuide")}</p>
         </>
-      ) : null}
+      ) : <p className="status-note print-hidden">{t("noData")}</p>}
       {usable.length > 0 ? (
         <div className="observation-period print-hidden">
           <label>
             <span>{t("reportDay")}</span>
-            <select value={current ? dateKey(current) : ""} onChange={(event) => onSelect(event.target.value)}>
+            <select value={currentDay} onChange={(event) => select(event.target.value)}>
               {usable.map((day) => (
-                <option key={day.from} value={dateKey(day)}>
+                <option key={day.from} value={observationDate(day)}>
                   {t("cloudOption", { date: date(day.from), cloud: percent(day.cloudFraction) })}
                 </option>
               ))}
             </select>
           </label>
-          {usable.length > 1 ? (
+          {comparable.length ? (
             <label>
               <span>{t("compareDate")}</span>
-              <select value={reference} onChange={(event) => setReference(event.target.value)}>
+              <select value={baseline ? reference : ""} onChange={(event) => setReference(event.target.value)}>
                 <option value="">{t("chooseDate")}</option>
-                {usable.map((day) => <option key={day.from} value={dateKey(day)}>{date(day.from)}</option>)}
+                {comparable.map((day) => <option key={day.from} value={observationDate(day)}>{date(day.from)}</option>)}
               </select>
             </label>
           ) : null}
@@ -115,6 +124,7 @@ export function ObservationHistory({ data, current, onSelect }: {
           <h3>{t("differenceDates")}</h3>
           <p>{t("descriptiveChange", { from: date(baseline.from), to: date(current.from) })}</p>
           <p>{t("clear")}: {percent(baseline.clearCoverage)} → {percent(current.clearCoverage)} · {t("cloud")}: {percent(baseline.cloudFraction)} → {percent(current.cloudFraction)}</p>
+          <p className="print-hidden">{t("historyCompareLimits")}</p>
           <dl className="observation-deltas">
             {indexKeys.map((key) => {
               const delta = compareDays(baseline, current, key);

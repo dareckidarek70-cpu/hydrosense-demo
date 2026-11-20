@@ -243,6 +243,55 @@ main { flex: 1; }
 .history-chart figcaption { min-height: 2.2em; font-size: .78rem; color: var(--muted); }
 .history-plot { display: block; width: 100%; height: auto; }
 .history-plot text { font: 8px var(--font-mono); fill: var(--muted); }
+.sentinel-history { --history-accent: #16745a; margin-top: 12px; min-width: 0; }
+.sentinel-history[data-history-series="ndwi"] { --history-accent: #286d87; }
+.sentinel-history[data-history-series="ndmi"] { --history-accent: #456c82; }
+.sentinel-history-head, .sentinel-series-caption, .sentinel-inspector {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px;
+}
+.sentinel-history-head { margin-bottom: 8px; }
+.sentinel-history-head > p { font-size: .82rem; color: var(--muted); }
+.sentinel-series { display: inline-flex; gap: 3px; padding: 3px; background: var(--inset); border: 1px solid var(--border); border-radius: 9px; }
+.sentinel-series button { min-height: 38px; padding: 5px 13px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--body); font: 650 .83rem var(--font-mono); }
+.sentinel-series button:hover { background: var(--surface); }
+.sentinel-series button[aria-pressed="true"] { color: var(--history-accent); border-color: var(--history-accent); background: var(--surface); font-weight: 800; }
+.sentinel-series-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--inset); }
+.sentinel-series-caption h3 { font: 750 .97rem var(--font-mono); color: var(--history-accent); }
+.sentinel-series-caption h3 span { margin-inline-start: 6px; font: 650 .88rem var(--font-display); color: var(--text); }
+.sentinel-report-day { font-size: .78rem; font-weight: 650; color: var(--body); }
+.sentinel-graph { margin-top: 8px; }
+.sentinel-axis-dates { margin-inline: 28px 10px; }
+.sentinel-plot { position: relative; height: clamp(132px, 16vw, 184px); cursor: crosshair; }
+.sentinel-plot:focus-visible { outline: 2px solid var(--primary); outline-offset: 5px; border-radius: 3px; }
+.sentinel-plot-drawing { position: absolute; inset-block: 0; inset-inline: 28px 10px; pointer-events: none; }
+.sentinel-axis-line, .sentinel-status-rail { position: absolute; inset-inline: 0; border-top: 1px solid var(--border); }
+.sentinel-axis-line[data-zero="true"] { border-color: var(--control-border); }
+.sentinel-axis-line b { position: absolute; right: calc(100% + 8px); transform: translateY(-52%); font: .73rem var(--font-mono); color: var(--muted); }
+.sentinel-status-rail { top: 92%; border-top-style: dotted; }
+.sentinel-report-line, .sentinel-inspected-line { position: absolute; top: 4%; bottom: 3%; border-left: 1px solid var(--primary); }
+.sentinel-inspected-line { border-left: 1px dashed var(--muted); }
+.sentinel-mark { position: absolute; z-index: 1; transform: translate(-50%, -50%); width: 7px; height: 7px; border-radius: 50%; background: var(--history-accent); }
+.sentinel-mark[data-status="rejected"] { width: auto; height: auto; color: var(--muted); background: none; font: 700 .8rem/1 var(--font-mono); }
+.sentinel-mark[data-status="unavailable"] { border-radius: 0; transform: translate(-50%, -50%) rotate(45deg); border: 1px solid var(--muted); background: var(--surface); }
+.sentinel-mark[data-selected="true"], .sentinel-mark[data-inspected="true"] { z-index: 2; outline: 1px solid var(--text); outline-offset: 2px; }
+.sentinel-mark[data-selected="true"][data-status="reading"] { width: 9px; height: 9px; }
+.sentinel-axis-dates { display: flex; justify-content: space-between; gap: 4px; font: .66rem var(--font-mono); color: var(--muted); }
+.sentinel-axis-dates[data-single="true"] { justify-content: center; }
+.sentinel-inspector { justify-content: flex-start; margin-top: 10px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: .82rem; color: var(--text); }
+.sentinel-inspector-status, .sentinel-inspector small { color: var(--muted); }
+.sentinel-inspector-status { margin-inline-start: 4px; }
+.sentinel-inspector-value { color: var(--history-accent); font-family: var(--font-mono); }
+.sentinel-chart-key { display: flex; flex-wrap: wrap; gap: 3px 12px; list-style: none; padding: 0; margin-top: 8px; color: var(--body); font-size: .73rem; }
+.sentinel-chart-key li { display: inline-flex; align-items: center; gap: 4px; }
+.sentinel-chart-key i { display: inline-flex; align-items: center; justify-content: center; min-width: 9px; font: 700 .85rem var(--font-mono); }
+.sentinel-chart-key .history-key-dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--history-accent); }
+.sentinel-instruction, .sentinel-reading-guide { margin-top: 7px; font-size: .78rem; color: var(--muted); }
+.sentinel-reading-guide summary { cursor: pointer; font-weight: 700; color: var(--text); }
+.sentinel-reading-guide p { margin-top: 5px; max-width: 78ch; }
+@media screen and (max-width: 414px) {
+  .sentinel-series-card { padding: 10px; }
+  .sentinel-inspector { gap: 3px 9px; }
+}
 .observation-date-comparison { margin-top: 9px; padding: 12px; background: var(--inset); border: 1px solid var(--border); border-radius: 8px; }
 .observation-date-comparison h3 { font-size: 1rem; }
 .observation-date-comparison p { color: var(--body); font-size: .83rem; margin-top: 4px; }
