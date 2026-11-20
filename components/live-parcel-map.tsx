@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
+import { Crosshair, LoaderCircle } from "lucide-react";
+import type { Observation } from "@/lib/copernicus/observations";
+import { inclusiveEnd, observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
+import { SatelliteLegend } from "./satellite-legend";
+import { useLocale } from "./locale";
+import { responseFailure } from "@/lib/copernicus/errors";
+import type { MessageKey } from "@/lib/i18n";
+import { MapRasterCache } from "@/lib/map-raster-cache";
+import { rasterZoom, visibleRasterFraction } from "@/lib/raster-viewport";
 import {
   Circle,
-  ImageOverlay,
   MapContainer,
   Marker,
   Polygon,
   Popup,
   TileLayer,
+  ZoomControl,
   useMap,
   useMapEvents,
 } from "react-leaflet";
@@ -19,110 +28,245 @@ type Parcel = {
   id: string;
   label: string;
   center: [number, number];
-  polygon?: [number, number][];
-  areaHectares?: number;
+  polygon: [number, number][];
+  areaHectares: number;
 };
 
 type LiveParcelMapProps = {
-  parcels?: Parcel[];
+  parcels: Parcel[];
   selectedParcelId: string;
   onSelect: (id: string) => void;
-  selectionMode?: "demo" | "custom";
   pickedPoint?: [number, number] | null;
-  onPickPoint?: (point: [number, number]) => void;
+  onPickPoint: (point: [number, number]) => void;
   analysisRadius?: 500 | 1000;
+  observation?: Observation | null;
+  observationPending?: boolean;
+  referenceWindow?: ObservationWindow;
 };
 
 type LayerMode = "BASEMAP" | "TRUE_COLOR" | "NDVI" | "NDWI" | "MOISTURE_INDEX";
 
 const markerIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconUrl: "/leaflet-marker-1.9.4.png",
+  shadowUrl: "/leaflet-marker-shadow-1.9.4.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
 
+function normalizedPoint(latLng: L.LatLng): [number, number] {
+  const point = latLng.wrap();
+  return [Number(point.lat.toFixed(6)), Number(point.lng.toFixed(6))];
+}
+
 function MapClickHandler({
   onPickPoint,
 }: {
-  onPickPoint?: (point: [number, number]) => void;
+  onPickPoint: (point: [number, number]) => void;
 }) {
   useMapEvents({
     click(event) {
-      if (!onPickPoint) return;
-      onPickPoint([event.latlng.lat, event.latlng.lng]);
+      onPickPoint(normalizedPoint(event.latlng));
     },
   });
 
   return null;
 }
 
-function SatelliteOverlay({
-  selectedLayer,
-}: {
+function PickMapCenter({ onPickPoint }: { onPickPoint: (point: [number, number]) => void }) {
+  const map = useMap();
+  const { t } = useLocale();
+  return (
+    <div className="map-center-control" ref={(control) => { if (control) L.DomEvent.disableClickPropagation(control); }}>
+      <button type="button" className="button-secondary" onClick={() => onPickPoint(normalizedPoint(map.getCenter()))}>
+        <Crosshair size={16} aria-hidden="true" /> {t("useMapCenter")}
+      </button>
+    </div>
+  );
+}
+
+function SyncMapSize() {
+  const map = useMap();
+  useEffect(() => {
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => map.invalidateSize({ animate: false }));
+    });
+    observer.observe(map.getContainer());
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [map]);
+  return null;
+}
+
+function SelectionFocus({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap();
+  useEffect(() => { map.panTo([lat, lng], { animate: false }); }, [lat, lng, map]);
+  return null;
+}
+
+function SatelliteOverlay({ selectedLayer, from, to, onStatus, cache }: {
   selectedLayer: Exclude<LayerMode, "BASEMAP">;
+  from: string;
+  to: string;
+  onStatus: (status: MessageKey, coverage?: number) => void;
+  cache: MapRasterCache;
 }) {
   const map = useMap();
-  const [overlayUrl, setOverlayUrl] = useState<string | null>(null);
-  const [overlayBounds, setOverlayBounds] = useState<
-    [[number, number], [number, number]] | null
-  >(null);
-
-  const refreshOverlay = () => {
-    const bounds = map.getBounds();
-    const size = map.getSize();
-
-    const minLng = bounds.getWest();
-    const minLat = bounds.getSouth();
-    const maxLng = bounds.getEast();
-    const maxLat = bounds.getNorth();
-
-    const width = Math.max(512, Math.min(1400, Math.round(size.x)));
-    const height = Math.max(512, Math.min(1400, Math.round(size.y)));
-
-    const from = "2026-04-01T00:00:00Z";
-    const to = "2026-04-30T23:59:59Z";
-
-    const url =
-      `/api/copernicus/layer?minLng=${minLng}&minLat=${minLat}&maxLng=${maxLng}&maxLat=${maxLat}` +
-      `&width=${width}&height=${height}&layer=${selectedLayer}&from=${encodeURIComponent(
-        from
-      )}&to=${encodeURIComponent(to)}`;
-
-    setOverlayUrl(url);
-    setOverlayBounds([
-      [minLat, minLng],
-      [maxLat, maxLng],
-    ]);
-  };
 
   useEffect(() => {
-    refreshOverlay();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLayer]);
+    let disposed = false;
+    let controller: AbortController | undefined;
+    let requested: string | undefined;
+    let overlay: L.ImageOverlay | undefined;
 
-  useMapEvents({
-    moveend() {
-      refreshOverlay();
-    },
-    zoomend() {
-      refreshOverlay();
-    },
-    resize() {
-      refreshOverlay();
-    },
-  });
+    async function show(key: string, bounds: L.LatLngBounds) {
+      const request = new AbortController();
+      controller = request;
+      const { signal } = request;
+      let pendingUrl: string | undefined;
+      let layer: L.ImageOverlay | undefined;
+      const cached = cache.get(key);
+      const deadline = setTimeout(() => {
+        if (signal.aborted) return;
+        request.abort();
+        layer?.remove();
+        requested = undefined;
+        onStatus("timeout");
+      }, 24_000);
 
-  if (!overlayUrl || !overlayBounds) return null;
+      try {
+        let blob: Blob | undefined;
+        if (!cached) {
+          const response = await fetch(`/api/copernicus/layer?${key}`, { signal });
+          if (!response.ok) {
+            const code = await responseFailure(response);
+            if (!signal.aborted) {
+              requested = undefined;
+              onStatus(code);
+            }
+            return;
+          }
+          const contentType = response.headers.get("Content-Type")?.split(";")[0];
+          if (contentType !== "image/png" && contentType !== "image/webp") {
+            if (!signal.aborted) {
+              requested = undefined;
+              onStatus("mapInvalidImage");
+            }
+            return;
+          }
+          blob = await response.blob();
+          if (signal.aborted) return;
+          pendingUrl = URL.createObjectURL(blob);
+        }
 
-  return (
-    <ImageOverlay
-      url={overlayUrl}
-      bounds={overlayBounds}
-      opacity={0.72}
-      zIndex={20}
-    />
-  );
+        const url = cached ?? pendingUrl;
+        if (!url) return;
+        layer = L.imageOverlay(url, bounds, { opacity: 0, zIndex: 20 }).addTo(map);
+        overlay = layer;
+        const image = layer.getElement();
+        const decodeStart = performance.now();
+        try {
+          if (!image) throw new Error("Missing overlay image");
+          await image.decode();
+        } catch {
+          if (!signal.aborted) {
+            if (cached) cache.delete(key);
+            layer.remove();
+            requested = undefined;
+            onStatus("mapInvalidImage");
+          }
+          return;
+        }
+        if (signal.aborted) return;
+        const decodeMs = Math.round(performance.now() - decodeStart);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) throw new Error("Missing raster canvas");
+        ctx.drawImage(image, 0, 0);
+        const coverage = visibleRasterFraction(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
+        if (coverage === 0) {
+          layer.remove();
+          requested = undefined;
+          onStatus("mapNoPixels");
+          return;
+        }
+        if (blob) {
+          cache.store(key, blob, Date.now(), url);
+          pendingUrl = undefined;
+        }
+
+        layer.setOpacity(0.9);
+        image.dataset.rasterState = "ready";
+        image.dataset.rasterDecodeMs = String(decodeMs);
+        onStatus("mapReady", coverage);
+      } catch {
+        if (!signal.aborted) {
+          layer?.remove();
+          requested = undefined;
+          onStatus("mapFallback");
+        }
+      } finally {
+        clearTimeout(deadline);
+        if (pendingUrl) URL.revokeObjectURL(pendingUrl);
+      }
+    }
+
+    function refresh(fit: boolean) {
+      if (disposed) return;
+      const bounds = map.getBounds();
+      const { x, y } = map.getSize();
+      const west = bounds.getWest(), south = bounds.getSouth(), east = bounds.getEast(), north = bounds.getNorth();
+      const longitudeSpan = east - west, latitudeSpan = north - south;
+      if (fit && x > 0 && y > 0) {
+        const zoom = map.getZoom();
+        const target = rasterZoom(zoom, Math.min(18, map.getMaxZoom()), longitudeSpan, latitudeSpan);
+        if (target > zoom) {
+          map.setZoom(target, { animate: false });
+          return;
+        }
+      }
+      const withinLimits = longitudeSpan <= 1 && latitudeSpan <= 1 && west >= -180 && east <= 180
+        && south >= -84 && north <= 84 && x > 0 && y > 0;
+      const scale = Math.min(1, 768 / Math.max(x, y));
+      const key = withinLimits ? new URLSearchParams({
+        minLng: west.toFixed(6), minLat: south.toFixed(6),
+        maxLng: east.toFixed(6), maxLat: north.toFixed(6),
+        width: String(Math.max(64, Math.round(x * scale))),
+        height: String(Math.max(64, Math.round(y * scale))),
+        layer: selectedLayer, from, to, format: "webp",
+      }).toString() : "";
+
+      if (key === requested) return;
+      requested = key;
+      controller?.abort();
+      overlay?.remove();
+      if (key) {
+        onStatus("mapRequest");
+        void show(key, bounds);
+      } else {
+        onStatus("zoomMap");
+      }
+    }
+
+    const onMove = () => refresh(false);
+    const onResize = () => refresh(true);
+    map.on("moveend", onMove).on("resize", onResize);
+    queueMicrotask(onResize);
+    return () => {
+      disposed = true;
+      map.off("moveend", onMove).off("resize", onResize);
+      controller?.abort();
+      overlay?.remove();
+    };
+  }, [map, selectedLayer, from, to, onStatus, cache]);
+
+  return null;
 }
 
 function LayerControl({
@@ -132,277 +276,109 @@ function LayerControl({
   selectedLayer: LayerMode;
   onChange: (layer: LayerMode) => void;
 }) {
-  const buttonStyle = (active: boolean): React.CSSProperties => ({
-    padding: "10px 14px",
-    borderRadius: "999px",
-    border: "1px solid rgba(17,49,34,0.12)",
-    background: active ? "#164b35" : "rgba(255,255,255,0.92)",
-    color: active ? "#ffffff" : "#173728",
-    fontWeight: 600,
-    fontSize: "0.95rem",
-    cursor: "pointer",
-    boxShadow: active ? "0 8px 18px rgba(22,75,53,0.18)" : "none",
-    pointerEvents: "auto",
-  });
+  const { t } = useLocale();
+  const layers = [
+    ["BASEMAP", t("baseMap")], ["TRUE_COLOR", t("trueColor")],
+    ["NDVI", "NDVI"], ["NDWI", "NDWI"], ["MOISTURE_INDEX", "NDMI"],
+  ] as const;
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 18,
-        left: 18,
-        zIndex: 500,
-        display: "flex",
-        gap: 8,
-        flexWrap: "wrap",
-        maxWidth: "calc(100% - 36px)",
-        pointerEvents: "none",
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => onChange("BASEMAP")}
-        style={buttonStyle(selectedLayer === "BASEMAP")}
-      >
-        Base map
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("TRUE_COLOR")}
-        style={buttonStyle(selectedLayer === "TRUE_COLOR")}
-      >
-        True Color
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("NDVI")}
-        style={buttonStyle(selectedLayer === "NDVI")}
-      >
-        NDVI
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("NDWI")}
-        style={buttonStyle(selectedLayer === "NDWI")}
-      >
-        NDWI
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("MOISTURE_INDEX")}
-        style={buttonStyle(selectedLayer === "MOISTURE_INDEX")}
-      >
-        Moisture Index
-      </button>
+    <div className="satellite-layer-toolbar" role="group" aria-label={t("mapLayer")}>
+      {layers.map(([id, name]) => (
+        <button key={id} type="button" onClick={() => onChange(id)} aria-pressed={selectedLayer === id}>
+          {name}
+        </button>
+      ))}
     </div>
   );
 }
 
-function MapSourceNote({ selectedLayer }: { selectedLayer: LayerMode }) {
-  const text =
-    selectedLayer === "BASEMAP"
-      ? "Base map view"
-      : `Satellite layer: ${selectedLayer.replace("_", " ")}`;
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: 18,
-        bottom: 18,
-        zIndex: 500,
-        padding: "8px 12px",
-        borderRadius: "999px",
-        background: "rgba(255,255,255,0.92)",
-        border: "1px solid rgba(17,49,34,0.1)",
-        fontSize: "0.9rem",
-        color: "#173728",
-        boxShadow: "0 8px 18px rgba(22,75,53,0.08)",
-        pointerEvents: "none",
-      }}
-    >
-      {text}
-    </div>
-  );
-}
-
-function LayerLegend({ selectedLayer }: { selectedLayer: LayerMode }) {
-  if (selectedLayer === "BASEMAP" || selectedLayer === "TRUE_COLOR") {
-    return null;
-  }
-
-  const legend =
-    selectedLayer === "NDVI"
-      ? {
-          title: "NDVI",
-          subtitle: "Vegetation condition and biomass intensity",
-          labels: [
-            "Barren land, sand, snow",
-            "Shrub, grassland",
-            "High vegetation level / tropical rainforest",
-          ],
-          min: "-1.0",
-          max: "1.0",
-          gradientClass: "legend-gradient--ndvi",
-        }
-      : selectedLayer === "NDWI"
-      ? {
-          title: "NDWI",
-          subtitle: "Water presence and surface moisture response",
-          labels: ["Very low", "Moderate", "Very high"],
-          min: "0.0",
-          max: "1.0",
-          gradientClass: "legend-gradient--ndwi",
-        }
-      : {
-          title: "Moisture Index",
-          subtitle: "Relative dryness and moisture interpretation",
-          labels: ["Extremely dry", "Neutral", "Very moist"],
-          min: "0.0",
-          max: "1.0",
-          gradientClass: "legend-gradient--moisture",
-        };
-
-  return (
-    <div className="map-layer-legends map-layer-legends--single">
-      <div className="map-layer-legends__header">
-        <div>
-          <h3>Map layer legend</h3>
-          <p>Interpreting satellite-derived indices</p>
-        </div>
-
-        <span>{legend.title}</span>
-      </div>
-
-      <div className="legend-card legend-card--active">
-        <div className="legend-title">{legend.title}</div>
-        <p className="legend-subtitle">{legend.subtitle}</p>
-
-        <div className="legend-labels">
-          <span>{legend.labels[0]}</span>
-          <span>{legend.labels[1]}</span>
-          <span>{legend.labels[2]}</span>
-        </div>
-
-        <div className={`legend-gradient ${legend.gradientClass}`} />
-
-        <div className="legend-scale-values">
-          <span>{legend.min}</span>
-          <span>{legend.max}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function LiveParcelMap({
-  parcels = [],
+const LiveParcelMap = memo(function LiveParcelMap({
+  parcels,
   selectedParcelId,
   onSelect,
-  selectionMode = "demo",
   pickedPoint = null,
   onPickPoint,
   analysisRadius = 500,
+  observation = null,
+  observationPending = false,
+  referenceWindow,
 }: LiveParcelMapProps) {
+  const { t, locale, date, coordinates, num } = useLocale();
   const [selectedLayer, setSelectedLayer] = useState<LayerMode>("BASEMAP");
-
-  const safeParcels = Array.isArray(parcels)
-    ? parcels.filter(
-        (parcel) =>
-          parcel &&
-          typeof parcel.id === "string" &&
-          Array.isArray(parcel.center) &&
-          parcel.center.length === 2 &&
-          typeof parcel.center[0] === "number" &&
-          typeof parcel.center[1] === "number"
-      )
-    : [];
+  const [overlayStatus, setOverlayStatus] = useState<MessageKey | null>(null);
+  const [pixelCoverage, setPixelCoverage] = useState<number>();
+  const showOverlayStatus = useCallback((status: MessageKey, coverage?: number) => {
+    setOverlayStatus(status);
+    setPixelCoverage(coverage);
+  }, []);
+  const [layerAttempt, setLayerAttempt] = useState(0);
+  const [defaultWindow] = useState(() => observationWindow());
+  const [cache] = useState(() => new MapRasterCache());
+  useEffect(() => () => cache.clear(), [cache]);
+  const window = observation ?? referenceWindow ?? defaultWindow;
 
   const selectedParcel =
-    safeParcels.find((parcel) => parcel.id === selectedParcelId) ??
-    safeParcels[0] ??
+    parcels.find((parcel) => parcel.id === selectedParcelId) ??
+    parcels[0] ??
     null;
 
   const fallbackCenter: [number, number] = [45.4372, 12.3346];
   const mapCenter = pickedPoint ?? selectedParcel?.center ?? fallbackCenter;
 
-  const selectedOverlayLayer = useMemo(() => {
-    if (selectedLayer === "BASEMAP") return null;
-    return selectedLayer;
-  }, [selectedLayer]);
+  const selectedOverlayLayer = selectedLayer === "BASEMAP" ? null : selectedLayer;
+  const canRetry = overlayStatus && !["mapRequest", "mapReady", "zoomMap", "mapNoPixels"].includes(overlayStatus);
 
   return (
-    <div
-      style={{
-        position: "relative",
-        zIndex: 0,
-        minHeight: "560px",
-        borderRadius: "28px",
-        overflow: "hidden",
-        border: "1px solid rgba(17,49,34,0.12)",
-        boxShadow: "0 22px 64px rgba(19, 44, 30, 0.1)",
-        background: "#f6faf4",
-      }}
-    >
-      <LayerControl selectedLayer={selectedLayer} onChange={setSelectedLayer} />
-      {(selectedLayer === "BASEMAP" || selectedLayer === "TRUE_COLOR") && (
-  <MapSourceNote selectedLayer={selectedLayer} />
-)}
+    <div className="map-shell">
+      <LayerControl selectedLayer={selectedLayer} onChange={(layer) => {
+        if (layer !== selectedLayer) setOverlayStatus(null);
+        setSelectedLayer(layer);
+      }} />
 
       <MapContainer
         center={mapCenter}
         zoom={10}
+        zoomControl={false}
         scrollWheelZoom={false}
-        style={{ height: "560px", width: "100%" }}
- >     
-<TileLayer
-  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-/>
+        trackResize={false}
+        className="map-canvas"
+      >
+        <SyncMapSize />
+        <ZoomControl key={locale} zoomInTitle={t("zoomIn")} zoomOutTitle={t("zoomOut")} />
+        <TileLayer
+          attribution={locale === "pl" ? '© autorzy <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-
-        {selectedOverlayLayer ? (
-          <SatelliteOverlay selectedLayer={selectedOverlayLayer} />
+        {selectedOverlayLayer && !observationPending ? (
+          <SatelliteOverlay
+            key={`${selectedOverlayLayer}:${window.from}:${window.to}:${layerAttempt}`}
+            selectedLayer={selectedOverlayLayer}
+            from={window.from}
+            to={window.to}
+            onStatus={showOverlayStatus}
+            cache={cache}
+          />
         ) : null}
 
         <MapClickHandler onPickPoint={onPickPoint} />
+        <PickMapCenter onPickPoint={onPickPoint} />
+        <SelectionFocus lat={mapCenter[0]} lng={mapCenter[1]} />
 
-        {safeParcels.map((parcel) => {
-          const hasPolygon =
-            Array.isArray(parcel.polygon) &&
-            parcel.polygon.length >= 3 &&
-            parcel.polygon.every(
-              (point) =>
-                Array.isArray(point) &&
-                point.length === 2 &&
-                typeof point[0] === "number" &&
-                typeof point[1] === "number"
-            );
-
-          if (!hasPolygon) return null;
-
+        {parcels.map((parcel) => {
           const isSelected = parcel.id === selectedParcelId;
 
           return (
             <Polygon
               key={parcel.id}
-              positions={parcel.polygon as [number, number][]}
+              bubblingMouseEvents={false}
+              positions={parcel.polygon}
               pathOptions={{
-                color: isSelected ? "#164b35" : "#6a8f75",
+                color: isSelected ? "#1d4ed8" : "#64748b",
                 weight: isSelected ? 3 : 2,
-                fillColor: isSelected ? "#87c38f" : "#b8d6ba",
-                fillOpacity:
-                  selectionMode === "custom"
-                    ? isSelected
-                      ? 0.16
-                      : 0.08
-                    : isSelected
-                    ? 0.28
-                    : 0.12,
+                fillColor: isSelected ? "#60a5fa" : "#94a3b8",
+                fillOpacity: isSelected ? (pickedPoint ? 0.16 : 0.28) : (pickedPoint ? 0.08 : 0.12),
               }}
               eventHandlers={{
                 click: () => onSelect(parcel.id),
@@ -411,19 +387,19 @@ export function LiveParcelMap({
               <Popup>
                 <strong>{parcel.label}</strong>
                 <br />
-                {parcel.areaHectares ?? "—"} hectares
+                {num(parcel.areaHectares)} ha
               </Popup>
             </Polygon>
           );
         })}
 
-        {selectionMode === "custom" && pickedPoint ? (
+        {pickedPoint ? (
           <>
-            <Marker position={pickedPoint} icon={markerIcon}>
+            <Marker key={locale} position={pickedPoint} icon={markerIcon} alt={t("point")}>
               <Popup>
-                Selected point
+                {t("point")}
                 <br />
-                {pickedPoint[0].toFixed(5)}, {pickedPoint[1].toFixed(5)}
+                {coordinates(pickedPoint)}
               </Popup>
             </Marker>
 
@@ -431,24 +407,41 @@ export function LiveParcelMap({
               center={pickedPoint}
               radius={analysisRadius}
               pathOptions={{
-                color: "#164b35",
-                fillColor: "#87c38f",
+                color: "#1d4ed8",
+                fillColor: "#67e8f9",
                 fillOpacity: 0.18,
                 weight: 2,
               }}
             />
           </>
         ) : selectedParcel ? (
-          <Marker position={selectedParcel.center} icon={markerIcon}>
+          <Marker key={`${locale}-${selectedParcel.id}`} position={selectedParcel.center} icon={markerIcon} alt={selectedParcel.label}>
             <Popup>{selectedParcel.label}</Popup>
           </Marker>
         ) : null}
       </MapContainer>
 
-      <LayerLegend selectedLayer={selectedLayer} />
+      {selectedOverlayLayer ? (
+        <>
+          <p className="satellite-layer-status" role="status">
+            {observationPending || overlayStatus === "mapRequest" ? <LoaderCircle className="loading-icon" size={15} aria-hidden="true" /> : null}
+            <span>{observationPending ? t("findingDate") : (
+              <>Sentinel-2 L2A · {observation ? t("overlayDay", { date: date(window.from) }) :
+                t("referenceMosaic", { from: date(window.from), to: date(inclusiveEnd(window)) })}
+              {overlayStatus === "mapReady" && pixelCoverage !== undefined
+                ? ` · ${t(pixelCoverage < 0.05 ? "mapSparsePixels" : "mapPixelCoverage", { coverage: num(pixelCoverage * 100, 2) })} ${t("mapReady")}`
+                : overlayStatus ? ` · ${t(overlayStatus)}` : ""}</>
+            )}</span>
+          </p>
+          {!observationPending && canRetry ? <button type="button" className="button-secondary satellite-layer-retry"
+            onClick={() => { setOverlayStatus("mapRequest"); setLayerAttempt((attempt) => attempt + 1); }}>
+            {t("mapRetry")}
+          </button> : null}
+          <SatelliteLegend key={selectedOverlayLayer} layer={selectedOverlayLayer} />
+        </>
+      ) : null}
     </div>
   );
-}
+});
 
 export default LiveParcelMap;
-// Force redeploy after legend layout update

@@ -1,156 +1,128 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useLocale } from "./locale";
+import type { ChatReference, ChatSource } from "@/lib/parcel-chat-contract";
+import { CHAT_CLIENT_TIMEOUT_MS, CHAT_QUESTION_LIMIT } from "@/lib/parcel-chat-limits";
+import { answerCurrentReport } from "@/lib/report-chat-answer";
+import { reportEvidenceId, type ReportEvidenceLink } from "@/lib/report-evidence-links";
+import type { ReportChatSnapshot } from "@/lib/report-chat";
 
-type Props = {
-  initialAnswer: string;
-  isWaterArea?: boolean;
-};
+const quickQuestions = ["q1", "q2", "q3", "q4", "q5"] as const;
+const reportQuestions = ["chatAskObservation", "chatAskNdvi", "chatAskRain", "chatAskSoil", "chatAskSynthesis"] as const;
+type Reply = { content: string; source?: ChatSource; references?: { label: string; url: string }[]; evidenceLinks?: readonly ReportEvidenceLink[] };
+type PanelProps = { reference: ChatReference; subject: string; onNdviEvidence?: () => void;
+  report?: { identity: string; pending: boolean; snapshot: ReportChatSnapshot } };
 
-const normalQuestions = [
-  "Is this parcel suitable for irrigation investment?",
-  "What type of irrigation would be the most optimal?",
-  "Which crops look most profitable for this parcel?",
-  "What are the most common risks for plants in this environment?",
-  "What should be verified before investment?",
-];
+export function ParcelAiChat(props: PanelProps) {
+  const { locale } = useLocale();
+  return <ContextualChat key={JSON.stringify([locale, props.report?.identity ?? props.reference])} {...props} />;
+}
 
-const waterQuestions = [
-  "Why are agricultural indicators not calculated here?",
-  "What should I select instead?",
-  "Can HydroSense analyse land near this water area?",
-  "What should be checked before choosing a nearby parcel?",
-];
-
-export function ParcelAiChat({ initialAnswer, isWaterArea = false }: Props) {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState(initialAnswer);
+function ContextualChat({ reference, subject, report, onNdviEvidence }: PanelProps) {
+  const { t, locale } = useLocale();
+  const [draft, setDraft] = useState("");
+  const [asked, setAsked] = useState("");
+  const [reply, setReply] = useState<Reply>();
   const [loading, setLoading] = useState(false);
+  const active = useRef<AbortController | null>(null);
 
-  async function askAI(q: string) {
-    if (!q.trim()) return;
+  useEffect(() => () => {
+    const current = active.current;
+    active.current = null;
+    current?.abort();
+  }, []);
 
+  async function ask(value: string) {
+    const question = value.trim();
+    if (report?.pending || active.current || !question || question.length > CHAT_QUESTION_LIMIT) return;
+    const controller = new AbortController();
+    active.current = controller;
+    const deadline = setTimeout(() => controller.abort(), CHAT_CLIENT_TIMEOUT_MS);
     setLoading(true);
-    setQuestion(q);
-
+    setAsked(question);
+    setReply(undefined);
     try {
-      const res = await fetch("/api/ai/parcel-chat", {
+      if (reference.mode === "observation") {
+        if (!report) return;
+        const data = await answerCurrentReport(question, reference.observation, report.snapshot, locale);
+        if (active.current === controller) setReply({ content: data.answer, source: data.source,
+          references: data.references, evidenceLinks: data.evidenceLinks });
+        return;
+      }
+      const response = await fetch("/api/ai/parcel-chat", {
         method: "POST",
-        body: JSON.stringify({
-          question: q,
-          context: isWaterArea ? "water-area" : "agricultural-parcel",
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...reference, question, locale }),
+        signal: controller.signal,
       });
-
-      const data = await res.json();
-      setAnswer(data.answer ?? initialAnswer);
-    } catch (e) {
-      console.error(e);
-      setAnswer(
-        isWaterArea
-          ? "This point appears to be located on a water surface. HydroSense does not calculate agricultural indicators for open water areas. Please select a land parcel or agricultural area nearby."
-          : "The AI answer could not be generated right now. Please try again or verify the parcel manually."
-      );
+      const data: { answer?: string; source?: ChatSource; error?: string; references?: Reply["references"] } = await response.json();
+      if (active.current !== controller) return;
+      if (response.ok && typeof data.answer === "string" && (data.source === "rules" || data.source === "model")) {
+        setReply({ content: data.answer, source: data.source, references: data.references });
+      } else {
+        setReply({ content: data.error ?? t("guidanceError") });
+      }
+    } catch {
+      if (active.current === controller) setReply({ content: t("guidanceError") });
+    } finally {
+      clearTimeout(deadline);
+      if (active.current === controller) {
+        active.current = null;
+        setLoading(false);
+      }
     }
-
-    setLoading(false);
   }
 
-  const questions = isWaterArea ? waterQuestions : normalQuestions;
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void ask(draft);
+  }
 
   return (
-    <div className="ai-panel animate-ai">
-      {/* HEADER */}
-      <div className="ai-header">
+    <section className="ai-panel print-hidden" aria-labelledby="parcel-chat-title">
+      <header className="ai-header">
         <div>
-          <p className="ai-label">
-            {isWaterArea ? "LOCATION CHECK" : "AI-POWERED ANALYSIS"}
-          </p>
-          <h2>{isWaterArea ? "Selection Guidance" : "AI Expert Insight"}</h2>
+          <p className="ai-label">{t("diligence")}</p>
+          <h2 id="parcel-chat-title" data-report-jump tabIndex={-1}>{t("guidance")}</h2>
+          <p>{subject}</p>
         </div>
-
-        <div className="ai-badges">
-          <span>{isWaterArea ? "Outside crop scope" : "Follow-up ready"}</span>
-          <span>
-            {isWaterArea ? "Select land parcel" : "Based on parcel context"}
-          </span>
-        </div>
-      </div>
-
-      {/* QUICK QUESTIONS */}
+      </header>
+      {reference.mode === "demo" ? <p className="report-quiet-note">{t("chatDemoWarning")}</p> : null}
       <div className="ai-questions">
-        {questions.map((q) => (
-          <button key={q} onClick={() => askAI(q)}>
-            {q}
-          </button>
+        {(report ? reportQuestions : quickQuestions).map((key) => (
+          <button key={key} type="button" disabled={loading || report?.pending} onClick={() => void ask(t(key))}>{t(key)}</button>
         ))}
       </div>
-
-      {/* CURRENT QUESTION */}
-      {question && (
-        <div className="ai-current-question">
-          <span>CURRENT QUESTION</span>
-          <div>{question}</div>
-        </div>
-      )}
-
-      {/* DECISION CARD */}
-      <div className="ai-decision">
-        {isWaterArea ? (
-          <>
-            <div>
-              <p>AI verdict</p>
-              <strong>Outside agricultural scope</strong>
-            </div>
-            <div>
-              <p>Main issue</p>
-              <strong>Water surface detected</strong>
-            </div>
-            <div>
-              <p>Next step</p>
-              <strong>Select nearby land</strong>
-            </div>
-          </>
-        ) : (
-          <>
-            <div>
-              <p>AI verdict</p>
-              <strong>Moderate potential</strong>
-            </div>
-            <div>
-              <p>Main risk</p>
-              <strong>Water variability</strong>
-            </div>
-            <div>
-              <p>Next step</p>
-              <strong>Field verification</strong>
-            </div>
-          </>
-        )}
+      {asked ? <div className="ai-current-question"><strong>{t("question")}</strong><p>{asked}</p></div> : null}
+      <div className="ai-answer" aria-live="polite" aria-busy={loading || report?.pending}>
+        <h3>{t("response")}</h3>
+        {reply?.source ? <p className="ai-label">{t(reply.source === "rules" ? "chatRules" : "chatModel")}</p> : null}
+        <p>{loading ? t("thinking") : report?.pending ? t("chatReportPending") : reply?.content ?? t(report ? "chatReportInitial" : "guidanceInitial")}</p>
+        {reply?.evidenceLinks?.length ? (
+          <div className="ai-evidence">
+            <p className="ai-label" id="chat-evidence-label">{t("chatReportSources")}</p>
+            <ul aria-labelledby="chat-evidence-label">
+              {reply.evidenceLinks.map(({ target, label }) => <li key={target}>
+                <a href={`#${target}`} onClick={target === reportEvidenceId.ndviHistory ? onNdviEvidence : undefined}>{label}</a>
+              </li>)}
+            </ul>
+          </div>
+        ) : null}
+        {reply?.references?.map(({ label, url }) => (
+          <p key={url}><a href={url} target="_blank" rel="noreferrer">{label}</a></p>
+        ))}
       </div>
-
-      {/* ANSWER */}
-      <div className="ai-answer">
-        <h3>{isWaterArea ? "Selection note" : "AI insight"}</h3>
-        <p>{loading ? "Thinking..." : answer}</p>
-      </div>
-
-      {/* INPUT */}
-      <div className="ai-input">
+      <form className="ai-input" onSubmit={submit}>
         <textarea
-          placeholder={
-            isWaterArea
-              ? "Ask what to select instead..."
-              : "Ask a follow-up question..."
-          }
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          placeholder={t("askField")}
+          aria-label={t("followUp")}
+          maxLength={CHAT_QUESTION_LIMIT}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
         />
-
-        <button onClick={() => askAI(question)}>
-          {isWaterArea ? "Ask guidance" : "Ask AI"}
-        </button>
-      </div>
-    </div>
+        <button type="submit" disabled={loading || report?.pending || !draft.trim()}>{t("ask")}</button>
+      </form>
+    </section>
   );
 }

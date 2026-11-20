@@ -1,29 +1,45 @@
+"use client";
+
+import { useLocale } from "@/components/locale";
+import Image from "next/image";
+import { brandAssets } from "@/lib/brand-assets";
+
 export function PrintReportLogo() {
+  const { t } = useLocale();
   return (
     <div className="print-report-logo">
       <div className="print-report-main-brand">
-        <img
-          src="/hydrosense-logo.png"
-          alt="HydroSense logo"
+        <Image
+          src={brandAssets.hydroSense}
+          alt={t("logo")}
+          width={40}
+          height={40}
+          unoptimized
           className="print-report-hydrosense-mark"
         />
 
         <div className="print-report-brand-text">
           <strong>HydroSense</strong>
-          <span>PARCEL INTELLIGENCE</span>
+          <span>{t("brand")}</span>
         </div>
       </div>
 
       <div className="print-report-partner-logos">
-        <img
-          src="/Projekt_Logo.png"
-          alt="LEOO project logo"
+        <Image
+          src={brandAssets.leo}
+          alt={t("leo")}
+          width={40}
+          height={40}
+          unoptimized
           className="print-report-partner-logo"
         />
 
-        <img
-          src="/sketch_Logo.jpg"
-          alt="Astro Youth Camp logo"
+        <Image
+          src={brandAssets.astroYouth}
+          alt={t("ayc")}
+          width={40}
+          height={40}
+          unoptimized
           className="print-report-partner-logo"
         />
       </div>

@@ -1,14 +1,16 @@
+"use client";
+
+import { useLocale } from "@/components/locale";
 export default function Loading() {
+  const { t } = useLocale();
   return (
     <div className="container">
-      <section className="page-section report-layout">
-        <div className="glass-card report-hero loading-card">
+      <section className="page-section brief-shell">
+        <div className="report-hero">
           <div className="section-heading">
-            <span className="eyebrow">Generating report</span>
-            <h1 className="section-title">Compiling parcel intelligence from mocked Copernicus and GIS signals</h1>
-            <p className="lead">
-              Preparing the executive summary, scorecards, and parcel-level recommendations for presentation.
-            </p>
+            <span className="eyebrow">{t("generating")}</span>
+            <h1 className="section-title">{t("preparing")}</h1>
+            <p className="lead">{t("loadingReport")}</p>
           </div>
           <div className="report-summary-band">
             <div className="loading-block shimmer" />

@@ -1,0 +1,192 @@
+/* Screen-only themes preserve the original A4 colors. */
+@media screen {
+  :root {
+    --bg: #f5f8f6;
+    --surface: #ffffff;
+    --inset: #f1f6f3;
+    --text: #17372c;
+    --body: #314e42;
+    --muted: #4d6358;
+    --border: #cadbd1;
+    --control-border: #687f72;
+    --primary: #16745a;
+    --primary-hover: #105840;
+    --primary-wash: #e7f2eb;
+    --muted-icon: var(--muted);
+    --shadow: 0 1px 2px rgb(20 39 50 / .045), 0 7px 24px rgb(20 39 50 / .035);
+    --theme-danger: #8b2b24;
+    --theme-danger-bg: #fff3f1;
+    --theme-danger-edge: #ac534b;
+    --theme-note: #663d13;
+    --theme-note-bg: #fff7e9;
+    --theme-note-edge: #9a6b32;
+  }
+
+  :root[data-theme="graphite"] {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --inset: #f7f6f3;
+    --text: #30363a;
+    --body: #41494c;
+    --muted: #535d61;
+    --border: #ddd9d2;
+    --control-border: #737a7a;
+    --primary: #52656a;
+    --primary-hover: #3d5156;
+    --primary-wash: #f0ede7;
+  }
+
+  .nav-preferences { display: flex; align-items: center; gap: 8px; }
+
+  .theme-switch {
+    display: inline-flex;
+    flex: none;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--inset);
+  }
+
+  .theme-switch button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 40px;
+    padding: 4px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: var(--body);
+    background: transparent;
+  }
+
+  .theme-switch button:hover { background: var(--surface); color: var(--primary-hover); }
+  .theme-switch button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .theme-check { position: absolute; top: 3px; inset-inline-end: 4px; visibility: hidden; }
+
+  :root:not([data-theme="graphite"]) [data-theme-option="nature"],
+  :root[data-theme="graphite"] [data-theme-option="graphite"] {
+    border-color: var(--primary);
+    background: var(--primary-wash);
+    color: var(--primary-hover);
+    box-shadow: inset 0 -2px var(--primary-hover);
+  }
+
+  :root:not([data-theme="graphite"]) [data-theme-option="nature"] .theme-check,
+  :root[data-theme="graphite"] [data-theme-option="graphite"] .theme-check { visibility: visible; }
+
+  ::selection { background: var(--primary-wash); color: var(--text); }
+
+  .scene-card {
+    color: var(--text);
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  .scene-head svg { color: var(--primary-hover); }
+  .scene-tag {
+    color: var(--primary-hover);
+    background: var(--primary-wash);
+    border-color: var(--border);
+  }
+  .scene-caption h2 { color: var(--text); }
+  :is(.scene-caption p, .scene-credit) { color: var(--muted); }
+  .scene-link { color: var(--primary-hover); border-color: var(--control-border); }
+  .scene-link:hover { background: var(--primary-wash); }
+  .home-hero-kicker span {
+    background: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-wash);
+  }
+
+  :is(.nav-link[aria-current], .workspace-steps [aria-current]) {
+    text-decoration: underline;
+    text-underline-offset: .25em;
+  }
+
+  :is(.button-secondary[aria-pressed="true"], .satellite-layer-toolbar button[aria-pressed="true"], .locale-switch button[aria-pressed="true"]) {
+    border-color: var(--primary);
+    background: var(--primary-wash);
+    color: var(--primary-hover);
+    box-shadow: inset 0 -2px var(--primary-hover);
+  }
+  .button-secondary:hover:not(:disabled):not([aria-pressed="true"]) {
+    border-color: var(--primary);
+    background: var(--primary-wash);
+  }
+  :is(.button, .button-secondary, .ai-panel button):disabled {
+    opacity: 1;
+    border: 1px dashed var(--control-border);
+    color: var(--muted);
+    background: var(--inset);
+  }
+  .ai-input textarea:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+  }
+  .ai-input textarea::placeholder {
+    color: var(--muted);
+    opacity: 1;
+  }
+
+  .index-card dd > strong { color: var(--text); }
+  .score-card .progress { background: var(--primary-wash); }
+  .ai-answer { background: var(--inset); }
+  .ai-answer a {
+    color: var(--primary-hover);
+    text-decoration: underline;
+    text-underline-offset: .15em;
+    overflow-wrap: anywhere;
+  }
+  .ai-answer .ai-label { color: var(--primary-hover); }
+  .ai-answer p { overflow-wrap: anywhere; }
+  .ai-input button:not(:disabled) {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  .ai-input button:hover:not(:disabled) {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+  }
+
+  .status-note:not(.map-placeholder) {
+    color: var(--primary-hover);
+    border-color: var(--primary);
+  }
+  .status-note.status-note--error {
+    color: var(--theme-danger);
+    background: var(--theme-danger-bg);
+    border-color: var(--theme-danger-edge);
+  }
+  .observation-period [role="alert"] { color: var(--theme-danger); }
+  .report-quiet-note {
+    color: var(--theme-note);
+    background: var(--theme-note-bg);
+    border-color: var(--theme-note-edge);
+  }
+}
+
+@media screen and (max-width: 760px) {
+  .site-nav { grid-template-columns: 1fr auto; gap: 3px 8px; padding-block: 7px 5px; }
+  .site-nav > .nav-preferences { grid-column: 2; grid-row: 1; }
+  .site-nav .nav-links { grid-column: 1 / -1; justify-content: center; }
+}
+
+@media screen and (max-width: 620px) {
+  .nav-preferences { gap: 6px; }
+  .site-nav .hydrosense-lockup { gap: 7px; }
+  .site-nav .hydrosense-mark { width: 32px; height: 32px; }
+  .site-nav .hydrosense-word { font-size: 1rem; }
+  .site-nav .partner-logos { gap: 4px; padding-inline-start: 5px; }
+  .site-nav .partner-logos img { width: 19px; height: 19px; }
+  .nav-preferences .locale-switch button { min-width: 36px; }
+  .theme-switch button { min-width: 38px; }
+}
+
+@media screen and (max-width: 414px) {
+  .site-nav .hydrosense-lockup,
+  .site-nav > .nav-preferences { grid-column: 1 / -1; justify-self: center; }
+  .site-nav > .nav-preferences { grid-row: 2; }
+  .site-nav .nav-links { grid-row: 3; }
+}
