@@ -4,6 +4,7 @@ import { summarizeObservations, type AreaStats } from "./observations";
 import { DAY, radiusAreaHectares, type AreaGeometry } from "./request";
 import { satelliteStatsWeight, takeUpstreamBudget } from "../upstream-budget";
 import { STATS_EVALSCRIPT } from "./stats-evalscripts";
+import { withCopernicusStage } from "./diagnostics";
 
 const CRS = "http://www.opengis.net/def/crs/EPSG/0/4326";
 const METERS_PER_DEGREE = Math.PI * 6_371_008.8 / 180;
@@ -57,9 +58,16 @@ export async function fetchAreaStats(area: NonNullable<ReturnType<typeof getAnal
   to: string;
 }): Promise<AreaStats> {
   const token = await getCopernicusAccessToken();
-  await takeUpstreamBudget("copernicus-stats", satelliteStatsWeight(
+  await withCopernicusStage("budget:statistics", () => takeUpstreamBudget("copernicus-stats", satelliteStatsWeight(
     (Date.parse(window.to) - Date.parse(window.from)) / DAY, area.areaHectares,
-  ));
+  )));
+  return withCopernicusStage("statistics", () => requestStats(area, window, token));
+}
+
+async function requestStats(area: NonNullable<ReturnType<typeof getAnalysisArea>>, window: {
+  from: string;
+  to: string;
+}, token: string): Promise<AreaStats> {
   const response = await fetch("https://sh.dataspace.copernicus.eu/statistics/v1", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

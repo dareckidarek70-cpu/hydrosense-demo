@@ -1,11 +1,16 @@
 import { CopernicusHttpError } from "./errors";
 import { takeUpstreamBudget } from "../upstream-budget";
+import { withCopernicusStage } from "./diagnostics";
 
 let cachedToken: { value: string; expires: number } | undefined;
 let tokenRequest: Promise<string> | undefined;
 
 async function fetchToken(clientId: string, clientSecret: string) {
-  await takeUpstreamBudget("copernicus-token");
+  await withCopernicusStage("budget:oauth", () => takeUpstreamBudget("copernicus-token"));
+  return withCopernicusStage("oauth", () => requestToken(clientId, clientSecret));
+}
+
+async function requestToken(clientId: string, clientSecret: string) {
   const response = await fetch(
     "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
     {

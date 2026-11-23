@@ -2,6 +2,7 @@ import { EVALSCRIPTS, LayerType } from "./evalscripts";
 import { CopernicusHttpError } from "./errors";
 import { DAY } from "./request";
 import { satelliteRasterWeight, takeUpstreamBudget } from "../upstream-budget";
+import { withCopernicusStage } from "./diagnostics";
 
 type BBox = [number, number, number, number];
 
@@ -56,23 +57,25 @@ export async function fetchLayerImage(params: {
     evalscript: EVALSCRIPTS[layer]
   };
 
-  await takeUpstreamBudget("copernicus-layer", satelliteRasterWeight(
+  await withCopernicusStage("budget:raster", () => takeUpstreamBudget("copernicus-layer", satelliteRasterWeight(
     (Date.parse(timeTo) - Date.parse(timeFrom)) / DAY, width, height,
-  ));
-  const response = await fetch("https://sh.dataspace.copernicus.eu/api/v1/process", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15_000),
-    cache: "no-store"
+  )));
+  return withCopernicusStage("raster", async () => {
+    const response = await fetch("https://sh.dataspace.copernicus.eu/api/v1/process", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15_000),
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new CopernicusHttpError(response.status, response.headers.get("Retry-After"));
+    }
+
+    return response.arrayBuffer();
   });
-
-  if (!response.ok) {
-    throw new CopernicusHttpError(response.status, response.headers.get("Retry-After"));
-  }
-
-  return response.arrayBuffer();
 }

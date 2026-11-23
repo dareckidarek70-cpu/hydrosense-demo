@@ -174,6 +174,9 @@ export function createWeatherHistoryHandler({
         ? { ...headers, "Retry-After": String(secondsLeft(providerBlockedUntil, at)) } : headers;
       return Response.json(weatherResult(query, series), { headers: responseHeaders });
     } catch (error) {
+      if (error instanceof UpstreamBudgetError && process.env.VERCEL_ENV === "preview") {
+        console.info("[HydroSense weather budget]", error.kind, error.retryAfter);
+      }
       const failure = error instanceof WeatherHistoryError ? error
         : error instanceof UpstreamBudgetError ? new WeatherHistoryError(
           error.kind === "limited" ? "weather_overloaded" : "weather_budget_unavailable",
