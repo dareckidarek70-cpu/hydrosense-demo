@@ -5,7 +5,7 @@ import type { AreaStats, Observation } from "@/lib/copernicus/observations";
 import { inclusiveEnd, type AreaGeometry, type ObservationWindow } from "@/lib/copernicus/request";
 import { indexKeys, indices, interpretIndex, localIndex } from "@/lib/copernicus/interpretation";
 import { IndexScale } from "./satellite-legend";
-import { responseFailure, type FailureCode } from "@/lib/copernicus/errors";
+import { responseFailure, type FailureCode } from "@/lib/copernicus/response-error";
 import { useLocale } from "./locale";
 import { getCachedObservation, rememberObservation } from "@/lib/observation-cache";
 import { reportEvidenceId } from "@/lib/report-evidence-links";

@@ -43,7 +43,7 @@ export function modelDetails(series: WeatherSeries) {
 }
 
 export type WeatherErrorCode = "weather_overloaded" | "weather_provider_limited" | "weather_provider_unavailable"
-  | "weather_provider_timeout" | "weather_invalid_provider_response";
+  | "weather_provider_timeout" | "weather_invalid_provider_response" | "weather_budget_unavailable";
 
 export class WeatherHistoryError extends Error {
   readonly code: WeatherErrorCode;

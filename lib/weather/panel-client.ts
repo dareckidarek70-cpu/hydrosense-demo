@@ -69,6 +69,9 @@ export function createWeatherPanelClient({
       if (signal.aborted) return null;
       if (timedOut) return { error: "weatherTimeout" };
       if (!res.ok) {
+        if (json?.error === "weather_budget_unavailable") {
+          return rememberLimit("weatherProvider", res.headers.get("Retry-After"));
+        }
         const error = errorFrom(res.status, json);
         if (error === "weatherRate" || error === "weatherProviderRate" || (res.status === 503 && res.headers.has("Retry-After"))) {
           return rememberLimit(error === "weatherRate" ? error : "weatherProviderRate", res.headers.get("Retry-After"));

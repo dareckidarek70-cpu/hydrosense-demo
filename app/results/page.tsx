@@ -11,6 +11,7 @@ import { demoPresentation } from "@/lib/i18n/demo";
 import { dateObservationWindow, observationWindow, pointFromQuery } from "@/lib/copernicus/request";
 import { soilPreviewAt } from "@/lib/soil-preview";
 import { reportTop } from "@/lib/report-navigation";
+import { releaseFeatures } from "@/lib/release-features";
 
 type ResultsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -25,7 +26,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
     const period = params.from === undefined && params.to === undefined
       ? observationWindow() : dateObservationWindow(params.from, params.to);
     return area && period ? <ObservedAreaBrief key={JSON.stringify([area, period])} area={area} generatedAt={generatedAt}
-      initialPeriod={period} soilPreview={process.env.VERCEL_ENV === "production" ? undefined : soilPreviewAt(area.coordinates)} /> : (
+      initialPeriod={period} soilPreview={releaseFeatures().soil ? soilPreviewAt(area.coordinates) : undefined} /> : (
       <section className="container page-section">
         <h1 id={reportTop} className="section-title" data-report-jump tabIndex={-1}>{t("invalidArea")}</h1>
         <Link className="button-secondary" href="/select-area">{t("chooseArea")}</Link>

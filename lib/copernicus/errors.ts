@@ -1,7 +1,7 @@
 import { RequestLimitError } from "../request-budget.ts";
+import { UpstreamBudgetError } from "../upstream-budget.ts";
 
-export const failureCodes = ["badRequest", "badLayer", "rateLimit", "providerRate", "timeout", "providerError", "networkError"] as const;
-export type FailureCode = typeof failureCodes[number];
+export { responseFailure, type FailureCode } from "./response-error.ts";
 
 export class CopernicusHttpError extends Error {
   readonly status: number;
@@ -16,6 +16,11 @@ export class CopernicusHttpError extends Error {
 
 export function classifyFailure(error: unknown) {
   if (error instanceof RequestLimitError) return { code: "rateLimit", status: 429, retryAfter: "60" } as const;
+  if (error instanceof UpstreamBudgetError) {
+    return error.kind === "limited"
+      ? { code: "rateLimit", status: 429, retryAfter: String(error.retryAfter) } as const
+      : { code: "providerError", status: 503, retryAfter: String(error.retryAfter) } as const;
+  }
   if (error instanceof CopernicusHttpError && error.status === 429) {
     const seconds = Number(error.retryAfter);
     return {
@@ -28,12 +33,4 @@ export function classifyFailure(error: unknown) {
     return { code: "timeout", status: 504, retryAfter: null } as const;
   }
   return { code: "providerError", status: 503, retryAfter: null } as const;
-}
-
-export async function responseFailure(response: Response): Promise<FailureCode> {
-  const body = await response.json().catch(() => null);
-  if (failureCodes.includes(body?.code)) return body.code;
-  if (response.status === 429) return "providerRate";
-  if (response.status === 504) return "timeout";
-  return "providerError";
 }

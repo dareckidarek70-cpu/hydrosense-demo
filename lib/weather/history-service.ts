@@ -1,4 +1,6 @@
 import { DAY } from "../copernicus/request.ts";
+import { releaseFeatures } from "../release-features.ts";
+import { takeUpstreamBudget, UpstreamBudgetError } from "../upstream-budget.ts";
 import {
   archiveDelayDays, dayString, parseWeatherHistoryQuery, rangeLength, type WeatherHistoryRequest,
 } from "./history-request.ts";
@@ -21,6 +23,7 @@ type HistoryOptions = {
   now?: () => Date;
   timeoutMs?: number;
   enabled?: () => boolean;
+  reserve?: typeof takeUpstreamBudget;
 };
 
 function weatherResult(query: WeatherHistoryRequest, series: SeriesPair | null) {
@@ -79,7 +82,7 @@ export type WeatherDay = WeatherHistory["days"][number];
 
 export function createWeatherHistoryHandler({
   fetcher = (...args) => fetch(...args), now = () => new Date(), timeoutMs = 8000,
-  enabled = () => process.env.VERCEL_ENV !== "production",
+  enabled = () => releaseFeatures().weather, reserve = takeUpstreamBudget,
 }: HistoryOptions = {}) {
   // Keep the weather cache and quota separate from imagery, reports and chat.
   const pending = new Map<string, Promise<SeriesPair>>();
@@ -113,19 +116,18 @@ export function createWeatherHistoryHandler({
     minute.used++;
     daily.used += weight;
 
-    const signal = AbortSignal.timeout(timeoutMs);
     const clock = () => now().getTime();
-    const loadModel = (model: WeatherSeries) =>
+    const loadModel = (model: WeatherSeries, signal: AbortSignal) =>
       fetchArchiveSeries(query.point, range, model, fetcher, signal, clock).catch((error: unknown) => {
         if (error instanceof WeatherHistoryError && error.code === "weather_provider_limited") {
           providerBlockedUntil = Math.max(providerBlockedUntil, clock() + (error.retryAfter ?? 60) * 1000);
         }
         throw error;
       });
-    const promise = Promise.allSettled([
-      loadModel("temperature"),
-      loadModel("precipitation"),
-    ]).then(([temperature, precipitation]): SeriesPair => {
+    const promise = reserve("weather", weight).then(() => {
+      const signal = AbortSignal.timeout(timeoutMs);
+      return Promise.allSettled([loadModel("temperature", signal), loadModel("precipitation", signal)]);
+    }).then(([temperature, precipitation]): SeriesPair => {
       if (temperature.status === "fulfilled" && precipitation.status === "fulfilled") {
         return { temperature: temperature.value, precipitation: precipitation.value };
       }
@@ -172,8 +174,12 @@ export function createWeatherHistoryHandler({
         ? { ...headers, "Retry-After": String(secondsLeft(providerBlockedUntil, at)) } : headers;
       return Response.json(weatherResult(query, series), { headers: responseHeaders });
     } catch (error) {
-      const failure = error instanceof WeatherHistoryError
-        ? error : new WeatherHistoryError("weather_provider_unavailable", 502);
+      const failure = error instanceof WeatherHistoryError ? error
+        : error instanceof UpstreamBudgetError ? new WeatherHistoryError(
+          error.kind === "limited" ? "weather_overloaded" : "weather_budget_unavailable",
+          error.kind === "limited" ? 429 : 503, error.retryAfter,
+        )
+        : new WeatherHistoryError("weather_provider_unavailable", 502);
       const responseHeaders = failure.retryAfter ? { ...headers, "Retry-After": String(failure.retryAfter) } : headers;
       return Response.json({ error: failure.code }, { status: failure.status, headers: responseHeaders });
     }

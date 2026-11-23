@@ -8,6 +8,7 @@ import { parcelChatSchema } from "@/lib/parcel-chat-contract";
 import { CHAT_BODY_LIMIT, CHAT_CONTEXT_TIMEOUT_MS, CHAT_MODEL_TIMEOUT_MS } from "@/lib/parcel-chat-limits";
 import { demoChatContext, resolveObservationEvidence, withinDeadline, type AnswerContext } from "@/lib/parcel-chat-context";
 import { allowRequest, readJson } from "@/lib/request-budget";
+import { takeUpstreamBudget } from "@/lib/upstream-budget";
 
 export async function POST(request: Request) {
   const raw: unknown = await readJson(request, CHAT_BODY_LIMIT).catch(() => null);
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
     && (context.mode === "demo" || context.evidence.kind === "verified");
   const response = await selectAnswer(question, locale, context, useModel ? async () => {
     if (!allowRequest("ai", 3)) return null;
+    await takeUpstreamBudget("openai");
     const { default: OpenAI } = await import("openai");
     const client = new OpenAI({ apiKey, timeout: CHAT_MODEL_TIMEOUT_MS, maxRetries: 0 });
     const result = await client.chat.completions.create({

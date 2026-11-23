@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { responseFailure, type FailureCode } from "@/lib/copernicus/errors";
+import { responseFailure, type FailureCode } from "@/lib/copernicus/response-error";
 import { reportRasterDebounceMs } from "@/lib/copernicus/report-map";
 import { MapRasterCache } from "@/lib/map-raster-cache";
 import { visibleRasterFraction } from "@/lib/raster-viewport";

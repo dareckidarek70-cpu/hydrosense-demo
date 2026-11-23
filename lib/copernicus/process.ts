@@ -1,5 +1,7 @@
 import { EVALSCRIPTS, LayerType } from "./evalscripts";
 import { CopernicusHttpError } from "./errors";
+import { DAY } from "./request";
+import { satelliteRasterWeight, takeUpstreamBudget } from "../upstream-budget";
 
 type BBox = [number, number, number, number];
 
@@ -54,6 +56,9 @@ export async function fetchLayerImage(params: {
     evalscript: EVALSCRIPTS[layer]
   };
 
+  await takeUpstreamBudget("copernicus-layer", satelliteRasterWeight(
+    (Date.parse(timeTo) - Date.parse(timeFrom)) / DAY, width, height,
+  ));
   const response = await fetch("https://sh.dataspace.copernicus.eu/api/v1/process", {
     method: "POST",
     headers: {

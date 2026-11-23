@@ -6,7 +6,7 @@ import type { Observation } from "@/lib/copernicus/observations";
 import { inclusiveEnd, observationWindow, type ObservationWindow } from "@/lib/copernicus/request";
 import { SatelliteLegend } from "./satellite-legend";
 import { useLocale } from "./locale";
-import { responseFailure } from "@/lib/copernicus/errors";
+import { responseFailure } from "@/lib/copernicus/response-error";
 import type { MessageKey } from "@/lib/i18n";
 import { MapRasterCache } from "@/lib/map-raster-cache";
 import { rasterZoom, visibleRasterFraction } from "@/lib/raster-viewport";
