@@ -94,11 +94,12 @@ export function useAreaObservation(area: PointArea | null, period: ObservationWi
   };
 }
 
-export function ObservationDetails({ data, day = data.observation, full = false, map }: {
+export function ObservationDetails({ data, day = data.observation, full = false, map, printAtlas }: {
   data: AreaStats;
   day?: Observation | null;
   full?: boolean;
   map?: ReactNode;
+  printAtlas?: ReactNode;
 }) {
   const { locale, t, date, num, percent } = useLocale();
   const quality = day ?? data.latestObserved;
@@ -106,7 +107,7 @@ export function ObservationDetails({ data, day = data.observation, full = false,
 
   return (
     <div className="metric-stack">
-      <div className={map ? "observation-overview" : undefined}>
+      <div className={map ? "observation-overview" : undefined} data-print-atlas={printAtlas ? "true" : undefined}>
         {map}
         <div className="observation-source" id={target} tabIndex={target ? -1 : undefined}
           data-evidence-target={target ? "sentinel" : undefined} role={target ? "group" : undefined}
@@ -130,8 +131,10 @@ export function ObservationDetails({ data, day = data.observation, full = false,
           ) : null}
         </div>
       </div>
+      {printAtlas}
       {day ? (
         <>
+          {printAtlas ? <h3 className="print-only print-index-heading">{t("printIndexDetails")}</h3> : null}
           <dl className={full ? "observation-index-grid" : "observation-index-grid observation-index-grid--compact"}>
             {indexKeys.map((key) => {
               const copy = localIndex(key, locale);

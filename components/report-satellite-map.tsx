@@ -10,7 +10,7 @@ import { observationDate } from "@/lib/copernicus/history-view";
 import type { MapRasterCache } from "@/lib/map-raster-cache";
 import type { MessageKey } from "@/lib/i18n";
 import type { PointArea } from "./area-observation";
-import { ObservationMap, ObservationMapMarks } from "./observation-map";
+import { ObservationMapMarks } from "./observation-map";
 import { IndexScale, SatelliteLegend } from "./satellite-legend";
 import { useReportRaster } from "./use-report-raster";
 import { useLocale } from "./locale";
@@ -110,7 +110,6 @@ export function ReportSatelliteMap({ area, day, reference, options, onReferenceC
   const [compare, setCompare] = useState(false);
   const [side, setSide] = useState<RasterSide>("current");
   const pairing = compare ? reference : null;
-  const printRaster = printing ? reportMapUrl(area, day, "TRUE_COLOR", "png") : null;
 
   return (
     <div className="report-satellite-map" data-map-comparing={!!pairing}>
@@ -136,7 +135,6 @@ export function ReportSatelliteMap({ area, day, reference, options, onReferenceC
         <AlignedSatelliteScenes area={area} day={day} reference={pairing} layer={layer} cache={cache} side={side} onSideChange={setSide} />
         <SatelliteMapLegend layer={layer} />
       </div>
-      {printing ? <div className="print-only"><ObservationMap key={printRaster ?? "outline"} area={area} url={printRaster} date={observationDate(day)} /></div> : null}
     </div>
   );
 }

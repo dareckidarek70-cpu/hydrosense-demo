@@ -15,6 +15,7 @@ export function PrintReportLogo() {
           width={40}
           height={40}
           unoptimized
+          loading="eager"
           className="print-report-hydrosense-mark"
         />
 
@@ -31,6 +32,7 @@ export function PrintReportLogo() {
           width={40}
           height={40}
           unoptimized
+          loading="eager"
           className="print-report-partner-logo"
         />
 
@@ -40,6 +42,7 @@ export function PrintReportLogo() {
           width={40}
           height={40}
           unoptimized
+          loading="eager"
           className="print-report-partner-logo"
         />
       </div>

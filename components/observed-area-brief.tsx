@@ -17,6 +17,7 @@ import { ObservationMap } from "./observation-map";
 import { ReportSatelliteMap } from "./report-satellite-map";
 import { ObservationPeriod } from "./observation-period";
 import { PrintReportLogo } from "./print-report-logo";
+import { PrintSatelliteAtlas } from "./print-satellite-atlas";
 import { PrintBriefButton } from "./print-brief-button";
 import { RadiusComparison } from "./radius-comparison";
 import { ParcelAiChat } from "./parcel-ai-chat";
@@ -68,6 +69,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
   const chatPending = !!chatWeather?.isLoading;
   const map = day ? <ReportSatelliteMap area={area} day={day} reference={baseline} options={eligible}
     onReferenceChange={setReferenceDate} onIndexChange={setHistoryIndex} printing={printing} cache={rasterCache} /> : <ObservationMap area={area} url={null} />;
+  const printAtlas = printing && day ? <PrintSatelliteAtlas area={area} day={day} cache={rasterCache} /> : null;
   const selectReportDay = (date: string) => {
     if (date === referenceDate) setReferenceDate("");
     setSelectedDay(date);
@@ -118,7 +120,7 @@ export function ObservedAreaBrief({ area, generatedAt, initialPeriod, soilPrevie
               <button type="button" className="button-secondary print-hidden" onClick={retry}>{t("retry")}</button>
             </div>
           ) : null}
-          {data ? <ObservationDetails data={data} day={day} map={map} full /> : state ? map : null}
+          {data ? <ObservationDetails data={data} day={day} map={map} printAtlas={printAtlas} full /> : state ? map : null}
           {water ? <p>{t("waterDominates")}</p> : null}
         </section>
 

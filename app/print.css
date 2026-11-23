@@ -1,16 +1,16 @@
 @media print {
-  @page { size: A4; margin: 10mm 11mm; }
+  @page { size: A4; margin: 12mm; }
 
   :root { --body: #273449; --muted: #44546a; }
   body { background: #fff; color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .app-shell, main { display: block; min-height: 0; }
-  .site-header, .site-footer, .skip-link, .print-hidden, .report-chart-screen { display: none !important; }
+  .site-header, .site-footer, .skip-link, .print-hidden, .report-chart-screen, .brief-shell :is(button, input, select, textarea, form) { display: none !important; }
   .print-only { display: block; }
   .container { width: 100%; }
   .page-section { padding: 0; }
 
-  .brief-shell { display: block; font-size: 9pt; line-height: 1.26; }
-  .brief-shell > * + * { margin-top: 2mm; }
+  .brief-shell { --paper-line: #cbd6e5; display: block; font-size: 9.5pt; line-height: 1.34; }
+  .brief-shell > * + * { margin-top: 3.2mm; }
   .brief-shell :is(h2, h3) { break-after: avoid; }
   .brief-shell :is(.report-hero, .observation-section, .report-chart-card, .report-card, .radius-comparison, .observation-followup) {
     box-shadow: none;
@@ -22,12 +22,12 @@
     break-inside: avoid;
   }
   .brief-shell .report-hero {
-    padding: 0 0 2mm;
-    border-bottom: 1px solid #93b4f6;
+    padding: 0 0 3mm;
+    border-bottom: .35mm solid #93b4f6;
   }
   .brief-shell .report-hero .eyebrow { font-size: 7pt; margin: 0 0 .5mm; }
-  .brief-shell .section-title { font-size: 17pt; letter-spacing: -.03em; }
-  .brief-shell .report-hero .lead { margin: .75mm 0 0; font-size: 9pt; max-width: none; }
+  .brief-shell .section-title { font-size: 20pt; letter-spacing: -.03em; }
+  .brief-shell .report-hero .lead { margin: 1.35mm 0 0; font-size: 10pt; max-width: none; }
   .brief-shell .report-generated { margin: .75mm 0 0; font-size: 8pt; }
   .brief-shell :is(.body-copy, .observation-section > p, .radius-comparison > p) { font-size: 8.6pt; line-height: 1.25; }
 
@@ -51,7 +51,8 @@
   .observation-document .report-hero .eyebrow { display: none; }
   .observation-document :is(.observation-section, .radius-comparison) { padding: 1.5mm 0 0; border-top: 1px solid var(--border); }
   .observation-document h2 { font-size: 11.5pt; margin-bottom: 1mm; }
-  .observation-document .metric-stack { gap: 1.3mm; }
+  .observation-document .metric-stack { display: block; }
+  .observation-document .metric-stack > * + * { margin-top: 2mm; }
   .observation-overview { grid-template-columns: minmax(0, 1.13fr) minmax(0, 1fr); gap: 3mm; break-inside: avoid; }
   .observation-map-frame { border-radius: 1.6mm; }
   .report-map-panel[data-map-side="reference"] { display: none; }
@@ -65,6 +66,32 @@
   .source-quality > div { padding-top: .75mm; }
   .source-quality dt { font-size: 7pt; }
   .source-quality dd { font-size: 9pt; }
+  .observation-overview[data-print-atlas] { display: block; }
+  .observation-overview[data-print-atlas] .report-satellite-map { display: none; }
+  .observation-overview[data-print-atlas] .observation-source {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1.45fr);
+    align-items: center;
+    padding: 2.8mm;
+    gap: 3mm;
+  }
+  .observation-overview[data-print-atlas] .source-quality { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .print-satellite-atlas { padding-top: 2mm; break-inside: avoid; }
+  .print-atlas-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 4mm; margin-bottom: 2.5mm; }
+  .print-atlas-heading h3, .print-index-heading { font-size: 13pt; }
+  .print-atlas-heading p, .print-atlas-note { color: var(--muted); font-size: 8.5pt; }
+  .print-satellite-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm; }
+  .print-satellite-tile { min-width: 0; border: 1px solid var(--paper-line); border-radius: 2mm; padding: 2.4mm; break-inside: avoid; }
+  .print-satellite-tile h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 2mm; font-size: 9.5pt; margin-bottom: 1.4mm; }
+  .print-satellite-tile h3 strong { font: 700 9pt var(--font-mono); }
+  .print-satellite-tile figcaption { margin-top: 1mm; color: var(--muted); font-size: 8pt; }
+  .print-satellite-tile .layer-swatch-list { display: flex; flex-wrap: wrap; gap: .75mm 1.75mm; margin: 0; padding: 0; border: 0; }
+  .print-satellite-tile .layer-swatch-list li { white-space: nowrap; font-size: 7.5pt; }
+  .print-satellite-missing { aspect-ratio: 480 / 216; display: grid; place-content: center; gap: 1mm; text-align: center; padding: 3mm; color: var(--body); background: #f2f5f9; }
+  .print-satellite-missing span { font-size: 8pt; }
+  .print-satellite-atlas .report-map-mask { margin-top: 2.3mm; font-size: 8.5pt; }
+  .print-satellite-atlas .report-map-mask span { width: 3mm; height: 3mm; }
+  .print-atlas-note { margin-top: 1mm; }
+  .print-index-heading { break-before: page; }
   .observation-index-grid, .history-charts, .observation-deltas { gap: 1.5mm; }
   .index-card, .history-chart { padding: 1.4mm; border-radius: 1.6mm; background: #fff; }
   .index-card dt { font-size: 8pt; gap: .8mm; }
@@ -77,9 +104,9 @@
   .surface-share { padding-top: .8mm; }
 
   .observation-history > p, .observation-history > .print-only > p { font-size: 8.5pt; margin-bottom: .8mm; }
-  .history-charts { margin-bottom: .9mm; break-inside: avoid; }
+  .history-charts { grid-template-columns: minmax(0, 1fr); gap: 2mm; margin-bottom: 1.2mm; break-inside: avoid; }
   .history-chart h3 { font-size: 9.5pt; margin-bottom: .55mm; }
-  .history-plot { max-height: 25mm; }
+  .history-plot { max-height: 35mm; }
   .history-plot text { font-size: 9.5px; }
   .history-chart figcaption { min-height: 0; font-size: 7.6pt; }
   .observation-date-comparison { padding: 1mm; margin-top: 1mm; break-inside: avoid; }
@@ -89,32 +116,32 @@
   .observation-deltas > div { padding: .7mm; }
   .radius-table { font-size: 8pt; margin-top: 1mm; }
   .radius-table :is(th, td) { padding: .8mm; }
-  .observation-followup { gap: 3mm; }
+  .observation-followup { gap: 5mm; }
   .observation-followup .observation-section > p + p { margin-top: .8mm; }
   .observation-evidence { display: block; font-size: 9pt; line-height: 1.25; }
   .observation-evidence > div + div { margin-top: .6mm; }
   .observation-evidence :is(dt, dd) { display: inline; }
   .observation-evidence dd::before { content: ". "; }
 
-  .demo-brief-shell .report-meta-row { display: grid; gap: .8mm; padding-block: 1mm; }
-  .demo-brief-shell .report-quiet-note { color: #6f4316; font-size: 8pt; padding: .65mm 1mm; }
-  .demo-brief-shell .report-summary-band { padding-top: 1mm; }
-  .report-summary-copy { gap: .65mm; }
-  .report-summary-copy h3 { font-size: 10.5pt; }
+  .demo-brief-shell .report-meta-row { display: grid; gap: 1.5mm; padding-block: 3mm; }
+  .demo-brief-shell .report-quiet-note { color: #6f4316; font-size: 9pt; padding: 1.8mm 2.4mm; border-radius: 1.6mm; }
+  .demo-brief-shell .report-summary-band { padding-top: 2.5mm; }
+  .report-summary-copy { gap: 1.2mm; }
+  .report-summary-copy h3 { font-size: 12pt; }
   .report-summary-copy .badge-row { gap: 1mm; }
   .report-summary-copy .pill { padding: .25mm 1mm; font-size: 7.5pt; border-radius: 1mm; }
   .demo-brief-shell :is(.report-score-grid, .report-chart-eyebrow) { display: none; }
-  .demo-brief-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5mm 3mm; }
-  .demo-brief-shell :is(.report-card, .report-chart-card) { padding: 1mm 0 0; border-top: 1px solid var(--border); }
-  .demo-brief-sections .report-card h3 { margin-bottom: .6mm; font-size: 9.5pt; }
-  .demo-brief-sections .report-card :is(p, ul, li) { font-size: 9.5pt; }
-  .demo-brief-sections .report-card ul { margin-top: .5mm; padding-inline-start: 4mm; }
-  .report-chart-title { font-size: 10.5pt; margin-bottom: 1mm; }
-  .report-chart-note { margin-top: 1mm; font-size: 8pt; }
-  .print-bars-vertical { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5mm; }
-  .print-bar-vertical-item { display: grid; justify-items: center; grid-template-rows: auto 16mm auto; gap: .5mm; text-align: center; break-inside: avoid; }
-  .print-bar-vertical-value { font: 700 8.6pt var(--font-mono); }
-  .print-bar-vertical-track { width: min(10mm, 100%); height: 100%; display: flex; align-items: end; background: #eaf1ff; }
+  .demo-brief-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm 4mm; }
+  .demo-brief-shell :is(.report-card, .report-chart-card) { padding: 3mm; border: 1px solid var(--paper-line); border-radius: 2mm; }
+  .demo-brief-sections .report-card h3 { margin-bottom: 1mm; font-size: 11pt; }
+  .demo-brief-sections .report-card :is(p, ul, li) { font-size: 10pt; line-height: 1.4; }
+  .demo-brief-sections .report-card ul { margin-top: 1mm; padding-inline-start: 4mm; }
+  .report-chart-title { font-size: 12pt; margin-bottom: 2mm; }
+  .report-chart-note { margin-top: 2mm; font-size: 8.5pt; }
+  .print-bars-vertical { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3mm; }
+  .print-bar-vertical-item { display: grid; justify-items: center; grid-template-rows: auto 26mm auto; gap: 1mm; text-align: center; break-inside: avoid; }
+  .print-bar-vertical-value { font: 700 10pt var(--font-mono); }
+  .print-bar-vertical-track { width: min(14mm, 100%); height: 100%; display: flex; align-items: end; background: #eaf1ff; border-radius: 1mm 1mm 0 0; overflow: hidden; }
   .print-bar-vertical-fill { width: 100%; }
-  .print-bar-vertical-label { font-size: 7.5pt; }
+  .print-bar-vertical-label { font-size: 8.5pt; }
 }
