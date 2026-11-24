@@ -1,119 +1,61 @@
-"use client";
+import { localization, type Locale } from "@/lib/i18n";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  Cell,
-} from "recharts";
+type Scores = Record<"investment" | "irrigation" | "cropFit" | "sustainability", number>;
 
-type ResultsScoreChartProps = {
-  investment: number;
-  irrigation: number;
-  cropFit: number;
-  sustainability: number;
-};
+const series = {
+  investment: "#2563eb",
+  irrigation: "#0891b2",
+  cropFit: "#4d72b5",
+  sustainability: "#317fa9",
+} as const;
+const scoreKeys = Object.keys(series) as (keyof Scores)[];
 
-export function ResultsScoreChart({
-  investment,
-  irrigation,
-  cropFit,
-  sustainability,
-}: ResultsScoreChartProps) {
-  const data = [
-    { name: "Investment", value: investment, color: "#73b17d" },
-    { name: "Irrigation", value: irrigation, color: "#79c1b2" },
-    { name: "Crop Fit", value: cropFit, color: "#9aca84" },
-    { name: "Sustainability", value: sustainability, color: "#b6c979" },
-  ];
+export function ResultsScoreChart({ scores, locale }: { scores: Scores; locale: Locale }) {
+  const { t, percent } = localization(locale);
+  const data = scoreKeys.map((key) => ({
+    label: t(key),
+    score: scores[key],
+    value: percent(scores[key] / 100),
+    color: series[key],
+  }));
 
   return (
-    <section className="glass-card report-chart-card">
-      <div className="report-chart-header">
-        <p className="eyebrow report-chart-eyebrow">Visual comparison</p>
-        <h3 className="report-chart-title">Core indicator chart</h3>
-      </div>
+    <section className="report-chart-card" aria-labelledby="demo-chart-title">
+      <p className="eyebrow report-chart-eyebrow">{t("visualComparison")}</p>
+      <h3 id="demo-chart-title" className="report-chart-title">{t("demoChart")}</h3>
 
-      {/* EKRAN */}
-      <div className="report-chart-screen">
-        <div className="report-chart-wrap">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{ top: 18, right: 18, left: 6, bottom: 12 }}
-              barCategoryGap="28%"
-            >
-              <CartesianGrid strokeDasharray="4 4" stroke="rgba(17,49,34,0.12)" />
-              <XAxis
-                dataKey="name"
-                tick={{ fill: "#587160", fontSize: 12 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                domain={[0, 100]}
-                tick={{ fill: "#587160", fontSize: 13 }}
-                axisLine={false}
-                tickLine={false}
-                width={36}
-              />
-              <Tooltip
-                formatter={(value: any) => [`Score: ${Number(value ?? 0)}%`, undefined]}
-                contentStyle={{
-                  borderRadius: 16,
-                  border: "1px solid rgba(17,49,34,0.08)",
-                  background: "rgba(255,255,255,0.96)",
-                  color: "#113122",
-                }}
-                cursor={{ fill: "rgba(17,49,34,0.05)" }}
-              />
-              <Bar dataKey="value" radius={[14, 14, 0, 0]} maxBarSize={96}>
-                {data.map((entry) => (
-                  <Cell key={entry.name} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+      <div className="report-chart-screen report-chart-wrap">
+        <ul className="demo-chart-list">
+          {data.map(({ label, score, value, color }) => (
+            <li className="demo-chart-row" key={label}>
+              <span>{label}</span>
+              <span className="demo-chart-track" role="meter" tabIndex={0}
+                aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={score} aria-valuetext={value}>
+                <span className="demo-chart-fill" style={{ width: `${score}%`, background: color }} />
+                <span className="demo-chart-tooltip" aria-hidden="true">{t("scoreDemo")}: {value}</span>
+              </span>
+              <strong aria-hidden="true">{value}</strong>
+            </li>
+          ))}
+        </ul>
+        <div className="demo-chart-axis" aria-hidden="true">
+          {[0, 25, 50, 75, 100].map((tick) => <span key={tick}>{tick}</span>)}
         </div>
       </div>
 
-      {/* DRUK / PDF */}
-      <div className="report-chart-print" aria-hidden="true">
-        <div className="print-chart-inner">
-          
-
-          <div className="print-bars-vertical">
-            {data.map((item) => (
-              <div key={item.name} className="print-bar-vertical-item">
-                <div className="print-bar-vertical-value">{item.value}</div>
-
-                <div className="print-bar-vertical-track">
-                  <div
-                    className="print-bar-vertical-fill"
-                    style={{
-                      height: `${Math.max(0, Math.min(100, item.value))}%`,
-                      background: item.color,
-                    }}
-                  />
-                </div>
-
-                <div className="print-bar-vertical-label">{item.name}</div>
-              </div>
-            ))}
+      <div className="report-chart-print print-bars-vertical">
+        {data.map(({ label, score, value, color }) => (
+          <div key={label} className="print-bar-vertical-item">
+            <div className="print-bar-vertical-value">{value}</div>
+            <div className="print-bar-vertical-track">
+              <div className="print-bar-vertical-fill" style={{ height: `${Math.max(0, Math.min(100, score))}%`, background: color }} />
+            </div>
+            <div className="print-bar-vertical-label">{label}</div>
           </div>
-        </div>
+        ))}
       </div>
 
-      <p className="report-chart-note">
-        This score is generated from satellite-derived indicators such as vegetation,
-        moisture, terrain, and long-term sustainability signals.
-      </p>
+      <p className="report-chart-note">{t("demoChartNote")}</p>
     </section>
   );
 }
-
-export default ResultsScoreChart;

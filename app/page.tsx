@@ -1,218 +1,83 @@
+import Image from "next/image";
 import Link from "next/link";
-import { FeatureCard } from "@/components/cards/feature-card";
-import { HydroSenseWordmark } from "@/components/hydrosense-wordmark";
-import { MetricCard } from "@/components/cards/metric-card";
-import { SectionHeader } from "@/components/section-header";
-import { demoHighlights, investorReasons, workflowSteps } from "@/lib/mock-content";
+import { ArrowDownRight, ArrowRight, ChartNoAxesCombined, FileText, Layers3, ScanLine } from "lucide-react";
+import { getLocalization } from "@/lib/i18n/server";
+import sentinelScene from "@/public/sentinel-biala-20260816.webp";
 
-export default function HomePage() {
+const capabilities = [
+  { icon: ScanLine, title: "toolArea", copy: "toolAreaText" },
+  { icon: Layers3, title: "toolSignals", copy: "toolSignalsText" },
+  { icon: ChartNoAxesCombined, title: "toolHistory", copy: "toolHistoryText" },
+  { icon: FileText, title: "toolReport", copy: "toolReportText" },
+] as const;
+
+const sample = {
+  coordinates: [52.0423, 23.0804] as [number, number],
+  date: "2026-08-16",
+  href: "/results?mode=custom&lat=52.0423&lng=23.0804&radius=500&from=2026-08-16&to=2026-08-16",
+};
+
+export default async function HomePage() {
+  const { t, date, coordinates } = await getLocalization();
   return (
-    <div className="container">
-      <section className="page-section hero-grid hero-grid--home">
-        <div className="hero-panel hero-panel--home">
-          <div className="section-heading">
-          
-            <span className="eyebrow">AI-assisted parcel review</span>
-
-            <h1
-              className="display-title"
-              style={{
-                fontSize: "clamp(2.1rem, 4vw, 3.6rem)",
-                lineHeight: 0.95,
-                letterSpacing: "-0.04em",
-                maxWidth: "9ch",
-              }}
-            >
-              Assess land before capital is committed.
-            </h1>
-
-            <p
-              className="lead"
-              style={{
-                maxWidth: "32rem",
-                fontSize: "1.05rem",
-                lineHeight: 1.7,
-                marginTop: "1.5rem",
-              }}
-            >
-              HydroSense transforms parcel’s satellite data into a concise executive brief covering water access, soil profile, crop fit, irrigation potential, and decision risk.
-            </p>
+    <div className="home-page">
+      <section className="container home-hero">
+        <div className="home-hero-copy">
+          <p className="eyebrow home-hero-kicker"><span aria-hidden="true" />{t("heroIntro")}</p>
+          <h1 className="display-title">{t("heroTitle")}</h1>
+          <p className="lead">{t("heroLead")}</p>
+          <div className="button-row home-actions">
+            <Link className="button" href="/select-area">{t("selectArea")} <ArrowRight size={17} aria-hidden="true" /></Link>
+            <Link className="button-secondary" href="/results?parcel=parcel-b" prefetch={false}>{t("demoBrief")}</Link>
           </div>
-
-          <div className="hero-actions hero-actions--home">
-            <Link className="button" href="/select-area">
-              Start Demo
-            </Link>
-            <Link className="button-secondary" href="/results?parcel=parcel-b">
-              View Brief
-            </Link>
-          </div>
+          <ul className="hero-sensors" aria-label={t("index")}>
+            <li>NDVI</li><li>NDWI</li><li>NDMI</li>
+          </ul>
         </div>
 
-        <div
-          className="hero-card map-art hero-feature-panel"
-          style={{
-            overflow: "hidden",
-            position: "relative",
-          }}
-        >
-          <div className="map-overlay">
-  <div className="label-row">
-    <span className="signal hero-preview-microtext">
-      AI-assisted parcel intelligence
-    </span>
-    <span className="pill hero-preview-microtext hero-preview-pill">
-      Veneto demo parcel set
-    </span>
-  </div>
-
-  <div>
-    <p className="supporting-label hero-preview-kicker">
-      Featured parcel for live review
-    </p>
-
-    <h2
-      className="section-title hero-feature-title"
-      style={{
-        color: "#f2fff5",
-        fontSize: "clamp(1.8rem, 3.2vw, 3.2rem)",
-        lineHeight: 0.95,
-        letterSpacing: "-0.035em",
-        maxWidth: "9.5ch",
-        marginBottom: "1.75rem",
-      }}
-    
-              >
-                Parcel B — Mestre Plain
-              </h2>
-            </div>
-
-            <div
-              className="stats-grid hero-stats-grid"
-              style={{
-                position: "relative",
-                zIndex: 2,
-              }}
-            >
-              <div className="metric-card hero-stat-card">
-                <p
-                  className="metric-value"
-                  style={{
-                    color: "#f2fff5",
-                    fontSize: "4.2rem",
-                    lineHeight: 1,
-                    marginBottom: "1rem",
-                  }}
-                >
-                  84%
-                </p>
-                <p className="metric-label">Investment suitability</p>
-              </div>
-
-              <div className="metric-card hero-stat-card">
-                <p
-                  className="metric-value"
-                  style={{
-                    color: "#f2fff5",
-                    fontSize: "4.2rem",
-                    lineHeight: 1,
-                    marginBottom: "1rem",
-                  }}
-                >
-                  81%
-                </p>
-                <p className="metric-label">Irrigation readiness</p>
-              </div>
-
-              <div className="metric-card hero-stat-card">
-                <p
-                  className="metric-value"
-                  style={{
-                    color: "#f2fff5",
-                    fontSize: "4.2rem",
-                    lineHeight: 1,
-                    marginBottom: "1rem",
-                  }}
-                >
-                  86%
-                </p>
-                <p className="metric-label">Crop fit score</p>
-              </div>
-
-              <div className="metric-card hero-stat-card">
-                <p
-                  className="metric-value"
-                  style={{
-                    color: "#f2fff5",
-                    fontSize: "4.2rem",
-                    lineHeight: 1,
-                    marginBottom: "1rem",
-                  }}
-                >
-                  82%
-                </p>
-                <p className="metric-label">Agricultural productivity</p>
-              </div>
-            </div>
+        <figure className="scene-card">
+          <div className="scene-head">
+            <span><ScanLine size={17} aria-hidden="true" /> Sentinel-2 L2A</span>
+            <span className="scene-tag">{t("sampleScene")}</span>
           </div>
-        </div>
+          <Link className="scene-preview" href={sample.href} aria-label={t("openScene")} prefetch={false}>
+            <Image src={sentinelScene} fill unoptimized preload alt={t("sampleImage")} />
+            <svg viewBox="0 0 768 460" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+              <path d="M26 65V26h39m638 0h39v39m0 330v39h-39m-638 0H26v-39" fill="none" stroke="#c2f6fc" strokeWidth="1.5" opacity=".8" />
+              <circle cx="384" cy="230" r="121" fill="#1baee7" fillOpacity=".08" stroke="#a5f3fc" strokeWidth="2.5" />
+              <circle cx="384" cy="230" r="132" fill="none" stroke="#e0faff" strokeWidth="1" strokeDasharray="3 7" opacity=".85" />
+              <path d="M384 213v34m-17-17h34" stroke="#e0faff" strokeWidth="1.5" />
+              <circle cx="384" cy="230" r="4" fill="#e0faff" />
+            </svg>
+            <span className="scene-coordinates">{coordinates(sample.coordinates)}</span>
+            <span className="scene-layer">TRUE COLOR</span>
+          </Link>
+          <figcaption>
+            <div className="scene-caption">
+              <div>
+                <h2>{t("sampleLocation")}</h2>
+                <p>{date(sample.date)} UTC · 500 m</p>
+              </div>
+              <Link className="scene-link" href={sample.href} aria-label={t("openScene")} prefetch={false}><ArrowDownRight size={20} aria-hidden="true" /></Link>
+            </div>
+            <p className="scene-credit">Contains modified Copernicus Sentinel data [2026], processed by Sentinel Hub</p>
+          </figcaption>
+        </figure>
       </section>
 
-      <section className="page-section">
-        <SectionHeader
-          eyebrow="What HydroSense does"
-          title="A premium parcel-intelligence demo built for live explanation."
-          description="The prototype is designed to present groundwater potential, crop fit, irrigation opportunities and risks in a concise agriculture industry context."
-        />
-        <div className="card-grid">
-          {demoHighlights.map((item) => (
-            <FeatureCard
-              key={item.title}
-              title={item.title}
-              description={item.description}
-              detail={item.detail}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="page-section two-column-grid">
-        <div className="glass-card">
-          <SectionHeader
-          eyebrow="3-step story"
-          title="Select parcel → Analyze signals → Present the brief"
-          description="HydroSense guides the user from parcel selection to satellite-based scoring and a concise executive brief ready for presentation."
-        />
-          <div className="metric-stack workflow-stack">
-  {workflowSteps.map((step, index) => (
-    <div className="workflow-step-wrap" key={step.title}>
-      <MetricCard
-        label={`0${index + 1}`}
-        title={step.title}
-        value={step.summary}
-      />
-
-      {index < workflowSteps.length - 1 ? (
-        <div className="workflow-arrow-down" aria-hidden="true">
-          ↓
-        </div>
-      ) : null}
-    </div>
-  ))}
-</div>
-        </div>
-
-        <div className="timeline-card">
-          <SectionHeader
-            eyebrow="Why investors care"
-            title="HydroSense frames land quality in decision-ready language."
-            description="The concept helps explain why a parcel matters before deeper diligence, capex planning, or cultivation strategy work begins."
-          />
-          <div className="insight-grid">
-            {investorReasons.map((reason) => (
-              <article key={reason.title} className="field-chip-card">
-                <h3>{reason.title}</h3>
-                <p>{reason.description}</p>
+      <section className="home-toolkit" aria-labelledby="toolkit-heading">
+        <div className="container">
+          <p className="eyebrow">{t("toolset")}</p>
+          <h2 className="section-title" id="toolkit-heading">{t("toolsetTitle")}</h2>
+          <div className="toolkit-grid">
+            {capabilities.map(({ icon: Icon, title, copy }, i) => (
+              <article className="tool-card" key={title}>
+                <div className="tool-card-top">
+                  <span className="tool-icon"><Icon size={20} aria-hidden="true" /></span>
+                  <span className="tool-number" aria-hidden="true">0{i + 1}</span>
+                </div>
+                <h3>{t(title)}</h3>
+                <p>{t(copy)}</p>
               </article>
             ))}
           </div>

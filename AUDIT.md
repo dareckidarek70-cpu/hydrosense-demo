@@ -1,0 +1,106 @@
+# Audyt HydroSense
+
+## Ustalenia i poprawki
+
+| Waga | Ustalenie | Zmiana |
+| --- | --- | --- |
+| Krytyczna | Plik `.env.local` z danymi dostępowymi Copernicus trafił do historii Git. | Dodano pusty szablon. Usunięcie pliku z indeksu przygotowano w osobnym lokalnym commicie z zachowaniem kopii. Publikacja tego commita powinna nastąpić po rotacji ujawnionego sekretu. |
+| Wysoka | Błędy dostawcy uruchamiały procentowy fallback oparty na współrzędnych. Raport ufał ocenom, źródłu i fladze wody z adresu URL. | Raport sam odczytuje obserwacje wybranego obszaru. Nieudana analiza i brak obserwacji mają odrębne stany. |
+| Wysoka | Wyniki inwestycji, nawodnienia i uprawy wynikały z arbitralnych wag NDVI/NDWI. Sustainability było średnią pozostałych ocen. | Cztery oceny pozostają wyłącznie w oznaczonych scenariuszach demo. Raport obserwacyjny podaje, jakich danych brakuje do każdej oceny. |
+| Wysoka | Maskowanie pomijało chmury i cienie, zakresy dat mapy i raportu były różne, a wodę zgadywano z prostokątów w rejonie Wenecji. | Wspólne reguły Sentinel-2 SCL dla mapy i obliczeń. Warstwa używa dnia podanego w raporcie, gdy istnieje użyteczna obserwacja. Woda wynika z udziału pikseli SCL 6. |
+| Wysoka | Publiczne endpointy pozwalały na duże żądania, wielokrotne próby dostawcy i wywołania OpenAI bez limitu. | Limity rozmiarów, zakresu dat, współrzędnych, czasu i liczby zapytań. Wyniki i token przechowywane z ograniczeniami; równoległe identyczne żądania współdzielą pracę. OpenAI jest domyślnie wyłączone. |
+| Wysoka | Zainstalowane wersje zależności miały zgłoszone podatności, a polecenie `next lint` zostało usunięte z Next.js 16. | Uaktualniono Next.js, React i Zod. Lint działa przez ESLint CLI, przeniesiony do zależności deweloperskich. |
+
+## Metoda obserwacyjna
+
+Źródłem jest [Copernicus CDSE Sentinel-2 L2A](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/S2L2A.html). [Statistical API](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Statistical.html) oblicza oddzielne statystyki dzienne dla rzeczywistej geometrii na siatce około 20 m. Standardowe okno obejmuje 30 pełnych dni UTC. Promienie 500 m i 1 km odpowiadają w przybliżeniu 78,5 i 314,2 ha. Odczyt działa na buforze, więc może obejmować kilka typów powierzchni oraz tereny poza granicą własności.
+
+| Wskaźnik | Wzór | Interpretacja |
+| --- | --- | --- |
+| NDVI | (B08 − B04) / (B08 + B04) | Zieloność roślinności na lądzie |
+| NDWI, wariant zielone–NIR | (B03 − B08) / (B03 + B08) | Kontrast wód powierzchniowych, z możliwym wpływem zabudowy |
+| NDMI | (B8A − B11) / (B8A + B11) | Optyczna odpowiedź związana z wodą w roślinności i cechami powierzchni |
+
+W obliczeniach pozostają klasy SCL 4, 5 i 6. Wodę wyklucza się z NDVI i NDMI. Piksel bez danych, z zerowym mianownikiem albo z klasą chmury, cienia, śniegu lub niepewnej powierzchni jest wykluczany. Zachmurzenie to udział klas 8–10 w pikselach zaobserwowanych i niesklasyfikowanych jako uszkodzone lub brak danych. Przybliżone użyteczne pokrycie obszaru wynika z liczby wyraźnych pikseli względem powierzchni i rozdzielczości siatki. Raport wybiera najnowszy dzień z co najmniej 50% takiego pokrycia i co najmniej 20 pikselami dla przynajmniej jednego wskaźnika. To jawne kryteria jakości, bez udawanej dokładności oceny agronomicznej.
+
+Data oznacza dzień dziennej mozaiki UTC. Więcej niż jeden fragment sceny może współtworzyć obraz. Gdy brak dnia wynikowego, mapa w warstwie satelitarnej może pokazywać mozaikę 30 dni z podanym zakresem. Jasne piksele w raporcie i mapa mogą mieć inne próbkowanie ze względu na siatkę mapy i zakres widoku.
+
+Lasy i uprawy mogą mieć podobny NDVI. Grunty odsłonięte, zabudowa i nieużytki wymagają niezależnych danych o pokryciu terenu. Sentinel-2 w tej konfiguracji nie ustala wilgotności gleby, poziomu wód podziemnych, infrastruktury, ryzyka inwestycyjnego ani możliwości uprawy. OpenStreetMap służy jako mapa orientacyjna. Poligony i procenty demo są ilustracyjne. Brak połączenia z danymi katastralnymi, glebowymi i hydrogeologicznymi.
+
+## Uruchomienie i dalsze decyzje
+
+- Weryfikacja lokalna obejmowała prawdziwy odczyt Copernicus dla dwóch promieni tego samego punktu, warstwę NDVI, próbę dla otwartej wody i widok Chrome o szerokości 390 px. Testy jednostkowe, ESLint i build przeszły. `npm audit --omit=dev` zwrócił 0 podatności.
+- Lokalnie uruchom `npm ci`, następnie `npm run dev`. Do testów jednostkowych używaj Node.js 22.18+ albo 24. Uruchom `npm test`, `npm run lint` oraz `npm run build`.
+- `.env.example` zawiera nazwy zmiennych. Do rzeczywistych odczytów serwer wymaga `COPERNICUS_CLIENT_ID` i `COPERNICUS_CLIENT_SECRET`. Na Vercel ustawiaj je oddzielnie dla Preview i Production. Nie zapisuj ich w Git.
+- Rotacja ujawnionego klienta Copernicus powinna objąć unieważnienie poprzedniego sekretu, weryfikację wykorzystania limitów i aktualizację lokalnej konfiguracji oraz Vercel. Samo usunięcie pliku z gałęzi nie usuwa go z historii.
+- Publiczne wdrożenie powinno mieć wspólny limit zapytań na brzegu lub u dostawcy. Limity w kodzie działają na pojedynczej instancji i nie zastępują limitu globalnego. Nie włączaj płatnego OpenAI bez ustalenia budżetu i kontroli dostępu.
+- Link utworzony w selektorze zachowuje wybrany zakres dat. Ponowne otwarcie pobiera dostępne obserwacje z Copernicus, więc link nie jest archiwalnym zapisem rastra. Druk zachowuje wybraną datę oraz obszar.
+
+## Etap II
+
+- Historia udostępnia okresy 30, 90 i 365 dni oraz własny zakres do 366 pełnych dni UTC. NDVI i NDMI są punktami na osi czasu. Krzyżyki oznaczają odczyt niedostępny dla danego wskaźnika, a luki dni bez obserwacji. Dzienna tabela pokazuje zachmurzenie i udział użytecznej powierzchni. Zmiana okresowa to różnica median pierwszych i ostatnich trzech kwalifikujących się pomiarów, o ile jest ich co najmniej sześć.
+- Użytkownik może wybrać dzień raportu i datę do porównania. Porównanie obszarowe obejmuje dwa promienie tego samego punktu. Różnicę między promieniami liczymy na najnowszej wspólnej użytecznej dacie. To wspólny dzień UTC, który może zawierać różne fragmenty sceny. Nakładające się bufory mogą obejmować różne rodzaje powierzchni. Nie ma jeszcze porównania dwóch niezależnych lokalizacji.
+- Progi NDVI, NDWI i NDMI są progami wizualizacji wspólnymi dla rastra i legendy. Interpretacja opisuje kontrast spektralny. Progi nie są progami agronomicznymi. Naturalne kolory używają B04, B03 i B02 z rozjaśnieniem 2,5×.
+- Wydruk A4 używa obrazu True Color z dnia raportu, wektorowego obrysu bufora, skali w środku mapy i dwóch wykresów wektorowych. Gdy raster jest niedostępny, wydruk pokazuje wyraźnie oznaczony schemat bufora.
+- Kontrola z Copernicus: obszar z polami w Veneto (NDVI 0,55 dla 500 m i 0,48 dla 1 km), Warszawa (0,08 dla 500 m) i Adriatyk (100% wody, NDWI 0,78, brak NDVI i NDMI). Zakresy 90 i 365 dni zwróciły odpowiednio 27 i 104 dni z obserwacjami w Veneto, przed odrzuceniem na podstawie jakości. Potwierdzono również pusty dzień oraz błąd 503 na instancji bez poświadczeń.
+
+## Etap III
+
+- Przełącznik PL/EN zapisuje wybór w ciasteczku. Polski jest domyślny. Ten sam katalog tłumaczeń i formatowanie `Intl` obsługują widok na ekranie i A4, w tym liczby, daty, opisy, przedziały legendy i porównania. Pola A–D pozostają przykładami, z niezmienionymi ocenami demonstracyjnymi.
+- Niedostępność danych nie tworzy zastępczych pomiarów. Brak obserwacji, odrzucona obserwacja i błąd usługi są osobnymi stanami. Kontrolowane próby API potwierdziły HTTP 504, HTTP 503 oraz HTTP 429 dostawcy z `Retry-After`; oddzielny limit aplikacji zwrócił 429 po dziesięciu nowych zapytaniach na tej samej instancji. Limity nie są wspólne dla instancji.
+- Próby rzeczywiste: punkt rolniczy pod Białą Podlaską dla obu promieni, las w Puszczy Białowieskiej i Jezioro Białe, okna 30, 90 i 365 dni z końcem 31 sierpnia 2026 r. Dla tego samego punktu 500 m zwróciło 15, 45 i 174 dni z obserwacjami przed oceną jakości. Dzień 30 sierpnia zwrócił brak obserwacji. Dla 26 sierpnia przy 500 m trzy średnie wskaźników, udział zachmurzenia i liczba wyraźnych pikseli zgadzały się z bezpośrednią odpowiedzią Statistical API przy tej samej konfiguracji. To kontrola przepływu liczb, nie niezależna walidacja naukowa.
+- W sprawdzonych pakietach klienta i HTML nie znaleziono wartości lokalnie skonfigurowanych sekretów. Ujawnienie w śledzonym `.env.local` i historii zdalnego repozytorium pozostaje otwarte. Etap III nie modyfikuje pliku na zdalnej gałęzi, nie publikuje lokalnego commita porządkowego i nie zmienia poświadczeń. Nie włączono płatnych integracji.
+
+## Etap IV
+
+- System Satellite Minimal + GeoTech Premium: jasne powierzchnie, niebieski akcent nawigacyjny, turkusowe znaczniki i bezszeryfowa typografia. Arkusz ekranowy zastąpił nakładające się reguły; A4 ma osobny arkusz stylów.
+- Strona główna używa lokalnego obrazu referencyjnego: okolice Białej Podlaskiej, 16 sierpnia 2026 UTC, Copernicus Sentinel-2 L2A True Color. Plik jest przetworzoną odpowiedzią istniejącego endpointu warstw z podanym źródłem, a nie nowym wywołaniem przy odwiedzinach strony. Odnośnik prowadzi do rzeczywistej analizy z tego dnia.
+- Obok wyboru punktu kliknięciem można użyć przycisku wyboru środka aktualnego widoku mapy. Raport wyodrębnia okres, jakość danych i wartości wskaźników od interpretacji. Wydruk zachowuje metodę, zalecenia, mapę i historię; porównania są drukowane, jeśli zostały otwarte.
+- Bez zmian w algorytmach, progach i barwach legend, odczytach Sentinel-2, integracjach, limitach ani ocenach działek demonstracyjnych A–D.
+
+### Pomiary wydajności po akceptacji wyglądu
+
+Porównanie z `be556b6`: lokalny produkcyjny build, ten sam Chrome i viewport 1280 × 900 px. Cache przeglądarki opróżniany przed zimnym otwarciem strony, mapy i raportu. Dla porównania poniżej obie instancje Next miały rozgrzany cache serwerowy na tych samych zapytaniach. Pomiar strony głównej to mediana trzech wejść, a powrotu do rastra mediana pięciu zmian między True Color i NDVI na tym samym przybliżeniu i w tym samym oknie. Raport: 500 m, punkt 52,0423 / 23,0804, 3 czerwca–31 sierpnia 2026 UTC. Czasy pojedynczych prób nie są laboratoryjną oceną sieci zewnętrznej ani gwarancją wyników na Vercel.
+
+| Miernik | Przed | Po |
+| --- | ---: | ---: |
+| Wysokość hero | 654 px | 486 px (−26%) |
+| Transfer zdjęcia na stronie głównej | 15 988 B | 12 890 B |
+| Żądania podczas wejścia na stronę główną | 25 | 21 |
+| LCP strony głównej, mediana lokalna | 40 ms | 36 ms |
+| Mapa bazowa: wszystkie początkowe kafelki gotowe | 2065 ms | 2014 ms |
+| Wczytanie rastra w przeglądarce, cache serwera: True Color / NDVI | 268 / 283 ms | 25 / 20 ms |
+| Powrót do poprzedniej warstwy | 277 ms, 1 odczyt HTTP z cache przeglądarki | 19 ms, bez odczytu HTTP |
+| Historia raportu gotowa przy wejściu, cache serwerowy | 423 ms | 65 ms |
+| Historia raportu po odświeżeniu w tej samej karcie | 411 ms, 1 POST | 44 ms, bez POST |
+| Transfer JS na stronie raportu (obserwacyjnego i demo) | 307 355 B | 201 365 B |
+| Rozmiar polskiego PDF obserwacyjnego | 4 256 150 B | 489 038 B |
+
+- Zmienianie warstw nie odtwarzało mapy już przed optymalizacją. W pomiarze React liczba zatwierdzeń zmian korzenia przy powrocie do rastra spadła z 3 do 2, a przy otwarciu raportu demo z 64 do 6 w półsekundowym oknie. Nie jest to licznik wszystkich wywołań renderowania komponentów. Zmiana rozmiaru kontenera uruchamia teraz pojedynczą synchronizację Leaflet na klatkę; sprawdzono wypełnienie czterech narożników po zmniejszeniu widoku.
+- Przyczynami były stałe oczekiwanie 250 ms przy każdej warstwie, 350 ms przed odczytem do raportu i biblioteka wykresów demo w pakiecie obu raportów. Pierwsze żądanie obrazu hero przez optymalizator Next trwało w osobnej próbie 47 ms; pomiar obejmuje całe żądanie i nie izoluje samego przetwarzania obrazu. W rozgrzanym teście różnica LCP była niewielka. Dwa zasoby znacznika Leaflet przeniesiono z CDN lokalnie. Początkowy JS mapy pozostał zbliżony: ok. 251 → 252 kB.
+- Statystyki są odczytywane do 5 minut z sesji karty dla tej samej geometrii i dat. Raster jest zachowywany tylko na tej mapie dla identycznego zakresu, obszaru, wymiaru i warstwy: do 8 obrazów, z limitem pamięci i TTL 5 min. Nie pobieramy warstw z wyprzedzeniem. Klikanie punktów na mapie nadal ma zwłokę 350 ms ograniczającą nadmiarowe żądania.
+- Najwolniejszy początkowy kafelek OSM trwał 1747 ms przed i 1703 ms po. Brak dowodu na istotne przyspieszenie zimnej mapy bazowej. W niezbuforowanej próbie po zmianach pomiar po stronie serwera odnotował 125 ms na uwierzytelnienie Copernicus, 902–1233 ms na raster i 3977 ms na statystyki. Te czasy zależą od dostawców i okresu analizy.
+- Usunięto 11 nieużywanych plików (1253 linie). Z różnic kodu wynika 1555 linii usuniętych brutto i ok. 1144 mniej netto, bez lockfile, dokumentacji i licencji zasobów. W CSS zmieniono 13 istniejących reguł i usunięto lub scalono 5 starych selektorów. Wyeliminowano 6 wskazanych duplikatów: dawny czat, dawną legendę, dawną mapę demo, powtórzoną normalizację punktu, nadmiarowy kontener wykresu oraz powtórzony odczyt metadanych wskaźnika. Zamiast Recharts wykres demo jest renderowany bez biblioteki klienckiej, z wartościami i podpowiedzią dostępną także z klawiatury. Logotypy w nagłówku, stopce i PDF korzystają z lekkich kopii istniejących oryginałów.
+- Weryfikacja: 17 testów, ESLint i build; Chrome desktop, tablet i telefon, mapa i wszystkie warstwy, działki A–D, rzeczywiste obserwacje, porównanie dat i promieni, PL/EN. Sprawdzony raport obserwacji i raport demo w obu językach nadal mają po jednej stronie A4.
+
+### Naprawa warstw mapy na Preview
+
+- Na `a974351` przy 1440 × 900 px mapa ma kontener 812 px. Początkowy zoom 10 dawał zakres długości ok. 1,115°, powyżej limitu 1°. Wszystkie cztery warstwy zostały zatrzymane przed wysłaniem żądania. Ręczne przybliżenie do 11 dało zakres 0,558° i odpowiedzi PNG 200.
+- Poprawka dopasowuje widok przy wyborze warstwy i zmianie rozmiaru, bez zmiany limitów serwera i bez sztucznego oczekiwania przed pobraniem. Zmiana punktu centruje mapę. Poprzednia nakładka znika po zmianie zapytania, a przerwane pobranie nie może jej przywrócić.
+- Gotowość jest sygnalizowana dopiero po zdekodowaniu prawdziwej nakładki Leaflet. W obecnej mozaice Veneto tylko ok. 0,35% rastra miało widoczne piksele mimo poprawnego PNG. Udział dotyczy rastra mapy, nie pokrycia bufora analizy. Maska, indeksy i legenda pozostały bez zmian. W razie pustego rastra, błędu lub timeoutu mapa bazowa dalej działa i jest pokazany odpowiedni komunikat.
+- Poprawne rastry mogą być ponownie użyte po identycznym zapytaniu, również przez cache CDN Preview z TTL 5 min; odpowiedzi błędów zachowują `no-store`. Nie włączono pobierania z wyprzedzeniem, automatycznych ponowień ani dodatkowych usług.
+- Dla własnego punktu i obserwacji 26.10.2026 UTC żądanie True Color trwało 8,03 s, w tym 2,05 s oczekiwania na odpowiedź i 5,98 s pobierania 870 kB. Mapa może teraz odebrać bezstratny WebP; serwer zwraca oryginalny PNG, jeśli konwersja się nie powiedzie lub nie zmniejszy transferu. Dla tej samej sceny PNG/WebP miały piksele identyczne bajt w bajt: True Color 869 043 → 651 212 B, NDVI 100 698 → 51 762 B, NDWI 35 657 → 16 194 B, NDMI 130 174 → 67 568 B. Eksport i mapy raportów nadal żądają PNG.
+
+## Etap V: kontekst raportu w asystencie
+
+- Wersja konkursowa przyjmowała opis działki i oceny z klienta; model mógł tworzyć swobodną odpowiedź. Przed Etapem V panel był dostępny tylko w demo i wysyłał samo pytanie, więc nie znał działki. Teraz obie wersje raportu przesyłają identyfikator zakresu, a kontekst uzupełnia serwer.
+- Działki A–D korzystają z istniejących kart i niezmienionych ocen demo. Raport własny korzysta z użytecznego dnia w pamięci statystyk dla tego samego punktu, promienia i okresu. Gdy ich tam nie ma, serwer może sprawdzić tylko wskazany dzień w Copernicus. Brak wyboru, brak użytecznej obserwacji i niedostępność usługi są oznaczane osobno. Wskaźniki nie są przeliczane na wilgotność gleby, poziom wód gruntowych ani opłacalność.
+- Domyślna ścieżka jest regułowa. Model wymaga flagi i klucza po stronie serwera, zna tylko kontekst zweryfikowany przez aplikację i może wybrać temat odpowiedzi, ale nie dopisywać liczb, źródeł ani zaleceń. Błędna odpowiedź, limit lub timeout modelu przywraca ścieżkę regułową. Przy zmianie działki, obszaru, dnia lub języka panel odrzuca odpowiedź z poprzedniego kontekstu.
+- Limity to 600 znaków pytania, 4 KiB ciała żądania, 16 żądań czatu i 3 próby modelu na minutę na instancję, do 12 s na sprawdzenie dnia i 10 s na model bez automatycznych ponowień. Limity instancyjne nie są globalną kontrolą kosztów przy wielu replikach.
+- W lokalnych próbach HTTP sprawdzono A–D, oba języki, niepoprawne żądania, brak klucza, brak wybranego dnia i HTTP 429 po przekroczeniu limitu. Odpowiedzi dla okolic Białej Podlaskiej (500 m i 1 km, dwa dni) oraz obszaru wodnego w Adriatyku porównano z odczytem raportu dla tego samego zakresu. To kontrola zgodności danych w aplikacji, nie niezależna walidacja naukowa. Testy modelu nie wysyłały zapytań do OpenAI.
+
+## Etap VI: pytania o konkretne uprawy
+
+- Czat rozpoznaje nazwy i odmianę fleksyjną ośmiu upraw w PL/EN, wybrane literówki i intencję, w tym termin, wymagania, nawadnianie, plon, opłacalność oraz porównanie roślin. Gdy pytanie o roślinę wykracza poza bazę, podaje ograniczenie zamiast zgadywać. Baza nie zawiera szczegółów dla każdej odmiany czy regionu.
+- Odpowiedź zaczyna się od wniosku. Osobno pokazuje ogólne wymagania (z odnośnikiem do metodyki PIORiN), kontekst wybranego obszaru i dane potrzebne do decyzji. Odczyt optyczny nie jest pomiarem pH, klasy gleby, wód gruntowych ani plonu. W raporcie demo asystent odróżnia „uwzględniono w scenariuszu” od „nie uwzględniono”, bez przypisywania procentowej szansy powodzenia.
+- Pytania o konkretne lub nierozpoznane uprawy omijają opcjonalnego dostawcę. Bez zmian w mapie, warstwach, PDF, scenariuszach A–D i konfiguracji OpenAI. Szczegółowe wyniki: [pełne odpowiedzi z testu HTTP](docs/etap-vi-odpowiedzi.md).

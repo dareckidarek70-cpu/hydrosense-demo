@@ -1,4 +1,4 @@
-export type ParcelId = "parcel-a" | "parcel-b" | "parcel-c";
+export type ParcelId = "parcel-a" | "parcel-b" | "parcel-c" | "parcel-d";
 
 export type DemoParcel = {
   id: ParcelId;

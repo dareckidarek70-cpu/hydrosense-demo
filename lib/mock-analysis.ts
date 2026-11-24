@@ -1,4 +1,4 @@
-import { AnalysisResult, DemoParcel, ParcelId } from "@/lib/types";
+import type { AnalysisResult, DemoParcel } from "@/lib/types";
 
 export const demoParcels: DemoParcel[] = [
   {
@@ -44,7 +44,7 @@ export const demoParcels: DemoParcel[] = [
     },
   },
   {
-    id: "parcel-d" as ParcelId,
+    id: "parcel-d",
     label: "Parcel D — Veneto Field Reference",
     region: "Veneto Field Reference",
     areaHectares: 176,
