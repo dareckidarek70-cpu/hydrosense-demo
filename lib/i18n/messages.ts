@@ -358,7 +358,7 @@ export const messages = {
   referenceMosaic: { en: "Reference mosaic: {from} to {to} UTC", pl: "Mozaika referencyjna: {from} – {to} UTC" },
   badRequest: { en: "Invalid area or dates. Check the coordinates and observation period.", pl: "Nieprawidłowy obszar lub daty. Sprawdź współrzędne i okres obserwacji." },
   badLayer: { en: "Invalid satellite layer request. Try zooming in.", pl: "Nieprawidłowe zapytanie o warstwę satelitarną. Spróbuj przybliżyć mapę." },
-  rateLimit: { en: "Query limit reached. Wait about a minute before retrying.", pl: "Osiągnięto limit zapytań. Odczekaj około minuty i spróbuj ponownie." },
+  rateLimit: { en: "Query limit reached. Try again later.", pl: "Osiągnięto limit zapytań. Spróbuj ponownie później." },
   providerRate: { en: "Copernicus has limited requests. Try again after a short wait.", pl: "Copernicus ograniczył liczbę zapytań. Spróbuj ponownie za chwilę." },
   timeout: { en: "Copernicus took too long to respond. Retry or choose a shorter period.", pl: "Copernicus nie odpowiedział na czas. Ponów próbę lub wybierz krótszy okres." },
   providerError: { en: "Copernicus data is temporarily unavailable. Retry in a moment.", pl: "Dane Copernicus są chwilowo niedostępne. Spróbuj ponownie za chwilę." },

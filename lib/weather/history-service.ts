@@ -1,6 +1,6 @@
 import { DAY } from "../copernicus/request.ts";
 import { releaseFeatures } from "../release-features.ts";
-import { takeUpstreamBudget, UpstreamBudgetError } from "../upstream-budget.ts";
+import { takeUpstreamBudget, UpstreamBudgetError, withUpstreamClient } from "../upstream-budget.ts";
 import {
   archiveDelayDays, dayString, parseWeatherHistoryQuery, rangeLength, type WeatherHistoryRequest,
 } from "./history-request.ts";
@@ -168,14 +168,14 @@ export function createWeatherHistoryHandler({
     const query = parseWeatherHistoryQuery(new URL(request.url), current);
     if (!query) return Response.json({ error: "weather_invalid_query" }, { status: 400, headers });
     try {
-      const series = await getSeries(query, current.getTime());
+      const series = await withUpstreamClient(request.headers, () => getSeries(query, current.getTime()));
       const at = now().getTime();
       const responseHeaders = series?.limited && providerBlockedUntil > at
         ? { ...headers, "Retry-After": String(secondsLeft(providerBlockedUntil, at)) } : headers;
       return Response.json(weatherResult(query, series), { headers: responseHeaders });
     } catch (error) {
-      if (error instanceof UpstreamBudgetError && process.env.VERCEL_ENV === "preview") {
-        console.info("[HydroSense weather budget]", error.kind, error.retryAfter);
+      if (error instanceof UpstreamBudgetError && process.env.VERCEL) {
+        console.info("[HydroSense weather budget]", error.kind, error.scope, error.retryAfter);
       }
       const failure = error instanceof WeatherHistoryError ? error
         : error instanceof UpstreamBudgetError ? new WeatherHistoryError(

@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { test } from "node:test";
-import { createUpstreamBudget, reserveBudgetScript, UpstreamBudgetError } from "../lib/upstream-budget.ts";
+import { createUpstreamBudget, reserveBudgetScript, UpstreamBudgetError, withUpstreamClient } from "../lib/upstream-budget.ts";
 
 const bin = process.env.HYDROSENSE_REDIS_BIN_DIR;
 const executable = name => bin ? join(bin, name) : name;
@@ -37,9 +37,12 @@ test("atomic Redis reservations are shared by independent clients, with no parti
     const common = { UPSTASH_REDIS_REST_URL: "https://stub.upstash.io", UPSTASH_REDIS_REST_TOKEN: "mock" };
     const preview = createUpstreamBudget({ ...common, VERCEL_ENV: "preview" }, fetcher);
     const production = createUpstreamBudget({ ...common, VERCEL_ENV: "production" }, fetcher);
+    const from = (ip, budget, operation, weight) => withUpstreamClient(
+      new Headers({ "x-vercel-forwarded-for": ip }), () => budget(operation, weight),
+    );
     const operations = ["copernicus-token", "copernicus-stats", "copernicus-layer"];
     const attempts = operations.flatMap(operation => Array.from({ length: 22 }, (_, i) =>
-      (i % 2 ? preview : production)(operation)));
+      from(`192.0.2.${i + 1}`, i % 2 ? preview : production, operation)));
     const outcomes = await Promise.allSettled(attempts);
     assert.equal(outcomes.filter(x => x.status === "fulfilled").length, 32);
     assert.ok(outcomes.filter(x => x.status === "rejected")
@@ -54,9 +57,19 @@ test("atomic Redis reservations are shared by independent clients, with no parti
     assert.equal((await command("EVAL", reserveBudgetScript, "2", "test:c", "test:b",
       "1", "60000", "1", "1", "60000", "1"))[0], 0);
     assert.equal(await command("GET", "test:c"), null);
-    await production("weather", 1600);
-    await assert.rejects(preview("weather", 2), error => error.kind === "limited");
-    await production("openai");
+    const school = "198.51.100.4";
+    const sameNetwork = await Promise.allSettled([
+      from(school, production, "weather", 2), from(school, preview, "weather", 2), from(school, production, "weather", 2),
+    ]);
+    assert.equal(sameNetwork.filter(x => x.status === "fulfilled").length, 2);
+    assert.equal(sameNetwork.find(x => x.status === "rejected").reason.scope, "client");
+    assert.equal(await command("GET", "hydrosense:upstream:v1:weather:minute"), "2");
+    await from("198.51.100.5", preview, "weather", 2);
+    await from("198.51.100.6", production, "weather", 2);
+    await assert.rejects(from("198.51.100.7", preview, "weather", 2), error =>
+      error.kind === "limited" && error.scope === "global" && error.retryAfter > 0);
+    assert.equal(await command("GET", "hydrosense:upstream:v1:weather:day"), "8");
+    await from(school, production, "openai");
   } finally {
     server.kill("SIGTERM");
     await exited;

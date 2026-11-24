@@ -4,6 +4,7 @@ import { getAnalysisArea } from "@/lib/copernicus/stats";
 import { loadReportStats } from "@/lib/copernicus/stats-cache";
 import { readJson } from "@/lib/request-budget";
 import { apiFailure, providerFailure } from "@/lib/copernicus/api-error";
+import { withUpstreamClient } from "@/lib/upstream-budget";
 
 const inputSchema = z.object({
   geometry: geometrySchema,
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    return Response.json(await loadReportStats(geometry, area, window));
+    return Response.json(await withUpstreamClient(request.headers, () => loadReportStats(geometry, area, window)));
   } catch (error) {
     return providerFailure("statistics", error);
   }

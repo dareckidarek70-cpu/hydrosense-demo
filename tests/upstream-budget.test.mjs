@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createUpstreamBudget, satelliteRasterWeight, satelliteStatsWeight, UpstreamBudgetError } from "../lib/upstream-budget.ts";
+import { createUpstreamBudget, satelliteRasterWeight, satelliteStatsWeight, UpstreamBudgetError, withUpstreamClient } from "../lib/upstream-budget.ts";
 import { classifyFailure } from "../lib/copernicus/errors.ts";
 import { createWeatherHistoryHandler } from "../lib/weather/history-service.ts";
 import { releaseFeatures } from "../lib/release-features.ts";
 
 const env = { VERCEL_ENV: "preview", UPSTASH_REDIS_REST_URL: "https://audit-test.upstash.io", UPSTASH_REDIS_REST_TOKEN: "mock" };
 const reject = (kind, retryAfter) => error => error instanceof UpstreamBudgetError && error.kind === kind && error.retryAfter === retryAfter;
+const from = (ip, operation) => withUpstreamClient(new Headers({ "x-vercel-forwarded-for": ip }), operation);
+const fromSchool = operation => from("192.0.2.45", operation);
 
 test("hosted environments fail closed, local development can remain offline", async () => {
   const noCall = async () => assert.fail("Unexpected fetch");
@@ -14,7 +16,11 @@ test("hosted environments fail closed, local development can remain offline", as
     await assert.rejects(createUpstreamBudget(input, noCall)("copernicus-token"), reject("unavailable", 30));
   }
   await createUpstreamBudget({}, noCall)("copernicus-token");
-  await assert.rejects(createUpstreamBudget({ ...env, UPSTASH_REDIS_REST_URL: "https://other.example" }, noCall)("weather"), reject("unavailable", 30));
+  await assert.rejects(fromSchool(() => createUpstreamBudget({ ...env, UPSTASH_REDIS_REST_URL: "https://other.example" }, noCall)("weather")), reject("unavailable", 30));
+  await assert.rejects(createUpstreamBudget(env, noCall)("weather"), reject("unavailable", 30));
+  await assert.rejects(from("192.0.2.1, 192.0.2.2", () => createUpstreamBudget(env, noCall)("weather")), reject("unavailable", 30));
+  await assert.rejects(withUpstreamClient(new Headers({ "x-forwarded-for": "192.0.2.45" }), () =>
+    createUpstreamBudget(env, noCall)("weather")), reject("unavailable", 30));
 });
 
 test("all runtime instances debit the same satellite buckets and isolate other providers", async () => {
@@ -28,37 +34,64 @@ test("all runtime instances debit the same satellite buckets and isolate other p
     calls.push([args.slice(0, +number), args.slice(+number).map(Number)]);
     return Response.json({ result: [1, 0] });
   };
-  await createUpstreamBudget(env, reserve)("copernicus-token");
-  await createUpstreamBudget({ ...env, VERCEL_ENV: "production" }, reserve)("copernicus-stats", 108);
-  await createUpstreamBudget(env, reserve)("copernicus-layer", 4);
-  await createUpstreamBudget(env, reserve)("weather", 4);
-  await createUpstreamBudget(env, reserve)("openai");
+  await fromSchool(() => createUpstreamBudget(env, reserve)("copernicus-token"));
+  await fromSchool(() => createUpstreamBudget({ ...env, VERCEL_ENV: "production" }, reserve)("copernicus-stats", 108));
+  await fromSchool(() => createUpstreamBudget(env, reserve)("copernicus-layer", 4));
+  await fromSchool(() => createUpstreamBudget(env, reserve)("weather", 4));
+  await fromSchool(() => createUpstreamBudget(env, reserve)("openai"));
   assert.deepEqual(calls[0][0].slice(0, 3), calls[1][0].slice(0, 3));
   assert.deepEqual(calls[1][0].slice(0, 3), calls[2][0].slice(0, 3));
   assert.deepEqual([calls[0][1][5], calls[1][1][5], calls[2][1][5]], [1, 108, 4]);
   assert.ok(calls[3][0].every(key => key.includes(":weather:")));
   assert.ok(calls[4][0].every(key => key.includes(":openai:")));
+  assert.deepEqual(calls[3][1], [4, 60_000, 1, 1600, 86_400_000, 4, 2, 60_000, 1, 800, 86_400_000, 4]);
   assert.equal(satelliteStatsWeight(366, 314), 108);
   assert.equal(satelliteRasterWeight(1, 720, 324), 4);
 });
 
+test("equivalent client networks share an opaque key; concurrent contexts stay isolated", async () => {
+  const reserve = async (_, options) => Response.json({ result: [
+    1, JSON.parse(options.body).find(key => key.startsWith("hydrosense:upstream:v1:client:")) ? 0 : -1,
+  ] });
+  const keys = async ip => {
+    let key;
+    const budget = createUpstreamBudget(env, async (url, options) => {
+      key = JSON.parse(options.body)[5];
+      return reserve(url, options);
+    });
+    await from(ip, async () => {
+      await Promise.resolve();
+      await budget("weather");
+    });
+    return key;
+  };
+  const [school, mapped, ipv6First, ipv6Second, ipv6Other] = await Promise.all(
+    ["192.0.2.45", "::ffff:192.0.2.45", "2001:db8:1::1", "2001:0db8:0001:0:ab::2", "2001:db8:1:1::2"].map(keys),
+  );
+  assert.equal(school, mapped);
+  assert.equal(ipv6First, ipv6Second);
+  assert.notEqual(ipv6First, ipv6Other);
+  assert.match(school, /^hydrosense:upstream:v1:client:[a-f0-9]{64}:weather:minute$/);
+});
+
 test("exhaustion reports Retry-After; store failures never fall through", async () => {
   const limited = createUpstreamBudget(env, async () => Response.json({ result: [0, 62_001] }));
-  await assert.rejects(limited("copernicus-layer"), error => {
+  await assert.rejects(fromSchool(() => limited("copernicus-layer")), error => {
+    assert.equal(error.scope, "global");
     assert.deepEqual(classifyFailure(error), { code: "rateLimit", status: 429, retryAfter: "63" });
     return true;
   });
   for (const response of [new Response("private response", { status: 503 }), Response.json({ result: [-1, 0] }), Response.json({ result: [1, "0"] })]) {
-    await assert.rejects(createUpstreamBudget(env, async () => response)("weather"), reject("unavailable", 30));
+    await assert.rejects(fromSchool(() => createUpstreamBudget(env, async () => response)("weather")), reject("unavailable", 30));
   }
 });
 
 test("weather denies work before contacting either external model", async () => {
-  for (const [kind, status] of [["limited", 429], ["unavailable", 503]]) {
+  for (const [kind, status, scope] of [["limited", 429, "global"], ["limited", 429, "client"], ["unavailable", 503, "global"]]) {
     const read = createWeatherHistoryHandler({
       enabled: () => true,
       now: () => new Date("2026-11-20T13:00:00Z"),
-      reserve: async () => { throw new UpstreamBudgetError(kind, 40); },
+      reserve: async () => { throw new UpstreamBudgetError(kind, 40, scope); },
       fetcher: async () => assert.fail("Unexpected provider call"),
     });
     const response = await read(new Request("http://example.test/api/weather/history?lat=52&lng=23&days=30"));

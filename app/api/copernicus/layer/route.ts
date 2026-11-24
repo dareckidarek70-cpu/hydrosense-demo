@@ -6,6 +6,7 @@ import { getCopernicusAccessToken } from "@/lib/copernicus/auth";
 import { cachedRequest } from "@/lib/request-budget";
 import { apiFailure, providerFailure } from "@/lib/copernicus/api-error";
 import { rasterForTransport } from "@/lib/raster-transport";
+import { withUpstreamClient } from "@/lib/upstream-budget";
 
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams;
@@ -33,13 +34,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const started = performance.now();
-    const image = await cachedRequest("layer", JSON.stringify([
+    const image = await withUpstreamClient(request.headers, () => cachedRequest("layer", JSON.stringify([
       coordinates, width, height, layer, timeFrom, timeTo,
     ]), 20, async () => fetchLayerImage({
       bbox: [west, south, east, north],
       width, height, timeFrom, timeTo, layer: layer as LayerType,
       accessToken: await getCopernicusAccessToken(),
-    }));
+    })));
     const transport = await rasterForTransport(image, format);
     return new Response(transport.data, {
       headers: {
